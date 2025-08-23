@@ -1,0 +1,187 @@
+"""TTS conversion endpoints."""
+import os
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, status
+
+from app.api.dependencies import get_database_service, get_task_manager
+from app.core.exceptions import TaskNotFoundException, TTSServiceException, ValidationException
+from app.models.schemas import TTSConvertRequest, TTSConvertResponse, TTSTaskResponse, ErrorResponse
+from app.services.database import DatabaseService
+from app.services.task_manager import TaskManagerWrapper
+
+router = APIRouter(prefix="/api/v1/tts", tags=["TTS"])
+
+
+@router.post(
+    "/convert",
+    response_model=TTSConvertResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit text for TTS conversion",
+    description="Submit text for text-to-speech conversion. Returns conversion ID and status.",
+    responses={
+        201: {"description": "Conversion task created successfully"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+        503: {"model": ErrorResponse, "description": "TTS service unavailable"}
+    }
+)
+async def convert_text(
+    request: TTSConvertRequest,
+    task_mgr: TaskManagerWrapper = Depends(get_task_manager),
+    db_service: DatabaseService = Depends(get_database_service)
+):
+    """Submit text for TTS conversion."""
+    try:
+        # Submit task to TTS manager
+        task_id = task_mgr.submit_task(
+            text=request.text,
+            custom_filename=request.custom_filename
+        )
+        
+        if not task_id:
+            raise TTSServiceException("Failed to submit TTS task")
+        
+        # Get the created task from database
+        task = db_service.get_task_by_id(task_id)
+        
+        return TTSConvertResponse(
+            conversion_id=task.task_id,
+            text=task.original_text,
+            status=task.status,
+            submitted_at=task.submitted_at or task.created_at
+        )
+        
+    except TaskNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except TTSServiceException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process TTS request: {str(e)}"
+        )
+
+
+@router.get(
+    "/{conversion_id}",
+    response_model=TTSTaskResponse,
+    summary="Get TTS conversion status",
+    description="Get the status and details of a TTS conversion task by ID.",
+    responses={
+        200: {"description": "Task status retrieved successfully"},
+        404: {"model": ErrorResponse, "description": "Task not found"},
+        500: {"model": ErrorResponse, "description": "Internal server error"}
+    }
+)
+async def get_conversion_status(
+    conversion_id: str,
+    db_service: DatabaseService = Depends(get_database_service)
+):
+    """Get TTS conversion status and details."""
+    try:
+        # Get task from database
+        task = db_service.get_task_by_id(conversion_id)
+        
+        # Calculate duration if file exists and has metadata
+        duration = None
+        if task.status in ["completed", "done"] and task.output_file_path and os.path.exists(task.output_file_path):
+            # Try to get duration from metadata first
+            duration = task.duration
+            
+            # If not in metadata, calculate from file size and sampling rate
+            if duration is None and task.file_size and task.sampling_rate:
+                # Rough estimate: file_size / (sampling_rate * 2 bytes per sample)
+                # This is approximate since it doesn't account for WAV header
+                duration = task.file_size / (task.sampling_rate * 2)
+        
+        return TTSTaskResponse(
+            conversion_id=task.task_id,
+            text=task.original_text,
+            status=task.status,
+            output_file_path=task.output_file_path,
+            custom_filename=task.custom_filename,
+            submitted_at=task.submitted_at,
+            started_at=task.started_at,
+            completed_at=task.completed_at,
+            failed_at=task.failed_at,
+            file_size=task.file_size,
+            sampling_rate=task.sampling_rate,
+            duration=duration,
+            device=task.device,
+            error_message=task.error_message
+        )
+        
+    except TaskNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve task status: {str(e)}"
+        )
+
+
+@router.get(
+    "",
+    response_model=list[TTSTaskResponse],
+    summary="List TTS conversions",
+    description="List TTS conversion tasks, optionally filtered by status.",
+    responses={
+        200: {"description": "Tasks retrieved successfully"},
+        400: {"model": ErrorResponse, "description": "Invalid parameters"},
+        500: {"model": ErrorResponse, "description": "Internal server error"}
+    }
+)
+async def list_conversions(
+    status: Optional[str] = None,
+    limit: int = 50,
+    db_service: DatabaseService = Depends(get_database_service)
+):
+    """List TTS conversion tasks."""
+    try:
+        # Validate status parameter
+        if status and status not in ["queued", "processing", "completed", "failed", "done"]:
+            raise ValidationException(
+                "Invalid status. Must be one of: queued, processing, completed, failed, done"
+            )
+        
+        # Validate limit
+        if limit < 1 or limit > 1000:
+            raise ValidationException("Limit must be between 1 and 1000")
+        
+        tasks = db_service.get_all_tasks(status=status, limit=limit)
+        
+        results = []
+        for task in tasks:
+            # Calculate duration if available
+            duration = None
+            if task.status in ["completed", "done"] and task.output_file_path and os.path.exists(task.output_file_path):
+                duration = task.duration
+                if duration is None and task.file_size and task.sampling_rate:
+                    duration = task.file_size / (task.sampling_rate * 2)
+            
+            results.append(TTSTaskResponse(
+                conversion_id=task.task_id,
+                text=task.original_text,
+                status=task.status,
+                output_file_path=task.output_file_path,
+                custom_filename=task.custom_filename,
+                submitted_at=task.submitted_at,
+                started_at=task.started_at,
+                completed_at=task.completed_at,
+                failed_at=task.failed_at,
+                file_size=task.file_size,
+                sampling_rate=task.sampling_rate,
+                duration=duration,
+                device=task.device,
+                error_message=task.error_message
+            ))
+        
+        return results
+        
+    except ValidationException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list tasks: {str(e)}"
+        )
