@@ -6,6 +6,8 @@ from typing import Optional
 from sqlalchemy import Column, Integer, String, DateTime, Text, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
+from app.core.config import settings
+
 Base = declarative_base()
 
 
@@ -50,23 +52,23 @@ class Task(Base):
 
 class DatabaseManager:
     """Database session manager for SQLAlchemy 2.x."""
-    
-    def __init__(self, database_url: str = "sqlite:////Users/liqing/Documents/PyCharmProjects/whisper-tts/tts_tasks.db"):
+
+    def __init__(self, database_url: str = settings.database_url):
         self.engine = create_engine(database_url, echo=False)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        
+
         # Create tables if they don't exist
         Base.metadata.create_all(bind=self.engine)
-    
+
     def get_session(self) -> Session:
         """Get a database session."""
         return self.SessionLocal()
-    
+
     def get_task_by_id(self, task_id: str) -> Optional[Task]:
         """Get a task by its ID."""
         with self.get_session() as session:
             return session.query(Task).filter(Task.task_id == task_id).first()
-    
+
     def get_all_tasks(self, status: Optional[str] = None, limit: int = 100) -> list[Task]:
         """Get all tasks, optionally filtered by status."""
         with self.get_session() as session:

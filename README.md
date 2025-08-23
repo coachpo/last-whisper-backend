@@ -41,9 +41,11 @@ tts-api/
 ## API Endpoints
 
 ### POST /api/v1/tts/convert
+
 Submit text for TTS conversion.
 
 **Request:**
+
 ```json
 {
   "text": "Hello world",
@@ -52,37 +54,44 @@ Submit text for TTS conversion.
 ```
 
 **Response:**
+
 ```json
 {
   "conversion_id": "20231201_120000_abc123",
-  "text": "Hello world", 
+  "text": "Hello world",
   "status": "queued",
   "submitted_at": "2023-12-01T12:00:00"
 }
 ```
 
 ### GET /api/v1/tts/{id}
+
 Get conversion status and metadata.
 
 ### GET /api/v1/tts
+
 List conversions with optional status filtering.
 
 ### GET /health
+
 Health check endpoint.
 
 ## Installation
 
 1. Navigate to the project directory:
+
 ```bash
 cd tts-api
 ```
 
 2. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 3. Initialize database (optional):
+
 ```bash
 python scripts/init_db.py
 ```
@@ -90,11 +99,13 @@ python scripts/init_db.py
 ## Running the Application
 
 ### Development Server
+
 ```bash
 python scripts/run_api.py
 ```
 
 ### Production
+
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
@@ -104,11 +115,13 @@ The API will be available at `http://localhost:8000` with interactive docs at `h
 ## Testing
 
 Run the full test suite:
+
 ```bash
 pytest
 ```
 
 Run specific test modules:
+
 ```bash
 pytest tests/test_api/test_health.py -v
 pytest tests/test_api/test_tts.py -v
@@ -136,11 +149,13 @@ TTS_DEVICE="cpu"  # or "cuda" for GPU
 ## Code Quality
 
 Format code:
+
 ```bash
 black .
 ```
 
 Lint code:
+
 ```bash
 ruff check .
 ```
@@ -150,11 +165,12 @@ ruff check .
 The application follows clean architecture principles:
 
 - **API Layer**: FastAPI routes with request/response models
-- **Service Layer**: Business logic and external service integration  
+- **Service Layer**: Business logic and external service integration
 - **Data Layer**: Database operations and models
 - **Core**: Configuration, exceptions, and utilities
 
 This design provides:
+
 - **Testability**: Easy to mock and test individual components
 - **Maintainability**: Clear separation of concerns
 - **Scalability**: Modular design allows easy extension

@@ -1,11 +1,13 @@
+import hashlib
+import os
+import queue
+import threading
+from datetime import datetime
+
 import scipy
 import torch
 from transformers import VitsModel, AutoTokenizer
-import queue
-import threading
-import hashlib
-import os
-from datetime import datetime
+
 
 class FBTTSService:
     def __init__(self, device=None):
@@ -233,6 +235,7 @@ class FBTTSService:
             print(f"Failed to switch to {new_device}: {e}")
             return False
 
+
 def task_consumer_example(task_queue):
     """Example function demonstrating how to consume task messages from the queue"""
     print("\n=== Task Consumer Example ===")
@@ -263,6 +266,7 @@ def task_consumer_example(task_queue):
             break
         except Exception as e:
             print(f"Error consuming task message: {e}")
+
 
 def main():
     # Create and start the TTS service with automatic device detection
@@ -303,7 +307,8 @@ def main():
     # Interactive mode
     print("\n=== Interactive Mode ===")
     print("Enter text to convert to speech")
-    print("Commands: 'quit' to exit, 'status' for queue status, 'device' for device info, 'switch cpu/cuda' to change device")
+    print(
+        "Commands: 'quit' to exit, 'status' for queue status, 'device' for device info, 'switch cpu/cuda' to change device")
 
     try:
         while True:
@@ -344,6 +349,7 @@ def main():
     # Stop the service
     tts_service.stop_service()
     print("Service stopped. Goodbye!")
+
 
 if __name__ == "__main__":
     main()

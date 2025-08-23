@@ -1,7 +1,8 @@
 """FastAPI dependencies."""
+from app.services.tts_service import tts_service
+
 from app.services.database import db_service
 from app.services.task_manager import task_manager
-from app.services.tts_service import tts_service
 
 
 def get_database_service():

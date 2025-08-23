@@ -7,13 +7,13 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 
 from sqlalchemy import func, and_
-from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.database import DatabaseManager, Task
 
 
 class TTSTaskManager:
-    def __init__(self, database_url: str = "sqlite:////Users/liqing/Documents/PyCharmProjects/whisper-tts/tts_tasks.db", tts_service=None):
+    def __init__(self, database_url: str = settings.database_url, tts_service=None):
         self.db_manager = DatabaseManager(database_url)
         self.tts_service = tts_service
         self.is_running = False
@@ -128,9 +128,9 @@ class TTSTaskManager:
             query = session.query(Task)
             if status:
                 query = query.filter(Task.status == status)
-            
+
             tasks = query.order_by(Task.created_at.desc()).all()
-            
+
             return [
                 {
                     'id': task.id,
@@ -159,7 +159,7 @@ class TTSTaskManager:
         """Get all tasks with the same text hash"""
         with self.db_manager.get_session() as session:
             tasks = session.query(Task).filter(Task.text_hash == text_hash).all()
-            
+
             return [
                 {
                     'id': task.id,
@@ -229,7 +229,7 @@ class TTSTaskManager:
 
         with self.db_manager.get_session() as session:
             task = session.query(Task).filter(Task.task_id == task_id).first()
-            
+
             if not task:
                 print(f"Task {task_id} not found in database")
                 return
@@ -299,7 +299,7 @@ class TTSTaskManager:
     def cleanup_failed_tasks(self, days: int = 7) -> int:
         """Remove failed tasks older than specified days"""
         cutoff_date = datetime.utcnow() - timedelta(days=days)
-        
+
         with self.db_manager.get_session() as session:
             deleted_count = session.query(Task).filter(
                 and_(

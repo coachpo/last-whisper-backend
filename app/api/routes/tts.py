@@ -27,9 +27,9 @@ router = APIRouter(prefix="/api/v1/tts", tags=["TTS"])
     }
 )
 async def convert_text(
-    request: TTSConvertRequest,
-    task_mgr: TaskManagerWrapper = Depends(get_task_manager),
-    db_service: DatabaseService = Depends(get_database_service)
+        request: TTSConvertRequest,
+        task_mgr: TaskManagerWrapper = Depends(get_task_manager),
+        db_service: DatabaseService = Depends(get_database_service)
 ):
     """Submit text for TTS conversion."""
     try:
@@ -38,20 +38,20 @@ async def convert_text(
             text=request.text,
             custom_filename=request.custom_filename
         )
-        
+
         if not task_id:
             raise TTSServiceException("Failed to submit TTS task")
-        
+
         # Get the created task from database
         task = db_service.get_task_by_id(task_id)
-        
+
         return TTSConvertResponse(
             conversion_id=task.task_id,
             text=task.original_text,
             status=task.status,
             submitted_at=task.submitted_at or task.created_at
         )
-        
+
     except TaskNotFoundException as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except TTSServiceException as e:
@@ -75,26 +75,26 @@ async def convert_text(
     }
 )
 async def get_conversion_status(
-    conversion_id: str,
-    db_service: DatabaseService = Depends(get_database_service)
+        conversion_id: str,
+        db_service: DatabaseService = Depends(get_database_service)
 ):
     """Get TTS conversion status and details."""
     try:
         # Get task from database
         task = db_service.get_task_by_id(conversion_id)
-        
+
         # Calculate duration if file exists and has metadata
         duration = None
         if task.status in ["completed", "done"] and task.output_file_path and os.path.exists(task.output_file_path):
             # Try to get duration from metadata first
             duration = task.duration
-            
+
             # If not in metadata, calculate from file size and sampling rate
             if duration is None and task.file_size and task.sampling_rate:
                 # Rough estimate: file_size / (sampling_rate * 2 bytes per sample)
                 # This is approximate since it doesn't account for WAV header
                 duration = task.file_size / (task.sampling_rate * 2)
-        
+
         return TTSTaskResponse(
             conversion_id=task.task_id,
             text=task.original_text,
@@ -111,7 +111,7 @@ async def get_conversion_status(
             device=task.device,
             error_message=task.error_message
         )
-        
+
     except TaskNotFoundException as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except Exception as e:
@@ -133,9 +133,9 @@ async def get_conversion_status(
     }
 )
 async def list_conversions(
-    status: Optional[str] = None,
-    limit: int = 50,
-    db_service: DatabaseService = Depends(get_database_service)
+        status: Optional[str] = None,
+        limit: int = 50,
+        db_service: DatabaseService = Depends(get_database_service)
 ):
     """List TTS conversion tasks."""
     try:
@@ -144,13 +144,13 @@ async def list_conversions(
             raise ValidationException(
                 "Invalid status. Must be one of: queued, processing, completed, failed, done"
             )
-        
+
         # Validate limit
         if limit < 1 or limit > 1000:
             raise ValidationException("Limit must be between 1 and 1000")
-        
+
         tasks = db_service.get_all_tasks(status=status, limit=limit)
-        
+
         results = []
         for task in tasks:
             # Calculate duration if available
@@ -159,7 +159,7 @@ async def list_conversions(
                 duration = task.duration
                 if duration is None and task.file_size and task.sampling_rate:
                     duration = task.file_size / (task.sampling_rate * 2)
-            
+
             results.append(TTSTaskResponse(
                 conversion_id=task.task_id,
                 text=task.original_text,
@@ -176,9 +176,9 @@ async def list_conversions(
                 device=task.device,
                 error_message=task.error_message
             ))
-        
+
         return results
-        
+
     except ValidationException as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except Exception as e:
@@ -199,33 +199,33 @@ async def list_conversions(
     }
 )
 async def download_audio_file(
-    conversion_id: str,
-    db_service: DatabaseService = Depends(get_database_service)
+        conversion_id: str,
+        db_service: DatabaseService = Depends(get_database_service)
 ):
     """Download the audio file for a completed TTS conversion."""
     try:
         # Get task from database
         task = db_service.get_task_by_id(conversion_id)
-        
+
         # Check if task is completed
         if task.status not in ["completed", "done"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Task is not completed. Current status: {task.status}"
             )
-        
+
         # Check if file exists
         if not task.output_file_path or not os.path.exists(task.output_file_path):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Audio file not found"
             )
-        
+
         # Determine filename for download
         filename = task.custom_filename or f"tts_{conversion_id}"
         if not filename.endswith('.wav'):
             filename += '.wav'
-        
+
         return FileResponse(
             path=task.output_file_path,
             media_type="audio/wav",
@@ -235,7 +235,7 @@ async def download_audio_file(
                 "Content-Length": str(task.file_size or os.path.getsize(task.output_file_path))
             }
         )
-        
+
     except TaskNotFoundException as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except HTTPException:
