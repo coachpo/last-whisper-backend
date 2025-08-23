@@ -1,5 +1,5 @@
 """FastAPI dependencies."""
-from app.services.tts_service import tts_service
+from app.services.outer.tts_service import tts_service
 
 from app.services.database import db_service
 from app.services.task_manager import task_manager

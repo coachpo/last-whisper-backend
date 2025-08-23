@@ -2,7 +2,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from app.services.tts_service import TTSServiceWrapper
+from app.services.outer.tts_service import TTSServiceWrapper
 
 from app.core.exceptions import TTSServiceException
 
@@ -14,7 +14,7 @@ class TestTTSServiceWrapper:
         """Test successful service initialization."""
         service = TTSServiceWrapper()
 
-        with patch('app.services.tts_service.FBTTSService') as mock_service_class:
+        with patch('app.services.outer.tts_service.FBTTSService') as mock_service_class:
             mock_service_instance = Mock()
             mock_service_class.return_value = mock_service_instance
 
@@ -28,7 +28,7 @@ class TestTTSServiceWrapper:
         """Test failed service initialization."""
         service = TTSServiceWrapper()
 
-        with patch('app.services.tts_service.FBTTSService') as mock_service_class:
+        with patch('app.services.outer.tts_service.FBTTSService') as mock_service_class:
             mock_service_class.side_effect = Exception("Initialization failed")
 
             with pytest.raises(TTSServiceException):
@@ -40,7 +40,7 @@ class TestTTSServiceWrapper:
         """Test successful request submission."""
         service = TTSServiceWrapper()
 
-        with patch('app.services.tts_service.FBTTSService') as mock_service_class:
+        with patch('app.services.outer.tts_service.FBTTSService') as mock_service_class:
             mock_service_instance = Mock()
             mock_service_instance.submit_request.return_value = "task_123"
             mock_service_class.return_value = mock_service_instance
@@ -62,7 +62,7 @@ class TestTTSServiceWrapper:
         """Test service shutdown."""
         service = TTSServiceWrapper()
 
-        with patch('app.services.tts_service.FBTTSService') as mock_service_class:
+        with patch('app.services.outer.tts_service.FBTTSService') as mock_service_class:
             mock_service_instance = Mock()
             mock_service_class.return_value = mock_service_instance
 

@@ -51,7 +51,7 @@ class TTSTaskManager:
             status = existing_task.status
             task_id = existing_task.task_id
 
-            if status == 'completed':
+            if status in ['completed', 'done']:
                 print(f"Task with same text already completed (ID: {task_id})")
                 return task_id
             elif status in ['queued', 'processing']:

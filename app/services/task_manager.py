@@ -1,9 +1,9 @@
 """Task manager service wrapper."""
 from typing import Optional
 
-from app.services.tts_service import tts_service
-
 from app.core.exceptions import TTSServiceException
+from app.services.outer.tts_service import tts_service
+from app.services.outer.tts_task_manager import TTSTaskManager
 
 
 class TaskManagerWrapper:
@@ -17,7 +17,6 @@ class TaskManagerWrapper:
         """Initialize the task manager."""
         try:
             # Import here to avoid circular dependencies
-            from tts_task_manager import TTSTaskManager
 
             if not tts_service.is_initialized:
                 raise TTSServiceException("TTS service must be initialized first")

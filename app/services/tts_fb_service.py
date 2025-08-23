@@ -35,7 +35,7 @@ class FBTTSService:
         self.worker_thread = None
 
         # Create output directory if it doesn't exist
-        self.output_dir = "/Users/liqing/Documents/PyCharmProjects/whisper-tts/output"
+        self.output_dir = "output"
         os.makedirs(self.output_dir, exist_ok=True)
 
         print(f"TTS model loaded successfully on {self.device}!")
