@@ -3,6 +3,7 @@ import os
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.responses import FileResponse
 
 from app.api.dependencies import get_database_service, get_task_manager
 from app.core.exceptions import TaskNotFoundException, TTSServiceException, ValidationException
@@ -184,4 +185,63 @@ async def list_conversions(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list tasks: {str(e)}"
+        )
+
+
+@router.get(
+    "/{conversion_id}/download",
+    summary="Download TTS audio file",
+    description="Download the generated audio file for a completed TTS conversion.",
+    responses={
+        200: {"description": "Audio file download", "content": {"audio/wav": {}}},
+        404: {"model": ErrorResponse, "description": "Task or file not found"},
+        400: {"model": ErrorResponse, "description": "Task not completed"}
+    }
+)
+async def download_audio_file(
+    conversion_id: str,
+    db_service: DatabaseService = Depends(get_database_service)
+):
+    """Download the audio file for a completed TTS conversion."""
+    try:
+        # Get task from database
+        task = db_service.get_task_by_id(conversion_id)
+        
+        # Check if task is completed
+        if task.status not in ["completed", "done"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Task is not completed. Current status: {task.status}"
+            )
+        
+        # Check if file exists
+        if not task.output_file_path or not os.path.exists(task.output_file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Audio file not found"
+            )
+        
+        # Determine filename for download
+        filename = task.custom_filename or f"tts_{conversion_id}"
+        if not filename.endswith('.wav'):
+            filename += '.wav'
+        
+        return FileResponse(
+            path=task.output_file_path,
+            media_type="audio/wav",
+            filename=filename,
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Length": str(task.file_size or os.path.getsize(task.output_file_path))
+            }
+        )
+        
+    except TaskNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download audio file: {str(e)}"
         )
