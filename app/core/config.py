@@ -1,7 +1,8 @@
 """Application configuration settings."""
+
 from typing import Optional
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -10,7 +11,9 @@ class Settings(BaseSettings):
     # API Settings
     app_name: str = "TTS API"
     app_version: str = "1.0.0"
-    app_description: str = "Text-to-Speech conversion API that orchestrates with existing TTS services"
+    app_description: str = (
+        "Text-to-Speech conversion API that orchestrates with existing TTS services"
+    )
 
     # Server Settings
     host: str = "0.0.0.0"
@@ -29,10 +32,7 @@ class Settings(BaseSettings):
     docs_url: str = "/docs"
     redoc_url: str = "/redoc"
     openapi_url: str = "/openapi.json"
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 
 # Global settings instance

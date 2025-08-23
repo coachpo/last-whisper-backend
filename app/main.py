@@ -1,7 +1,7 @@
 """FastAPI application entry point."""
+
 from contextlib import asynccontextmanager
 
-from app.services.outer.tts_service import tts_service
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
@@ -9,6 +9,7 @@ from app.api.routes import health, tts
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
 from app.models.schemas import ErrorResponse
+from app.services.outer.tts_service import tts_service
 from app.services.task_manager import task_manager
 
 
@@ -53,7 +54,7 @@ app = FastAPI(
     docs_url=settings.docs_url,
     redoc_url=settings.redoc_url,
     openapi_url=settings.openapi_url,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
@@ -62,11 +63,8 @@ async def tts_api_exception_handler(request, exc: TTSAPIException):
     """Handle TTS API exceptions."""
     return JSONResponse(
         status_code=exc.status_code,
-        content=ErrorResponse(
-            error=exc.message,
-            detail=exc.detail
-        ).model_dump(),
-        headers=exc.headers
+        content=ErrorResponse(error=exc.message, detail=exc.detail).model_dump(),
+        headers=exc.headers,
     )
 
 
@@ -75,10 +73,7 @@ async def general_exception_handler(request, exc):
     """Handle general exceptions."""
     return JSONResponse(
         status_code=500,
-        content=ErrorResponse(
-            error="Internal server error",
-            detail=str(exc)
-        ).model_dump()
+        content=ErrorResponse(error="Internal server error", detail=str(exc)).model_dump(),
     )
 
 

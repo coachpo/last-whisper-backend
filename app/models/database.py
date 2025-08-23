@@ -1,10 +1,11 @@
 """SQLAlchemy database models."""
+
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Optional
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy import Column, DateTime, Integer, String, Text, create_engine
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.core.config import settings
 
@@ -13,6 +14,7 @@ Base = declarative_base()
 
 class Task(Base):
     """SQLAlchemy model for TTS tasks, matching existing database schema."""
+
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -22,7 +24,7 @@ class Task(Base):
     status = Column(String, nullable=False, default="pending", index=True)
     output_file_path = Column(Text)
     custom_filename = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
     submitted_at = Column(DateTime)
     started_at = Column(DateTime)
     completed_at = Column(DateTime)

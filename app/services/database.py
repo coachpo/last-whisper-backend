@@ -1,5 +1,6 @@
 """Database service layer."""
-from typing import Optional, List
+
+from typing import List, Optional
 
 from app.core.config import settings
 from app.core.exceptions import DatabaseException, TaskNotFoundException

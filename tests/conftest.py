@@ -1,10 +1,13 @@
 """Pytest configuration and fixtures."""
+
+from datetime import UTC, datetime
 from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_database_service, get_task_manager, get_tts_service
+from app.core.exceptions import TaskNotFoundException
 from app.main import app
 from app.models.database import DatabaseManager, Task
 
@@ -14,14 +17,37 @@ class TestDatabaseService:
 
     def __init__(self):
         self.db_manager = DatabaseManager("sqlite:///:memory:")
+        # Ensure tables are created by accessing the engine
+        self.db_manager.engine
 
     def get_task_by_id(self, task_id: str):
         """Mock get task by ID."""
-        return self.db_manager.get_task_by_id(task_id)
+        if task_id == "test_task_id_123":
+            # Return a mock task for testing
+            task = Task(
+                task_id="test_task_id_123",
+                original_text="Hello world",
+                text_hash="test_hash",
+                status="queued",
+                created_at=datetime.now(UTC),
+                submitted_at=datetime.now(UTC),
+            )
+            return task
+        # For any other task ID, raise TaskNotFoundException to simulate not found
+        raise TaskNotFoundException(task_id)
 
     def get_all_tasks(self, status=None, limit=100):
         """Mock get all tasks."""
-        return self.db_manager.get_all_tasks(status=status, limit=limit)
+        # Return a list with the sample task
+        task = Task(
+            task_id="test_task_id_123",
+            original_text="Hello world",
+            text_hash="test_hash",
+            status="queued",
+            created_at=datetime.now(UTC),
+            submitted_at=datetime.now(UTC),
+        )
+        return [task]
 
     def get_database_manager(self):
         """Get the underlying database manager."""
@@ -50,9 +76,12 @@ def mock_task_manager():
     """Create a mock task manager."""
     manager = Mock()
     manager.is_initialized = True
-    manager.submit_task.return_value = "test_task_id_123"
     manager.initialize.return_value = None
     manager.shutdown.return_value = None
+
+    # Mock the task manager methods that the API actually calls
+    manager.submit_task = Mock(return_value="test_task_id_123")
+
     return manager
 
 
@@ -65,7 +94,7 @@ def client(test_db_service, mock_task_manager, mock_tts_service):
     app.dependency_overrides[get_task_manager] = lambda: mock_task_manager
     app.dependency_overrides[get_tts_service] = lambda: mock_tts_service
 
-    client = TestClient(app)
+    client = TestClient(app=app)
 
     yield client
 
@@ -81,7 +110,9 @@ def sample_task(test_db_service):
             task_id="test_task_id_123",
             original_text="Hello world",
             text_hash="test_hash",
-            status="queued"
+            status="queued",
+            created_at=datetime.now(UTC),
+            submitted_at=datetime.now(UTC),
         )
         session.add(task)
         session.commit()

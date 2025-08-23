@@ -1,5 +1,6 @@
 """Health check endpoints."""
-from datetime import datetime
+
+from datetime import UTC, datetime
 
 from fastapi import APIRouter
 
@@ -13,7 +14,7 @@ router = APIRouter()
     "/",
     response_model=HealthResponse,
     summary="Health check",
-    description="Get the health status of the API service"
+    description="Get the health status of the API service",
 )
 async def health_check():
     """Health check endpoint."""
@@ -21,7 +22,7 @@ async def health_check():
         status="healthy",
         service=settings.app_name,
         version=settings.app_version,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(UTC),
     )
 
 
@@ -29,7 +30,7 @@ async def health_check():
     "/health",
     response_model=HealthResponse,
     summary="Detailed health check",
-    description="Get detailed health status of the API service"
+    description="Get detailed health status of the API service",
 )
 async def detailed_health_check():
     """Detailed health check endpoint."""
@@ -37,5 +38,5 @@ async def detailed_health_check():
         status="healthy",
         service=settings.app_name,
         version=settings.app_version,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(UTC),
     )

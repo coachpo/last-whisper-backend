@@ -6,7 +6,7 @@ from datetime import datetime
 
 import scipy
 import torch
-from transformers import VitsModel, AutoTokenizer
+from transformers import AutoTokenizer, VitsModel
 
 
 class FBTTSService:
@@ -80,17 +80,17 @@ class FBTTSService:
 
         request_id = f"{timestamp}_{text_hash}"
         request = {
-            'id': request_id,
-            'text': text,
-            'filename': filename,
-            'status': 'queued',
-            'submitted_at': datetime.now()
+            "id": request_id,
+            "text": text,
+            "filename": filename,
+            "status": "queued",
+            "submitted_at": datetime.now(),
         }
 
         self.request_queue.put(request)
 
         # Publish initial task message to external queue
-        self._publish_task_message(request_id, filename, 'queued', text=text)
+        self._publish_task_message(request_id, filename, "queued", text=text)
 
         print(f"Request {request_id} submitted and queued. Output file: {filename}")
         return request_id
@@ -98,11 +98,11 @@ class FBTTSService:
     def _publish_task_message(self, request_id, output_file_path, status, **metadata):
         """Publish a task message to the external task queue"""
         task_message = {
-            'request_id': request_id,
-            'output_file_path': output_file_path,
-            'status': status,
-            'timestamp': datetime.now().isoformat(),
-            'metadata': metadata
+            "request_id": request_id,
+            "output_file_path": output_file_path,
+            "status": status,
+            "timestamp": datetime.now().isoformat(),
+            "metadata": metadata,
         }
         self.task_queue.put(task_message)
 
@@ -123,20 +123,20 @@ class FBTTSService:
         """Process a single TTS request"""
         try:
             print(f"Processing request {request['id']} on {self.device}...")
-            request['status'] = 'processing'
+            request["status"] = "processing"
 
             # Publish processing status
             self._publish_task_message(
-                request['id'],
-                request['filename'],
-                'processing',
-                text=request['text'],
+                request["id"],
+                request["filename"],
+                "processing",
+                text=request["text"],
                 started_at=datetime.now().isoformat(),
-                device=str(self.device)
+                device=str(self.device),
             )
 
             # Tokenize the text and move to device
-            inputs = self.tokenizer(request['text'], return_tensors="pt")
+            inputs = self.tokenizer(request["text"], return_tensors="pt")
             # Move input tensors to the same device as the model
             inputs = {key: value.to(self.device) for key, value in inputs.items()}
 
@@ -147,53 +147,59 @@ class FBTTSService:
 
             # Save audio file
             scipy.io.wavfile.write(
-                request['filename'],
-                rate=self.model.config.sampling_rate,
-                data=audio_data
+                request["filename"], rate=self.model.config.sampling_rate, data=audio_data
             )
 
-            request['status'] = 'completed'
-            request['completed_at'] = datetime.now()
+            request["status"] = "completed"
+            request["completed_at"] = datetime.now()
 
             # Publish completion status
             self._publish_task_message(
-                request['id'],
-                request['filename'],
-                'completed',
-                text=request['text'],
-                completed_at=request['completed_at'].isoformat(),
-                file_size=os.path.getsize(request['filename']) if os.path.exists(request['filename']) else None,
+                request["id"],
+                request["filename"],
+                "completed",
+                text=request["text"],
+                completed_at=request["completed_at"].isoformat(),
+                file_size=(
+                    os.path.getsize(request["filename"])
+                    if os.path.exists(request["filename"])
+                    else None
+                ),
                 sampling_rate=self.model.config.sampling_rate,
-                device=str(self.device)
+                device=str(self.device),
             )
 
             # Send 'done' message to indicate task is fully finished
             self._publish_task_message(
-                request['id'],
-                request['filename'],
-                'done',
-                text=request['text'],
-                completed_at=request['completed_at'].isoformat(),
-                file_size=os.path.getsize(request['filename']) if os.path.exists(request['filename']) else None,
+                request["id"],
+                request["filename"],
+                "done",
+                text=request["text"],
+                completed_at=request["completed_at"].isoformat(),
+                file_size=(
+                    os.path.getsize(request["filename"])
+                    if os.path.exists(request["filename"])
+                    else None
+                ),
                 sampling_rate=self.model.config.sampling_rate,
-                device=str(self.device)
+                device=str(self.device),
             )
 
             print(f"Request {request['id']} completed! Audio saved as: {request['filename']}")
 
         except Exception as e:
-            request['status'] = 'failed'
-            request['error'] = str(e)
+            request["status"] = "failed"
+            request["error"] = str(e)
 
             # Publish failure status
             self._publish_task_message(
-                request['id'],
-                request['filename'],
-                'failed',
-                text=request['text'],
+                request["id"],
+                request["filename"],
+                "failed",
+                text=request["text"],
                 error=str(e),
                 failed_at=datetime.now().isoformat(),
-                device=str(self.device)
+                device=str(self.device),
             )
             print(f"Request {request['id']} failed: {e}")
 
@@ -208,18 +214,20 @@ class FBTTSService:
     def get_device_info(self):
         """Get information about the current device being used"""
         device_info = {
-            'device': str(self.device),
-            'device_type': self.device.type,
-            'cuda_available': torch.cuda.is_available()
+            "device": str(self.device),
+            "device_type": self.device.type,
+            "cuda_available": torch.cuda.is_available(),
         }
 
-        if torch.cuda.is_available() and self.device.type == 'cuda':
-            device_info.update({
-                'cuda_device_count': torch.cuda.device_count(),
-                'cuda_device_name': torch.cuda.get_device_name(self.device),
-                'cuda_memory_allocated': torch.cuda.memory_allocated(self.device),
-                'cuda_memory_reserved': torch.cuda.memory_reserved(self.device)
-            })
+        if torch.cuda.is_available() and self.device.type == "cuda":
+            device_info.update(
+                {
+                    "cuda_device_count": torch.cuda.device_count(),
+                    "cuda_device_name": torch.cuda.get_device_name(self.device),
+                    "cuda_memory_allocated": torch.cuda.memory_allocated(self.device),
+                    "cuda_memory_reserved": torch.cuda.memory_reserved(self.device),
+                }
+            )
 
         return device_info
 
@@ -247,14 +255,14 @@ def task_consumer_example(task_queue):
             task_message = task_queue.get(timeout=2)
 
             # Process the task message
-            print(f"\nReceived task message:")
+            print("\nReceived task message:")
             print(f"  Request ID: {task_message['request_id']}")
             print(f"  Output File: {task_message['output_file_path']}")
             print(f"  Status: {task_message['status']}")
             print(f"  Timestamp: {task_message['timestamp']}")
 
             # Access additional metadata
-            if task_message['metadata']:
+            if task_message["metadata"]:
                 print(f"  Metadata: {task_message['metadata']}")
 
             # Mark task as done
@@ -275,7 +283,7 @@ def main():
 
     # Display device information
     device_info = tts_service.get_device_info()
-    print(f"\nDevice Information:")
+    print("\nDevice Information:")
     for key, value in device_info.items():
         print(f"  {key}: {value}")
 
@@ -301,6 +309,7 @@ def main():
 
     # Demonstrate task queue consumption
     import time
+
     time.sleep(2)  # Give some time for processing
     task_consumer_example(task_queue)
 
@@ -308,25 +317,28 @@ def main():
     print("\n=== Interactive Mode ===")
     print("Enter text to convert to speech")
     print(
-        "Commands: 'quit' to exit, 'status' for queue status, 'device' for device info, 'switch cpu/cuda' to change device")
+        "Commands: 'quit' to exit, 'status' for queue status, 'device' for device info, 'switch cpu/cuda' to change device"
+    )
 
     try:
         while True:
             user_input = input("\nText: ").strip()
 
-            if user_input.lower() == 'quit':
+            if user_input.lower() == "quit":
                 break
-            elif user_input.lower() == 'status':
+            elif user_input.lower() == "status":
                 print(f"Request queue size: {tts_service.get_queue_size()} requests pending")
-                print(f"Task queue size: {tts_service.get_task_queue_size()} task messages available")
-            elif user_input.lower() == 'device':
+                print(
+                    f"Task queue size: {tts_service.get_task_queue_size()} task messages available"
+                )
+            elif user_input.lower() == "device":
                 device_info = tts_service.get_device_info()
                 print("Current device information:")
                 for key, value in device_info.items():
                     print(f"  {key}: {value}")
-            elif user_input.lower().startswith('switch '):
+            elif user_input.lower().startswith("switch "):
                 new_device = user_input[7:].strip()
-                if new_device in ['cpu', 'cuda']:
+                if new_device in ["cpu", "cuda"]:
                     success = tts_service.switch_device(new_device)
                     if success:
                         print(f"Device switched to {new_device}")
@@ -334,7 +346,7 @@ def main():
                         print(f"Failed to switch to {new_device}")
                 else:
                     print("Invalid device. Use 'switch cpu' or 'switch cuda'")
-            elif user_input.lower() == 'consume':
+            elif user_input.lower() == "consume":
                 task_consumer_example(task_queue)
             elif user_input:
                 custom_name = input("Custom filename (optional, press Enter for auto): ").strip()

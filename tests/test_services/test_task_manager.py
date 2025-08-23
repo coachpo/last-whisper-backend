@@ -1,4 +1,5 @@
 """Tests for task manager wrapper."""
+
 from unittest.mock import Mock, patch
 
 import pytest
@@ -14,11 +15,11 @@ class TestTaskManagerWrapper:
         """Test successful task manager initialization."""
         manager = TaskManagerWrapper()
 
-        with patch('app.services.task_manager.tts_service') as mock_tts_service:
+        with patch("app.services.task_manager.tts_service") as mock_tts_service:
             mock_tts_service.is_initialized = True
             mock_tts_service._service = Mock()
 
-            with patch('app.services.task_manager.TTSTaskManager') as mock_manager_class:
+            with patch("app.services.task_manager.TTSTaskManager") as mock_manager_class:
                 mock_manager_instance = Mock()
                 mock_manager_class.return_value = mock_manager_instance
 
@@ -32,7 +33,7 @@ class TestTaskManagerWrapper:
         """Test initialization when TTS service not ready."""
         manager = TaskManagerWrapper()
 
-        with patch('app.services.task_manager.tts_service') as mock_tts_service:
+        with patch("app.services.task_manager.tts_service") as mock_tts_service:
             mock_tts_service.is_initialized = False
 
             with pytest.raises(TTSServiceException, match="TTS service must be initialized first"):
@@ -44,11 +45,11 @@ class TestTaskManagerWrapper:
         """Test successful task submission."""
         manager = TaskManagerWrapper()
 
-        with patch('app.services.task_manager.tts_service') as mock_tts_service:
+        with patch("app.services.task_manager.tts_service") as mock_tts_service:
             mock_tts_service.is_initialized = True
             mock_tts_service._service = Mock()
 
-            with patch('app.services.task_manager.TTSTaskManager') as mock_manager_class:
+            with patch("app.services.task_manager.TTSTaskManager") as mock_manager_class:
                 mock_manager_instance = Mock()
                 mock_manager_instance.submit_task.return_value = "task_123"
                 mock_manager_class.return_value = mock_manager_instance
@@ -57,7 +58,9 @@ class TestTaskManagerWrapper:
                 result = manager.submit_task("Hello world", "test_file")
 
                 assert result == "task_123"
-                mock_manager_instance.submit_task.assert_called_once_with("Hello world", "test_file")
+                mock_manager_instance.submit_task.assert_called_once_with(
+                    "Hello world", "test_file"
+                )
 
     def test_submit_task_not_initialized(self):
         """Test task submission when manager not initialized."""
@@ -70,11 +73,11 @@ class TestTaskManagerWrapper:
         """Test manager shutdown."""
         manager = TaskManagerWrapper()
 
-        with patch('app.services.task_manager.tts_service') as mock_tts_service:
+        with patch("app.services.task_manager.tts_service") as mock_tts_service:
             mock_tts_service.is_initialized = True
             mock_tts_service._service = Mock()
 
-            with patch('app.services.task_manager.TTSTaskManager') as mock_manager_class:
+            with patch("app.services.task_manager.TTSTaskManager") as mock_manager_class:
                 mock_manager_instance = Mock()
                 mock_manager_class.return_value = mock_manager_instance
 

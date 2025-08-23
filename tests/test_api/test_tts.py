@@ -1,4 +1,5 @@
 """Tests for TTS conversion endpoints."""
+
 from fastapi import status
 
 
@@ -7,10 +8,7 @@ class TestTTSConvert:
 
     def test_convert_text_success(self, client, sample_task, mock_task_manager):
         """Test successful text conversion submission."""
-        request_data = {
-            "text": "Hello world",
-            "custom_filename": "test_file"
-        }
+        request_data = {"text": "Hello world", "custom_filename": "test_file"}
 
         response = client.post("/api/v1/tts/convert", json=request_data)
 
@@ -24,8 +22,7 @@ class TestTTSConvert:
 
         # Verify task manager was called
         mock_task_manager.submit_task.assert_called_once_with(
-            text="Hello world",
-            custom_filename="test_file"
+            text="Hello world", custom_filename="test_file"
         )
 
     def test_convert_text_empty_text(self, client):
@@ -75,7 +72,7 @@ class TestGetConversionStatus:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
         data = response.json()
-        assert "not found" in data["error"]
+        assert "not found" in data["detail"]
 
 
 class TestListConversions:
@@ -95,14 +92,14 @@ class TestListConversions:
         """Test listing with invalid status parameter."""
         response = client.get("/api/v1/tts?status=invalid")
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         data = response.json()
-        assert "Invalid status" in data["error"]
+        assert "Invalid status" in data["detail"]
 
     def test_list_conversions_invalid_limit(self, client):
         """Test listing with invalid limit parameter."""
         response = client.get("/api/v1/tts?limit=0")
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         data = response.json()
-        assert "Limit must be between 1 and 1000" in data["error"]
+        assert "Limit must be between 1 and 1000" in data["detail"]

@@ -1,4 +1,5 @@
 """Tests for health check endpoints."""
+
 from fastapi import status
 
 

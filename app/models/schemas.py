@@ -1,4 +1,5 @@
 """Pydantic models for API request/response schemas."""
+
 from datetime import datetime
 from typing import Optional
 
@@ -7,13 +8,16 @@ from pydantic import BaseModel, Field
 
 class TTSConvertRequest(BaseModel):
     """Request model for TTS conversion."""
+
     text: str = Field(..., min_length=1, max_length=10000, description="Text to convert to speech")
-    custom_filename: Optional[str] = Field(None, max_length=255,
-                                           description="Optional custom filename (without extension)")
+    custom_filename: Optional[str] = Field(
+        None, max_length=255, description="Optional custom filename (without extension)"
+    )
 
 
 class TTSConvertResponse(BaseModel):
     """Response model for TTS conversion submission."""
+
     conversion_id: str = Field(..., description="Unique ID for the conversion task")
     text: str = Field(..., description="Echo of the submitted text")
     status: str = Field(..., description="Current status of the conversion")
@@ -22,10 +26,13 @@ class TTSConvertResponse(BaseModel):
 
 class TTSTaskResponse(BaseModel):
     """Response model for TTS task status and details."""
+
     conversion_id: str = Field(..., description="Unique ID for the conversion task")
     text: str = Field(..., description="Original text submitted for conversion")
     status: str = Field(..., description="Current status: queued, processing, completed, failed")
-    output_file_path: Optional[str] = Field(None, description="Path to the generated audio file (when completed)")
+    output_file_path: Optional[str] = Field(
+        None, description="Path to the generated audio file (when completed)"
+    )
     custom_filename: Optional[str] = Field(None, description="Custom filename specified in request")
 
     # Timestamps
@@ -46,12 +53,14 @@ class TTSTaskResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Response model for API errors."""
+
     error: str = Field(..., description="Error message")
     detail: Optional[str] = Field(None, description="Additional error details")
 
 
 class HealthResponse(BaseModel):
     """Response model for health check."""
+
     status: str = Field(..., description="Health status")
     service: str = Field(..., description="Service name")
     version: str = Field(..., description="Service version")

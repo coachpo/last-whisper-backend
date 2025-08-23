@@ -1,13 +1,14 @@
 """TTS conversion endpoints."""
+
 import os
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.api.dependencies import get_database_service, get_task_manager
 from app.core.exceptions import TaskNotFoundException, TTSServiceException, ValidationException
-from app.models.schemas import TTSConvertRequest, TTSConvertResponse, TTSTaskResponse, ErrorResponse
+from app.models.schemas import ErrorResponse, TTSConvertRequest, TTSConvertResponse, TTSTaskResponse
 from app.services.database import DatabaseService
 from app.services.task_manager import TaskManagerWrapper
 
@@ -23,21 +24,18 @@ router = APIRouter(prefix="/api/v1/tts", tags=["TTS"])
     responses={
         201: {"description": "Conversion task created successfully"},
         422: {"model": ErrorResponse, "description": "Validation error"},
-        503: {"model": ErrorResponse, "description": "TTS service unavailable"}
-    }
+        503: {"model": ErrorResponse, "description": "TTS service unavailable"},
+    },
 )
 async def convert_text(
         request: TTSConvertRequest,
         task_mgr: TaskManagerWrapper = Depends(get_task_manager),
-        db_service: DatabaseService = Depends(get_database_service)
+        db_service: DatabaseService = Depends(get_database_service),
 ):
     """Submit text for TTS conversion."""
     try:
         # Submit task to TTS manager
-        task_id = task_mgr.submit_task(
-            text=request.text,
-            custom_filename=request.custom_filename
-        )
+        task_id = task_mgr.submit_task(text=request.text, custom_filename=request.custom_filename)
 
         if not task_id:
             raise TTSServiceException("Failed to submit TTS task")
@@ -49,7 +47,7 @@ async def convert_text(
             conversion_id=task.task_id,
             text=task.original_text,
             status=task.status,
-            submitted_at=task.submitted_at or task.created_at
+            submitted_at=task.submitted_at or task.created_at,
         )
 
     except TaskNotFoundException as e:
@@ -59,7 +57,7 @@ async def convert_text(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process TTS request: {str(e)}"
+            detail=f"Failed to process TTS request: {str(e)}",
         )
 
 
@@ -71,12 +69,11 @@ async def convert_text(
     responses={
         200: {"description": "Task status retrieved successfully"},
         404: {"model": ErrorResponse, "description": "Task not found"},
-        500: {"model": ErrorResponse, "description": "Internal server error"}
-    }
+        500: {"model": ErrorResponse, "description": "Internal server error"},
+    },
 )
 async def get_conversion_status(
-        conversion_id: str,
-        db_service: DatabaseService = Depends(get_database_service)
+        conversion_id: str, db_service: DatabaseService = Depends(get_database_service)
 ):
     """Get TTS conversion status and details."""
     try:
@@ -85,7 +82,11 @@ async def get_conversion_status(
 
         # Calculate duration if file exists and has metadata
         duration = None
-        if task.status in ["completed", "done"] and task.output_file_path and os.path.exists(task.output_file_path):
+        if (
+                task.status in ["completed", "done"]
+                and task.output_file_path
+                and os.path.exists(task.output_file_path)
+        ):
             # Try to get duration from metadata first
             duration = task.duration
 
@@ -109,7 +110,7 @@ async def get_conversion_status(
             sampling_rate=task.sampling_rate,
             duration=duration,
             device=task.device,
-            error_message=task.error_message
+            error_message=task.error_message,
         )
 
     except TaskNotFoundException as e:
@@ -117,7 +118,7 @@ async def get_conversion_status(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve task status: {str(e)}"
+            detail=f"Failed to retrieve task status: {str(e)}",
         )
 
 
@@ -129,13 +130,13 @@ async def get_conversion_status(
     responses={
         200: {"description": "Tasks retrieved successfully"},
         400: {"model": ErrorResponse, "description": "Invalid parameters"},
-        500: {"model": ErrorResponse, "description": "Internal server error"}
-    }
+        500: {"model": ErrorResponse, "description": "Internal server error"},
+    },
 )
 async def list_conversions(
         status: Optional[str] = None,
         limit: int = 50,
-        db_service: DatabaseService = Depends(get_database_service)
+        db_service: DatabaseService = Depends(get_database_service),
 ):
     """List TTS conversion tasks."""
     try:
@@ -155,27 +156,33 @@ async def list_conversions(
         for task in tasks:
             # Calculate duration if available
             duration = None
-            if task.status in ["completed", "done"] and task.output_file_path and os.path.exists(task.output_file_path):
+            if (
+                    task.status in ["completed", "done"]
+                    and task.output_file_path
+                    and os.path.exists(task.output_file_path)
+            ):
                 duration = task.duration
                 if duration is None and task.file_size and task.sampling_rate:
                     duration = task.file_size / (task.sampling_rate * 2)
 
-            results.append(TTSTaskResponse(
-                conversion_id=task.task_id,
-                text=task.original_text,
-                status=task.status,
-                output_file_path=task.output_file_path,
-                custom_filename=task.custom_filename,
-                submitted_at=task.submitted_at,
-                started_at=task.started_at,
-                completed_at=task.completed_at,
-                failed_at=task.failed_at,
-                file_size=task.file_size,
-                sampling_rate=task.sampling_rate,
-                duration=duration,
-                device=task.device,
-                error_message=task.error_message
-            ))
+            results.append(
+                TTSTaskResponse(
+                    conversion_id=task.task_id,
+                    text=task.original_text,
+                    status=task.status,
+                    output_file_path=task.output_file_path,
+                    custom_filename=task.custom_filename,
+                    submitted_at=task.submitted_at,
+                    started_at=task.started_at,
+                    completed_at=task.completed_at,
+                    failed_at=task.failed_at,
+                    file_size=task.file_size,
+                    sampling_rate=task.sampling_rate,
+                    duration=duration,
+                    device=task.device,
+                    error_message=task.error_message,
+                )
+            )
 
         return results
 
@@ -184,7 +191,7 @@ async def list_conversions(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list tasks: {str(e)}"
+            detail=f"Failed to list tasks: {str(e)}",
         )
 
 
@@ -195,12 +202,11 @@ async def list_conversions(
     responses={
         200: {"description": "Audio file download", "content": {"audio/wav": {}}},
         404: {"model": ErrorResponse, "description": "Task or file not found"},
-        400: {"model": ErrorResponse, "description": "Task not completed"}
-    }
+        400: {"model": ErrorResponse, "description": "Task not completed"},
+    },
 )
 async def download_audio_file(
-        conversion_id: str,
-        db_service: DatabaseService = Depends(get_database_service)
+        conversion_id: str, db_service: DatabaseService = Depends(get_database_service)
 ):
     """Download the audio file for a completed TTS conversion."""
     try:
@@ -211,20 +217,19 @@ async def download_audio_file(
         if task.status not in ["completed", "done"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Task is not completed. Current status: {task.status}"
+                detail=f"Task is not completed. Current status: {task.status}",
             )
 
         # Check if file exists
         if not task.output_file_path or not os.path.exists(task.output_file_path):
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Audio file not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Audio file not found"
             )
 
         # Determine filename for download
         filename = task.custom_filename or f"tts_{conversion_id}"
-        if not filename.endswith('.wav'):
-            filename += '.wav'
+        if not filename.endswith(".wav"):
+            filename += ".wav"
 
         return FileResponse(
             path=task.output_file_path,
@@ -232,8 +237,8 @@ async def download_audio_file(
             filename=filename,
             headers={
                 "Content-Disposition": f"attachment; filename={filename}",
-                "Content-Length": str(task.file_size or os.path.getsize(task.output_file_path))
-            }
+                "Content-Length": str(task.file_size or os.path.getsize(task.output_file_path)),
+            },
         )
 
     except TaskNotFoundException as e:
@@ -243,5 +248,5 @@ async def download_audio_file(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to download audio file: {str(e)}"
+            detail=f"Failed to download audio file: {str(e)}",
         )

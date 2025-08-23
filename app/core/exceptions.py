@@ -1,4 +1,5 @@
 """Custom exceptions for the TTS API."""
+
 from typing import Any, Dict, Optional
 
 
@@ -10,7 +11,7 @@ class TTSAPIException(Exception):
             message: str,
             status_code: int = 500,
             detail: Optional[str] = None,
-            headers: Optional[Dict[str, Any]] = None
+            headers: Optional[Dict[str, Any]] = None,
     ):
         self.message = message
         self.status_code = status_code
