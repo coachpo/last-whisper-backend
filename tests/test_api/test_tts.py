@@ -52,6 +52,89 @@ class TestTTSConvert:
         assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
 
+class TestTTSMultiConvert:
+    """Test TTS multiple text conversion endpoint."""
+
+    def test_convert_multiple_texts_success(self, client, sample_task, mock_task_manager):
+        """Test successful multiple text conversion submission."""
+        request_data = {"texts": ["Hello world", "This is a test", "Multiple conversion"]}
+        
+        # Mock the submit_multiple_tasks method to return multiple task IDs
+        mock_task_manager.submit_multiple_tasks.return_value = ["task_1", "task_2", "task_3"]
+
+        response = client.post("/api/v1/tts/convert-multiple", json=request_data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+
+        assert len(data["conversion_ids"]) == 3
+        assert data["conversion_ids"] == ["task_1", "task_2", "task_3"]
+        assert data["texts"] == ["Hello world", "This is a test", "Multiple conversion"]
+        assert data["status"] == "queued"
+        assert "submitted_at" in data
+
+        # Verify task manager was called
+        mock_task_manager.submit_multiple_tasks.assert_called_once_with(
+            texts=["Hello world", "This is a test", "Multiple conversion"]
+        )
+
+    def test_convert_multiple_texts_empty_list(self, client):
+        """Test conversion with empty texts list."""
+        request_data = {"texts": []}
+
+        response = client.post("/api/v1/tts/convert-multiple", json=request_data)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_convert_multiple_texts_missing_texts(self, client):
+        """Test conversion with missing texts field."""
+        request_data = {}
+
+        response = client.post("/api/v1/tts/convert-multiple", json=request_data)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_convert_multiple_texts_too_many_texts(self, client):
+        """Test conversion with too many texts (over limit)."""
+        # Create a list with 101 texts (over the 100 limit)
+        texts = [f"Text {i}" for i in range(101)]
+        request_data = {"texts": texts}
+
+        response = client.post("/api/v1/tts/convert-multiple", json=request_data)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_convert_multiple_texts_empty_text_item(self, client):
+        """Test conversion with empty text item in the list."""
+        request_data = {"texts": ["Hello", "", "World"]}
+
+        response = client.post("/api/v1/tts/convert-multiple", json=request_data)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_convert_multiple_texts_task_manager_failure(self, client, mock_task_manager):
+        """Test when task manager fails to submit multiple tasks."""
+        mock_task_manager.submit_multiple_tasks.return_value = []
+
+        request_data = {"texts": ["Hello world", "Test text"]}
+
+        response = client.post("/api/v1/tts/convert-multiple", json=request_data)
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    def test_convert_multiple_texts_task_manager_exception(self, client, mock_task_manager):
+        """Test when task manager raises an exception during multiple task submission."""
+        mock_task_manager.submit_multiple_tasks.side_effect = Exception("Task manager error")
+
+        request_data = {"texts": ["Hello world", "Test text"]}
+
+        response = client.post("/api/v1/tts/convert-multiple", json=request_data)
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        data = response.json()
+        assert "Failed to process multiple TTS requests" in data["detail"]
+
+
 class TestGetConversionStatus:
     """Test get conversion status endpoint."""
 

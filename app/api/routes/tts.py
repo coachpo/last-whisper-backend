@@ -2,13 +2,14 @@
 
 import os
 from typing import Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.api.dependencies import get_database_service, get_task_manager
 from app.core.exceptions import TaskNotFoundException, TTSServiceException, ValidationException
-from app.models.schemas import ErrorResponse, TTSConvertRequest, TTSConvertResponse, TTSTaskResponse
+from app.models.schemas import ErrorResponse, TTSConvertRequest, TTSConvertResponse, TTSMultiConvertRequest, TTSMultiConvertResponse, TTSTaskResponse
 from app.services.database import DatabaseService
 from app.services.task_manager import TaskManagerWrapper
 
@@ -58,6 +59,55 @@ async def convert_text(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process TTS request: {str(e)}",
+        )
+
+
+@router.post(
+    "/convert-multiple",
+    response_model=TTSMultiConvertResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit multiple texts for TTS conversion",
+    description="Submit multiple texts for text-to-speech conversion. Returns conversion IDs and status.",
+    responses={
+        201: {"description": "Multiple conversion tasks created successfully"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+        503: {"model": ErrorResponse, "description": "TTS service unavailable"},
+    },
+)
+async def convert_multiple_texts(
+        request: TTSMultiConvertRequest,
+        task_mgr: TaskManagerWrapper = Depends(get_task_manager),
+        db_service: DatabaseService = Depends(get_database_service),
+):
+    """Submit multiple texts for TTS conversion."""
+    try:
+        # Submit multiple tasks to TTS manager
+        task_ids = task_mgr.submit_multiple_tasks(texts=request.texts)
+
+        if not task_ids:
+            raise TTSServiceException("Failed to submit TTS tasks")
+
+        # Get the created tasks from database
+        tasks = []
+        for task_id in task_ids:
+            task = db_service.get_task_by_id(task_id)
+            tasks.append(task)
+
+        return TTSMultiConvertResponse(
+            conversion_ids=task_ids,
+            texts=request.texts,
+            status="queued",
+            submitted_at=tasks[0].submitted_at or tasks[0].created_at if tasks else datetime.now(),
+        )
+
+    except TaskNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except TTSServiceException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process multiple TTS requests: {str(e)}",
         )
 
 

@@ -33,6 +33,17 @@ class TestDatabaseService:
                 submitted_at=datetime.now(UTC),
             )
             return task
+        elif task_id in ["task_1", "task_2", "task_3"]:
+            # Return mock tasks for multiple text conversion testing
+            task = Task(
+                task_id=task_id,
+                original_text=f"Text for {task_id}",
+                text_hash=f"hash_{task_id}",
+                status="queued",
+                created_at=datetime.now(UTC),
+                submitted_at=datetime.now(UTC),
+            )
+            return task
         # For any other task ID, raise TaskNotFoundException to simulate not found
         raise TaskNotFoundException(task_id)
 
@@ -81,6 +92,7 @@ def mock_task_manager():
 
     # Mock the task manager methods that the API actually calls
     manager.submit_task = Mock(return_value="test_task_id_123")
+    manager.submit_multiple_tasks = Mock(return_value=["task_1", "task_2", "task_3"])
 
     return manager
 

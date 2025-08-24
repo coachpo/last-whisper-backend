@@ -49,6 +49,21 @@ class TaskManagerWrapper:
         except Exception as e:
             raise TTSServiceException(f"Failed to submit task: {str(e)}")
 
+    def submit_multiple_tasks(self, texts: list[str]) -> list[str]:
+        """Submit multiple tasks for processing."""
+        if not self._is_initialized or not self._manager:
+            raise TTSServiceException("Task manager not initialized")
+
+        try:
+            task_ids = []
+            for text in texts:
+                task_id = self._manager.submit_task(text)
+                if task_id:
+                    task_ids.append(task_id)
+            return task_ids
+        except Exception as e:
+            raise TTSServiceException(f"Failed to submit multiple tasks: {str(e)}")
+
     def get_task_status(self, task_id: str) -> Optional[dict]:
         """Get task status."""
         if not self._is_initialized or not self._manager:
