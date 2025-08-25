@@ -191,3 +191,7 @@ class DatabaseManager:
             return True
         except Exception:
             return False
+
+    def close(self):
+        """Dispose of the database engine."""
+        self.engine.dispose()

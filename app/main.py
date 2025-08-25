@@ -23,21 +23,21 @@ async def lifespan(app: FastAPI):
     try:
         # Setup logging
         setup_logging()
-        logger.info("Logging initialized successfully")
-        
+        logger.info("Logging system initialized successfully")
+
         # Initialize database manager
         db_manager = get_database_manager()
         logger.info("Database manager initialized successfully")
 
         # Initialize TTS service
-        tts_service = get_tts_engine()
-        tts_service.initialize()
-        logger.info("TTS service initialized successfully")
+        tts_engine = get_tts_engine()
+        tts_engine.initialize()
+        logger.info("TTS engine service initialized successfully")
 
-        # Initialize unified task manager
-        task_manager = get_tts_engine_manager()
-        task_manager.start_monitoring()
-        logger.info("Task manager initialized successfully")
+        # Initialize tts engine manager
+        tts_engine_manager = get_tts_engine_manager()
+        tts_engine_manager.start_monitoring()
+        logger.info("TTS engine manager initialized successfully")
 
         logger.info("All API services initialized successfully")
     except Exception as e:
@@ -48,20 +48,25 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     try:
-        # Shutdown unified task manager
+        # Shutdown tts engine manager
         try:
-            task_manager = get_tts_engine_manager()
-            task_manager.stop_monitoring()
-            logger.info("Task manager shut down")
+            tts_engine_manager = get_tts_engine_manager()
+            tts_engine_manager.stop_monitoring()
+            logger.info("TTS engine manager shut down successfully")
         except Exception as e:
-            logger.error(f"Error shutting down task manager: {e}")
+            logger.error(f"Error shutting down TTS engine manager: {e}")
 
         # Shutdown TTS service
-        tts_service = get_tts_engine()
-        tts_service.shutdown()
-        logger.info("TTS service shut down")
+        tts_engine = get_tts_engine()
+        tts_engine.shutdown()
+        logger.info("TTS engine service shut down successfully")
 
-        logger.info("All API services shut down")
+        # Shutdown database manager
+        db_manager = get_database_manager()
+        db_manager.close()
+        logger.info("Database manager shut down successfully")
+
+        logger.info("All API services shut down successfully")
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 

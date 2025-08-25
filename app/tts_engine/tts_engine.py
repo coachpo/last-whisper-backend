@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 
 class TTSEngine:
     def __init__(self, device=None):
-        logger.info("Loading TTS model...")
+        logger.info("TTS engine: Loading Whisper TTS model...")
 
         # Device detection and setup
         if device is None:
@@ -24,7 +24,7 @@ class TTSEngine:
         else:
             self.device = torch.device(device)
 
-        logger.info(f"Using device: {self.device}")
+        logger.info(f"TTS engine: Using device: {self.device}")
 
         # Load model and tokenizer
         self.model = VitsModel.from_pretrained("facebook/mms-tts-fin")
@@ -43,7 +43,7 @@ class TTSEngine:
         self.output_dir = "output"
         os.makedirs(self.output_dir, exist_ok=True)
 
-        logger.info(f"TTS model loaded successfully on {self.device}!")
+        logger.info(f"TTS engine: TTS model loaded successfully on {self.device}!")
 
     def get_task_queue(self):
         """Returns the task queue for external services to consume task messages"""
@@ -55,7 +55,7 @@ class TTSEngine:
             self.is_running = True
             self.worker_thread = threading.Thread(target=self._process_queue, daemon=True)
             self.worker_thread.start()
-            logger.info("TTS service started!")
+            logger.info("TTS engine: Service started successfully!")
 
     def stop_service(self):
         """Stop the TTS service"""
@@ -63,7 +63,7 @@ class TTSEngine:
         if self.worker_thread:
             self.worker_thread.join()
             self.worker_thread = None
-        logger.info("TTS service stopped!")
+        logger.info("TTS engine: Service stopped successfully!")
 
     def submit_request(self, text, custom_filename=None):
         """Submit a text-to-speech conversion request"""
@@ -98,7 +98,7 @@ class TTSEngine:
         # Publish initial task message to external queue
         self._publish_task_message(request_id, filename, "queued", text=text)
 
-        logger.info(f"Request {request_id} submitted and queued. Output file: {filename}")
+        logger.info(f"TTS engine: Request {request_id} submitted and queued. Output file: {filename}")
         return request_id
 
     def _publish_task_message(self, request_id, output_file_path, status, **metadata):
@@ -128,7 +128,7 @@ class TTSEngine:
     def _process_request(self, request):
         """Process a single TTS request"""
         try:
-            logger.info(f"Processing request {request['id']} on {self.device}...")
+            logger.info(f"TTS engine: Processing request {request['id']} on {self.device}...")
             request["status"] = "processing"
 
             # Publish processing status
@@ -191,7 +191,7 @@ class TTSEngine:
                 device=str(self.device),
             )
 
-            logger.info(f"Request {request['id']} completed! Audio saved as: {request['filename']}")
+            logger.info(f"TTS engine: Request {request['id']} completed successfully! Audio saved as: {request['filename']}")
 
         except Exception as e:
             request["status"] = "failed"
@@ -243,7 +243,7 @@ class TTSEngine:
             old_device = self.device
             self.device = torch.device(new_device)
             self.model = self.model.to(self.device)
-            logger.info(f"Successfully switched from {old_device} to {self.device}")
+            logger.info(f"TTS engine: Successfully switched from {old_device} to {self.device}")
             return True
         except Exception as e:
             logger.error(f"Failed to switch to {new_device}: {e}")

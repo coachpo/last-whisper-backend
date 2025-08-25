@@ -55,10 +55,10 @@ class TTSEngineManager:
             task_id = existing_task.task_id
 
             if status in ["completed", "done"]:
-                logger.info(f"Task with same text already completed (ID: {task_id})")
+                logger.info(f"TTS task with same text already completed (ID: {task_id})")
                 return task_id
             elif status in ["queued", "processing"]:
-                logger.info(f"Task with same text already {status} (ID: {task_id})")
+                logger.info(f"TTS task with same text already {status} (ID: {task_id})")
                 return task_id
 
         # No existing task found, create new one
@@ -80,7 +80,7 @@ class TTSEngineManager:
             session.add(new_task)
             session.commit()
 
-        logger.info(f"Created new task: {task_id}")
+        logger.info(f"New TTS task created successfully (ID: {task_id})")
         return task_id
 
     def _task_exists(self, task_id: str) -> bool:
@@ -192,14 +192,14 @@ class TTSEngineManager:
             self.is_running = True
             self.monitor_thread = threading.Thread(target=self._monitor_task_queue, daemon=True)
             self.monitor_thread.start()
-            logger.info("Task monitoring started!")
+            logger.info("TTS engine manager task monitoring started!")
 
     def stop_monitoring(self):
         """Stop monitoring task queue"""
         self.is_running = False
         if self.monitor_thread:
             self.monitor_thread.join()
-        logger.info("Task monitoring stopped!")
+        logger.info("TTS engine manager task monitoring stopped!")
 
     def _monitor_task_queue(self):
         """Monitor TTS service task queue and update database"""
@@ -227,13 +227,13 @@ class TTSEngineManager:
         if not task_id:
             return
 
-        logger.info(f"Updating task {task_id} status to {status}")
+        logger.info(f"TTS engine manager updating task {task_id} status to {status}")
 
         with self.db_manager.get_session() as session:
             task = session.query(Task).filter(Task.task_id == task_id).first()
 
             if not task:
-                logger.warning(f"Task {task_id} not found in database")
+                logger.warning(f"TTS task {task_id} not found in database")
                 return
 
             # Update basic fields
@@ -320,7 +320,7 @@ class TTSEngineManager:
             )
             session.commit()
 
-        logger.info(f"Cleaned up {deleted_count} old failed tasks")
+        logger.info(f"TTS engine manager cleaned up {deleted_count} old failed tasks")
         return deleted_count
 
     def _update_item_from_task_status(self, task: Task, status: str, output_file_path: Optional[str],
@@ -357,7 +357,7 @@ class TTSEngineManager:
                     # Set the audio URL
                     item.audio_url = f"{settings.base_url}/api/v1/tts/audio/{audio_filename}"
 
-                    logger.info(f"Audio file ready for item {item.id}: {audio_filename}")
+                    logger.info(f"TTS engine manager: Audio file ready for item {item.id}: {audio_filename}")
 
                 except Exception as e:
                     logger.error(f"Error handling audio file for item {item.id}: {e}")
@@ -384,7 +384,7 @@ class TTSEngineManager:
                 if task:
                     task.item_id = item_id
                     session.commit()
-                    logger.info(f"Linked task {task_id} to item {item_id}")
+                    logger.info(f"TTS engine manager linked task {task_id} to item {item_id}")
 
         return task_id
 
@@ -450,7 +450,7 @@ class TTSEngineManager:
             )
             session.commit()
 
-            logger.info(f"Cleaned up {deleted_count} orphaned completed tasks")
+            logger.info(f"TTS engine manager cleaned up {deleted_count} orphaned completed tasks")
             return deleted_count
 
     def get_tts_worker_health(self) -> Dict[str, Any]:
