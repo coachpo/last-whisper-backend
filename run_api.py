@@ -4,6 +4,7 @@ import uvicorn
 
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.core.uvicorn_logging import LOGGING_CONFIG
 
 
 def main():
@@ -17,6 +18,8 @@ def main():
         port=settings.port,
         reload=settings.reload,
         log_level=settings.log_level,
+        access_log=True,  # Enable access logs with custom formatting
+        log_config=LOGGING_CONFIG,  # Use our custom logging config
     )
 
 

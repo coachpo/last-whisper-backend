@@ -98,7 +98,8 @@ class ItemCreateRequest(BaseModel):
 
     locale: str = Field(..., min_length=2, max_length=10, description="Language locale (e.g., 'en', 'fi')")
     text: str = Field(..., min_length=1, max_length=10000, description="Text for dictation practice")
-    difficulty: Optional[int] = Field(None, ge=1, le=10, description="Difficulty level (1-10). If not provided, will be auto-calculated based on text length.")
+    difficulty: Optional[int] = Field(None, ge=1, le=10,
+                                      description="Difficulty level (1-10). If not provided, will be auto-calculated based on text length.")
     tags: Optional[List[str]] = Field(None, description="Tags for categorization")
 
     @field_validator('tags')
@@ -132,32 +133,23 @@ class BulkItemCreateRequest(BaseModel):
         return v
 
 
-class BulkItemCreateResponse(BaseModel):
-    """Response model for bulk item creation."""
-
-    created_items: List[ItemResponse] = Field(..., description="List of created items")
-    total_created: int = Field(..., description="Total number of items created")
-    failed_items: List[Dict[str, Any]] = Field(default_factory=list, description="List of failed items with error details")
-    total_failed: int = Field(..., description="Total number of items that failed to create")
-    submitted_at: datetime = Field(..., description="Timestamp when the bulk creation was submitted")
-
-
 class TagUpdateRequest(BaseModel):
     """Request model for updating item tags."""
 
     operation: str = Field(..., description="Tag operation: 'replace', 'add', 'remove', 'modify'")
-    
+
     # For 'replace' operation - completely replace all tags
     tags: Optional[List[str]] = Field(None, description="New tags list (for 'replace' operation)")
-    
+
     # For 'add' operation - add new tags
     add_tags: Optional[List[str]] = Field(None, description="Tags to add (for 'add' operation)")
-    
+
     # For 'remove' operation - remove specific tags
     remove_tags: Optional[List[str]] = Field(None, description="Tags to remove (for 'remove' operation)")
-    
+
     # For 'modify' operation - modify specific tags
-    tag_modifications: Optional[List[Dict[str, str]]] = Field(None, description="Tag modifications: [{'old': 'old_tag', 'new': 'new_tag'}]")
+    tag_modifications: Optional[List[Dict[str, str]]] = Field(None,
+                                                              description="Tag modifications: [{'old': 'old_tag', 'new': 'new_tag'}]")
 
     @field_validator('operation')
     @classmethod
@@ -280,6 +272,17 @@ class ItemResponse(BaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     practiced: bool = Field(..., description="Whether item has been practiced")
+
+
+class BulkItemCreateResponse(BaseModel):
+    """Response model for bulk item creation."""
+
+    created_items: List[ItemResponse] = Field(..., description="List of created items")
+    total_created: int = Field(..., description="Total number of items created")
+    failed_items: List[Dict[str, Any]] = Field(default_factory=list,
+                                               description="List of failed items with error details")
+    total_failed: int = Field(..., description="Total number of items that failed to create")
+    submitted_at: datetime = Field(..., description="Timestamp when the bulk creation was submitted")
 
 
 class ItemListResponse(BaseModel):

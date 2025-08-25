@@ -188,7 +188,7 @@ async def get_conversion_status(
 async def list_conversions(
         status: Optional[str] = None,
         limit: int = 50,
-        task_service: TTSTaskService = Depends(get_task_service),
+        task_service: TaskService = Depends(get_task_service),
 ):
     """List TTS conversion tasks."""
     try:
