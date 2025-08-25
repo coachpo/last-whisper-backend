@@ -20,14 +20,14 @@ features:
 
 - **Item**: Dictation items with text, locale, difficulty, tags, and TTS status
 - **Attempt**: User practice attempts with scoring metrics
-- **Task**: TTS processing tasks (enhanced from original)
+- **Task**: TTS processing tasks (item from original)
 
 ### Services
 
 - **ItemsService**: CRUD operations for dictation items and TTS job management
 - **AttemptsService**: Scoring and persistence of practice attempts
 - **StatsService**: Aggregated statistics and practice logs
-- **EnhancedTaskManager**: TTS workflow management with Items integration
+- **ItemTaskManager**: TTS workflow management with Items integration
 
 ### API Endpoints
 
@@ -54,7 +54,7 @@ features:
 
 #### Health (`/healthz`)
 
-- Enhanced health checks for database, audio directory, and TTS worker
+- Item health checks for database, audio directory, and TTS worker
 
 ## Features
 

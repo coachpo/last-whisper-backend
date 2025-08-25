@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from app.api.dependencies import get_enhanced_task_manager, get_database_manager
+from app.api.dependencies import get_item_task_manager, get_database_manager
 from app.api.routes import health, tts, items, attempts, stats
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
@@ -31,10 +31,10 @@ async def lifespan(app: FastAPI):
         task_manager.initialize()
         print("Legacy task manager initialized successfully")
 
-        # Initialize enhanced task manager
-        enhanced_task_manager = get_enhanced_task_manager()
-        enhanced_task_manager.start_monitoring()
-        print("Enhanced task manager initialized successfully")
+        # Initialize item task manager
+        item_task_manager = get_item_task_manager()
+        item_task_manager.start_monitoring()
+        print("Item task manager initialized successfully")
 
         print("All API services initialized successfully")
     except Exception as e:
@@ -45,13 +45,13 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     try:
-        # Shutdown enhanced task manager
+        # Shutdown item task manager
         try:
-            enhanced_task_manager = get_enhanced_task_manager()
-            enhanced_task_manager.stop_monitoring()
-            print("Enhanced task manager shut down")
+            item_task_manager = get_item_task_manager()
+            item_task_manager.stop_monitoring()
+            print("Item task manager shut down")
         except Exception as e:
-            print(f"Error shutting down enhanced task manager: {e}")
+            print(f"Error shutting down item task manager: {e}")
 
         # Shutdown legacy task manager
         task_manager.shutdown()

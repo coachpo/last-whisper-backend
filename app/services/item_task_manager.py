@@ -1,4 +1,4 @@
-"""Enhanced task manager with Items integration."""
+"""Item-specific task manager with TTS integration."""
 
 import os
 from datetime import UTC, datetime
@@ -9,8 +9,8 @@ from app.models.database import Task, Item
 from app.services.outer.tts_task_manager import TTSTaskManager
 
 
-class EnhancedTaskManager(TTSTaskManager):
-    """Enhanced task manager that integrates with Items workflow."""
+class ItemTaskManager(TTSTaskManager):
+    """Task manager that integrates TTS tasks with Item entities."""
 
     def __init__(self, database_url: str = settings.database_url, tts_service=None):
         super().__init__(database_url, tts_service)

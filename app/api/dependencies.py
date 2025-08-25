@@ -4,7 +4,7 @@ from app.core.config import settings
 from app.models.database import DatabaseManager
 from app.services.attempts_service import AttemptsService
 from app.services.database import db_service
-from app.services.enhanced_task_manager import EnhancedTaskManager
+from app.services.item_task_manager import ItemTaskManager
 from app.services.items_service import ItemsService
 from app.services.outer.tts_service import tts_service
 from app.services.stats_service import StatsService
@@ -15,7 +15,7 @@ _database_manager = None
 _items_service = None
 _attempts_service = None
 _stats_service = None
-_enhanced_task_manager = None
+_item_task_manager = None
 
 
 def get_database_manager() -> DatabaseManager:
@@ -53,13 +53,13 @@ def get_stats_service() -> StatsService:
     return _stats_service
 
 
-def get_enhanced_task_manager() -> EnhancedTaskManager:
-    """Dependency to get enhanced task manager."""
-    global _enhanced_task_manager
-    if _enhanced_task_manager is None:
-        _enhanced_task_manager = EnhancedTaskManager(settings.database_url,
-                                                     tts_service._service if tts_service.is_initialized else None)
-    return _enhanced_task_manager
+def get_item_task_manager() -> ItemTaskManager:
+    """Dependency to get item task manager."""
+    global _item_task_manager
+    if _item_task_manager is None:
+        _item_task_manager = ItemTaskManager(settings.database_url,
+                                                 tts_service._service if tts_service.is_initialized else None)
+    return _item_task_manager
 
 
 # Legacy dependencies for backward compatibility
