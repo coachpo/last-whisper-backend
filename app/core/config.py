@@ -9,10 +9,10 @@ class Settings(BaseSettings):
     """Application settings."""
 
     # API Settings
-    app_name: str = "Dictation Backend API"
+    app_name: str = "Dictation Training Backend"
     app_version: str = "1.0.0"
     app_description: str = (
-        "Dictation practice backend with local TTS, scoring, and session-less workflow"
+        "Dictation training backend with local TTS, scoring, and session-less workflow"
     )
 
     # Server Settings

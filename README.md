@@ -1,7 +1,7 @@
-# Whisper TTS API
+# Dictation Training Backend
 
 A production-grade FastAPI service for Text-to-Speech conversion using Facebook's MMS-TTS-Fin model with clean
-architecture, comprehensive testing, and robust task management. The project has been extended to include a comprehensive dictation practice backend.
+architecture, comprehensive testing, and robust task management. The project has been extended to include a comprehensive dictation training backend.
 
 ## Features
 
@@ -22,7 +22,7 @@ architecture, comprehensive testing, and robust task management. The project has
 ## Project Structure
 
 ```
-whisper-tts/
+dictation-training-backend/
 ├── app/
 │   ├── api/
 │   │   ├── routes/          # API route definitions
@@ -174,7 +174,7 @@ Comprehensive health check with detailed service status.
 
 ```bash
 git clone <repository-url>
-cd whisper-tts
+cd dictation-training-backend
 ```
 
 2. Create a virtual environment (recommended):
