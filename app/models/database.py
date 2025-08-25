@@ -5,7 +5,7 @@ import os
 from datetime import UTC, datetime
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, Index, event
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, Index, event, text
 from sqlalchemy.orm import Session, declarative_base, sessionmaker, relationship
 
 from app.core.config import settings
@@ -135,7 +135,7 @@ class DatabaseManager:
                     "check_same_thread": False,
                 },
             )
-            
+
             # Configure basic SQLite pragmas
             @event.listens_for(self.engine, "connect")
             def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -147,7 +147,7 @@ class DatabaseManager:
             self.engine = create_engine(database_url, echo=False)
 
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        
+
         # Ensure audio directory exists
         os.makedirs(settings.audio_dir, exist_ok=True)
 
@@ -175,8 +175,8 @@ class DatabaseManager:
         """Check if database is accessible."""
         try:
             with self.get_session() as session:
-                # Simple query to test connection
-                session.execute("SELECT 1").fetchone()
+                result = session.execute(text("SELECT 1"))
+                result.fetchone()
                 return True
         except Exception:
             return False
@@ -191,5 +191,3 @@ class DatabaseManager:
             return True
         except Exception:
             return False
-
-

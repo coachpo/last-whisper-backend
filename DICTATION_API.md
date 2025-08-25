@@ -146,8 +146,6 @@ CREATE TABLE attempts
 );
 ```
 
-
-
 ## Usage Examples
 
 ### Create a dictation item

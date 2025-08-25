@@ -186,3 +186,34 @@ class TestListConversions:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         data = response.json()
         assert "Limit must be between 1 and 1000" in data["detail"]
+
+
+class TestAudioEndpoints:
+    """Test audio serving endpoints."""
+
+    def test_serve_audio_invalid_filename(self, client):
+        """Test audio serving with invalid filename."""
+        # Test invalid file extension
+        response = client.get("/api/v1/tts/audio/test.mp3")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Test filename with backslashes (Windows-style)
+        response = client.get("/api/v1/tts/audio/folder\\test.wav")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Test filename with dots (but not path traversal)
+        response = client.get("/api/v1/tts/audio/test..wav")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_serve_audio_file_not_found(self, client):
+        """Test audio serving with non-existent file."""
+        response = client.get("/api/v1/tts/audio/nonexistent.wav")
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_serve_audio_valid_filename(self, client):
+        """Test audio serving with valid filename."""
+        # This test would require a test audio file to be present
+        # For now, we just test that the endpoint exists and handles errors correctly
+        response = client.get("/api/v1/tts/audio/test.wav")
+        # Should return 404 since the file doesn't exist, but the endpoint is working
+        assert response.status_code == status.HTTP_404_NOT_FOUND

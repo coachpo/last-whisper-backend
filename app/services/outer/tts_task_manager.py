@@ -264,7 +264,7 @@ class TTSTaskManager:
                 task.device = metadata.get("device")
 
             session.commit()
-            
+
             # Handle item updates if task is linked to an item
             self._update_item_from_task_status(task, status, output_file_path, metadata, session)
 
@@ -320,7 +320,8 @@ class TTSTaskManager:
         print(f"Cleaned up {deleted_count} old failed tasks")
         return deleted_count
 
-    def _update_item_from_task_status(self, task: Task, status: str, output_file_path: Optional[str], metadata: Dict[str, Any], session):
+    def _update_item_from_task_status(self, task: Task, status: str, output_file_path: Optional[str],
+                                      metadata: Dict[str, Any], session):
         """Update item status and related data when task status changes."""
         if not task.item_id:
             return
@@ -351,7 +352,7 @@ class TTSTaskManager:
                         shutil.copy2(output_file_path, audio_path)
 
                     # Set the audio URL
-                    item.audio_url = f"{settings.base_url}/v1/audio/{audio_filename}"
+                    item.audio_url = f"{settings.base_url}/api/v1/tts/audio/{audio_filename}"
 
                     print(f"Audio file ready for item {item.id}: {audio_filename}")
 

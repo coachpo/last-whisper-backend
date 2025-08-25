@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.api.dependencies import get_database_service, get_task_manager
+from app.core.config import settings
 from app.core.exceptions import TaskNotFoundException, TTSServiceException, ValidationException
 from app.models.schemas import ErrorResponse, TTSConvertRequest, TTSConvertResponse, TTSMultiConvertRequest, \
     TTSMultiConvertResponse, TTSTaskResponse
@@ -301,3 +302,43 @@ async def download_audio_file(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to download audio file: {str(e)}",
         )
+
+
+@router.get(
+    "/audio/{filename}",
+    summary="Serve generic audio file",
+    description="Serve audio files from the audio directory. Used for serving generated audio files for items.",
+    responses={
+        200: {"description": "Audio file served", "content": {"audio/wav": {}}},
+        400: {"model": ErrorResponse, "description": "Invalid filename"},
+        404: {"model": ErrorResponse, "description": "Audio file not found"},
+    },
+)
+async def serve_audio(filename: str):
+    """Serve generic audio files from the audio directory."""
+    # Validate filename for security
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid filename",
+        )
+
+    if not filename.endswith('.wav'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only WAV files are supported",
+        )
+
+    audio_path = os.path.join(settings.audio_dir, filename)
+
+    if not os.path.exists(audio_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Audio file not found",
+        )
+
+    return FileResponse(
+        path=audio_path,
+        media_type="audio/wav",
+        filename=filename,
+    )

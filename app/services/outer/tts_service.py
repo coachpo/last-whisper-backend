@@ -58,5 +58,4 @@ class TTSServiceWrapper:
         """Check if the service is initialized."""
         return self._is_initialized
 
-
 # No global instance - use get_tts_service() from dependencies.py instead

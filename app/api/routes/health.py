@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 
 from app.api.dependencies import get_database_manager, get_tts_service, get_task_manager
 from app.core.config import settings

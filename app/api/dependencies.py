@@ -4,9 +4,9 @@ from app.core.config import settings
 from app.models.database import DatabaseManager
 from app.services.attempts_service import AttemptsService
 from app.services.database import db_service
-from app.services.outer.tts_task_manager import TTSTaskManager
 from app.services.items_service import ItemsService
 from app.services.outer.tts_service import TTSServiceWrapper
+from app.services.outer.tts_task_manager import TTSTaskManager
 from app.services.stats_service import StatsService
 
 # Global instances
@@ -60,7 +60,7 @@ def get_task_manager() -> TTSTaskManager:
     if _task_manager is None:
         tts_service = get_tts_service()
         _task_manager = TTSTaskManager(settings.database_url,
-                                      tts_service._service if tts_service.is_initialized else None)
+                                       tts_service._service if tts_service.is_initialized else None)
     return _task_manager
 
 

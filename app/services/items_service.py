@@ -200,7 +200,7 @@ class ItemsService:
 
     def build_audio_url(self, filename: str) -> str:
         """Build a full audio URL from filename."""
-        return urljoin(settings.base_url, f"/v1/audio/{filename}")
+        return urljoin(settings.base_url, f"/api/v1/tts/audio/{filename}")
 
     def _item_to_dict(self, item: Item) -> Dict[str, Any]:
         """Convert Item model to dictionary."""

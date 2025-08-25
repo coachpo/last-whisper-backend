@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from app.api.dependencies import get_task_manager, get_database_manager, get_tts_service
-from app.api.routes import health, tts, items, attempts, stats, audio
+from app.api.routes import health, tts, items, attempts, stats
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
 from app.models.schemas import ErrorResponse
@@ -95,4 +95,3 @@ app.include_router(tts.router)
 app.include_router(items.router)
 app.include_router(attempts.router)
 app.include_router(stats.router)
-app.include_router(audio.router)
