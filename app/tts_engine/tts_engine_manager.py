@@ -74,8 +74,8 @@ class TTSEngineManager:
                 text_hash=text_hash,
                 status="queued",
                 custom_filename=custom_filename,
-                created_at=datetime.now(UTC),
-                submitted_at=datetime.now(UTC),
+                created_at=datetime.now(),
+                submitted_at=datetime.now(),
             )
             session.add(new_task)
             session.commit()
@@ -208,7 +208,9 @@ class TTSEngineManager:
         while self.is_running:
             try:
                 # Get task message from queue with timeout
-                task_message = task_message_queue.get()
+                task_message = task_message_queue.get(timeout=2)
+                if task_message is None:
+                    continue
                 self._update_task_from_message(task_message)
                 task_message_queue.task_done()
 
@@ -246,14 +248,14 @@ class TTSEngineManager:
                 if metadata.get("started_at"):
                     task.started_at = datetime.fromisoformat(metadata["started_at"])
                 else:
-                    task.started_at = datetime.now(UTC)
+                    task.started_at = datetime.now()
                 task.device = metadata.get("device")
 
             elif status == "completed":
                 if metadata.get("completed_at"):
                     task.completed_at = datetime.fromisoformat(metadata["completed_at"])
                 else:
-                    task.completed_at = datetime.now(UTC)
+                    task.completed_at = datetime.now()
                 task.file_size = metadata.get("file_size")
                 task.sampling_rate = metadata.get("sampling_rate")
                 task.device = metadata.get("device")
@@ -262,7 +264,7 @@ class TTSEngineManager:
                 if metadata.get("failed_at"):
                     task.failed_at = datetime.fromisoformat(metadata["failed_at"])
                 else:
-                    task.failed_at = datetime.now(UTC)
+                    task.failed_at = datetime.now()
                 task.error_message = metadata.get("error")
                 task.device = metadata.get("device")
 
@@ -310,7 +312,7 @@ class TTSEngineManager:
 
     def cleanup_failed_tasks(self, days: int = 7) -> int:
         """Remove failed tasks older than specified days"""
-        cutoff_date = datetime.now(UTC) - timedelta(days=days)
+        cutoff_date = datetime.now() - timedelta(days=days)
 
         with self.db_manager.get_session() as session:
             deleted_count = (
@@ -365,7 +367,7 @@ class TTSEngineManager:
             logger.error(f"TTS failed for item {item.id}: {metadata.get('error', 'Unknown error')}")
 
         # Update timestamp
-        item.updated_at = datetime.now(UTC)
+        item.updated_at = datetime.now()
         session.commit()
 
     def submit_task_for_item(self, item_id: int, text: str, custom_filename: Optional[str] = None) -> Optional[str]:
@@ -404,7 +406,7 @@ class TTSEngineManager:
 
             # Reset status to pending
             item.tts_status = "pending"
-            item.updated_at = datetime.now(UTC)
+            item.updated_at = datetime.now()
             session.commit()
 
             # Submit new TTS task
@@ -432,7 +434,7 @@ class TTSEngineManager:
         """Clean up tasks that are not linked to any item."""
         with self.db_manager.get_session() as session:
             # Delete completed tasks older than 24 hours that have no item link
-            cutoff_date = datetime.now(UTC) - timedelta(hours=24)
+            cutoff_date = datetime.now() - timedelta(hours=24)
 
             deleted_count = (
                 session.query(Task)

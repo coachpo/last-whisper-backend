@@ -118,7 +118,9 @@ class TTSEngine:
         while self.is_running:
             try:
                 # Get request from queue with timeout
-                request = self.request_queue.get()
+                request = self.request_queue.get(timeout=2)
+                if request is None:
+                    continue
                 self._process_request(request)
                 self.request_queue.task_done()
             except queue.Empty:

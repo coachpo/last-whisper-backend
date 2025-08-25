@@ -219,7 +219,7 @@ class StatsService:
             progress = []
             for result in results:
                 progress.append({
-                    "date": result.date.isoformat(),
+                    "date": str(result.date),
                     "attempts": result.attempts,
                     "avg_percentage": round(float(result.avg_percentage or 0), 2),
                     "avg_wer": round(float(result.avg_wer or 0), 4),

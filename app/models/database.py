@@ -25,7 +25,7 @@ class Task(Base):
     status = Column(String, nullable=False, default="pending", index=True)
     output_file_path = Column(Text)
     custom_filename = Column(Text)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
     submitted_at = Column(DateTime)
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
@@ -68,8 +68,8 @@ class Item(Base):
     difficulty = Column(Integer, nullable=True, index=True)
     tags_json = Column(Text, nullable=True)  # JSON array of strings
     tts_status = Column(String(20), nullable=False, default="pending", index=True)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC), index=True)
-    updated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, nullable=False, default=datetime.now, index=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
     # Relationships
     attempts = relationship("Attempt", back_populates="item", cascade="all, delete-orphan")
@@ -108,7 +108,7 @@ class Attempt(Base):
     wer = Column(Float, nullable=False)  # 0.0-1.0
     words_ref = Column(Integer, nullable=False)
     words_correct = Column(Integer, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC), index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.now, index=True)
 
     # Relationships
     item = relationship("Item", back_populates="attempts")

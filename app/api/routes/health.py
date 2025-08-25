@@ -64,7 +64,7 @@ async def health_check(
     # Add basic service info
     checks["service"] = settings.app_name
     checks["version"] = settings.app_version
-    checks["timestamp"] = datetime.now(UTC).isoformat()
+    checks["timestamp"] = datetime.now().isoformat()
 
     return HealthCheckResponse(
         status=overall_status,

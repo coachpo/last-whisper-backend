@@ -354,17 +354,17 @@ async def get_item_audio(
 ):
     """Stream the audio file for a dictation item."""
     try:
-        item = items_service.get_item(item_id)
-        if not item:
+        item_data = items_service.get_item(item_id)
+        if not item_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Item not found",
             )
 
-        if item.tts_status != "ready":
+        if item_data["tts_status"] != "ready":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Audio not ready. Current status: {item.tts_status}",
+                detail=f"Audio not ready. Current status: {item_data['tts_status']}",
             )
 
         # Build audio file path
