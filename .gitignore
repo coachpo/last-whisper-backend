@@ -6,6 +6,8 @@
 *.iml
 out
 output
+audio
+*.wav
 *.db
 gen
 ### Python template
