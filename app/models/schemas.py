@@ -153,7 +153,7 @@ class TagUpdateResponse(BaseModel):
 class DifficultyUpdateRequest(BaseModel):
     """Request model for updating item difficulty."""
 
-    difficulty: int = Field(..., ge=1, le=10, description="Difficulty level (1-10)")
+    difficulty: int = Field(..., ge=1, le=5, description="Difficulty level (1-5)")
 
 
 class DifficultyUpdateResponse(BaseModel):
