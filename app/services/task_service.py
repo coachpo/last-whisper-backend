@@ -7,21 +7,31 @@ from app.core.exceptions import DatabaseException, TaskNotFoundException
 from app.models.database import DatabaseManager, Task
 
 
-class DatabaseService:
+class TaskService:
     """Service for database operations."""
 
     def __init__(self):
-        self.db_manager = DatabaseManager(settings.database_url)
+        # Reuse a shared DatabaseManager if one exists
+        self.db_manager = getattr(DatabaseManager, "default_instance", None) or DatabaseManager(settings.database_url)
 
     def get_task_by_id(self, task_id: str) -> Task:
         """Get a task by ID, raising exception if not found."""
-        task = self.db_manager.get_task_by_id(task_id)
+        try:
+            task = self.db_manager.get_task_by_id(task_id)
+        except Exception as e:
+            # Surface database errors as DatabaseException, as tests expect
+            raise DatabaseException(str(e))
+
         if not task:
             raise TaskNotFoundException(task_id)
         return task
 
     def get_all_tasks(self, status: Optional[str] = None, limit: int = 100) -> List[Task]:
         """Get all tasks with optional filtering."""
+        # Input validation as per tests
+        if limit is None or limit <= 0:
+            raise ValueError("limit must be a positive integer")
+
         try:
             return self.db_manager.get_all_tasks(status=status, limit=limit)
         except Exception as e:
@@ -30,7 +40,3 @@ class DatabaseService:
     def get_database_manager(self) -> DatabaseManager:
         """Get the underlying database manager."""
         return self.db_manager
-
-
-# Global database service instance
-db_service = DatabaseService()

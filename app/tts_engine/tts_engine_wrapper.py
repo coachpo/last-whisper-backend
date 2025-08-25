@@ -4,10 +4,10 @@ from typing import Optional
 
 from app.core.config import settings
 from app.core.exceptions import TTSServiceException
-from app.services.tts_fb_service import FBTTSService
+from app.tts_engine.tts_engine import TTSEngine
 
 
-class TTSServiceWrapper:
+class TTSEngineWrapper:
     """Wrapper for the TTS service that provides a clean interface."""
 
     def __init__(self):
@@ -19,7 +19,7 @@ class TTSServiceWrapper:
         try:
             # Import here to avoid circular dependencies
 
-            self._service = FBTTSService(device=settings.tts_device)
+            self._service = TTSEngine(device=settings.tts_device)
             self._service.start_service()
             self._is_initialized = True
         except Exception as e:
@@ -57,5 +57,3 @@ class TTSServiceWrapper:
     def is_initialized(self) -> bool:
         """Check if the service is initialized."""
         return self._is_initialized
-
-# No global instance - use get_tts_service() from dependencies.py instead

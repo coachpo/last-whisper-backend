@@ -3,11 +3,12 @@
 from app.core.config import settings
 from app.models.database import DatabaseManager
 from app.services.attempts_service import AttemptsService
-from app.services.database import db_service
 from app.services.items_service import ItemsService
-from app.services.outer.tts_service import TTSServiceWrapper
-from app.services.outer.tts_task_manager import TTSTaskManager
 from app.services.stats_service import StatsService
+from app.services.task_service import TaskService
+from app.tts_engine.tts_engine_manager import TTSEngineManager
+
+from app.tts_engine.tts_engine_wrapper import TTSEngineWrapper
 
 # Global instances
 _database_manager = None
@@ -15,7 +16,8 @@ _items_service = None
 _attempts_service = None
 _stats_service = None
 _task_manager = None
-_tts_service = None
+_tts_engine = None
+_task_service = None
 
 
 def get_database_manager() -> DatabaseManager:
@@ -31,8 +33,8 @@ def get_items_service() -> ItemsService:
     global _items_service
     if _items_service is None:
         db_manager = get_database_manager()
-        task_manager = get_task_manager()
-        _items_service = ItemsService(db_manager, task_manager)
+        engine_manager = get_tts_engine_manager()
+        _items_service = ItemsService(db_manager, engine_manager)
     return _items_service
 
 
@@ -54,25 +56,28 @@ def get_stats_service() -> StatsService:
     return _stats_service
 
 
-def get_task_manager() -> TTSTaskManager:
+def get_tts_engine_manager() -> TTSEngineManager:
     """Dependency to get unified task manager."""
     global _task_manager
     if _task_manager is None:
-        tts_service = get_tts_service()
-        _task_manager = TTSTaskManager(settings.database_url,
-                                       tts_service._service if tts_service.is_initialized else None)
+        tts_service = get_tts_engine()
+        _task_manager = TTSEngineManager(settings.database_url,
+                                         tts_service._service if tts_service.is_initialized else None)
     return _task_manager
 
 
-def get_tts_service() -> TTSServiceWrapper:
-    """Dependency to get TTS service."""
-    global _tts_service
-    if _tts_service is None:
-        _tts_service = TTSServiceWrapper()
-    return _tts_service
+def get_tts_engine() -> TTSEngineWrapper:
+    """Dependency to get TTS engine."""
+    global _tts_engine
+    if _tts_engine is None:
+        _tts_engine = TTSEngineWrapper()
+    return _tts_engine
 
 
 # Legacy dependencies for backward compatibility
-def get_database_service():
+def get_task_service() -> TaskService:
     """Dependency to get database service."""
-    return db_service
+    global _task_service
+    if _task_service is None:
+        _task_service = TaskService()
+    return _task_service

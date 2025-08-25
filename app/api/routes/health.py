@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 
-from app.api.dependencies import get_database_manager, get_tts_service, get_task_manager
+from app.api.dependencies import get_database_manager, get_tts_engine, get_tts_engine_manager
 from app.core.config import settings
 from app.models.database import DatabaseManager
 from app.models.schemas import HealthCheckResponse
@@ -47,7 +47,7 @@ async def health_check(
 
     # Check TTS service
     try:
-        tts_service = get_tts_service()
+        tts_service = get_tts_engine()
         checks["tts_service"] = "healthy" if tts_service.is_initialized else "not_initialized"
     except Exception as e:
         checks["tts_service"] = f"error: {str(e)}"
@@ -55,7 +55,7 @@ async def health_check(
 
     # Check task manager
     try:
-        task_mgr = get_task_manager()
+        task_mgr = get_tts_engine_manager()
         checks["task_manager"] = "healthy" if task_mgr.is_initialized else "not_initialized"
     except Exception as e:
         checks["task_manager"] = f"error: {str(e)}"

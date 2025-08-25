@@ -3,7 +3,6 @@ import json
 import os
 import queue
 import threading
-import time
 from datetime import UTC, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -13,7 +12,7 @@ from app.core.config import settings
 from app.models.database import DatabaseManager, Task, Item
 
 
-class TTSTaskManager:
+class TTSEngineManager:
     def __init__(self, database_url: str = settings.database_url, tts_service=None):
         self.db_manager = DatabaseManager(database_url)
         self.tts_service = tts_service
@@ -516,95 +515,3 @@ class TTSTaskManager:
     def is_initialized(self) -> bool:
         """Check if the manager is initialized."""
         return self.tts_service is not None
-
-
-def main():
-    """Example usage of TTSTaskManager with FBTTSService"""
-    from tts_fb_service import FBTTSService
-
-    # Initialize services
-    print("=== TTS Task Manager Demo ===")
-    tts_service = FBTTSService()
-    task_manager = TTSTaskManager(tts_service=tts_service)
-
-    # Start services
-    tts_service.start_service()
-    task_manager.start_monitoring()
-
-    # Submit some test tasks
-    print("\n=== Submitting Test Tasks ===")
-    task1 = task_manager.submit_task("Hei, tämä on ensimmäinen testi!", "test1")
-    task2 = task_manager.submit_task("Toinen testi suomen kielellä.", "test2")
-    task3 = task_manager.submit_task("Hei, tämä on ensimmäinen testi!")  # Duplicate text
-
-    # Wait for processing
-    print("\nWaiting for tasks to process...")
-    time.sleep(5)
-
-    # Check task statuses
-    print("\n=== Task Statuses ===")
-    for task_id in [task1, task2, task3]:
-        if task_id:
-            status = task_manager.get_task_status(task_id)
-            if status:
-                print(
-                    f"Task {task_id}: {status['status']} - {status.get('output_file_path', 'N/A')}"
-                )
-
-    # Show statistics
-    print("\n=== Statistics ===")
-    stats = task_manager.get_statistics()
-    for key, value in stats.items():
-        print(f"{key}: {value}")
-
-    # Interactive mode
-    print("\n=== Interactive Mode ===")
-    print("Commands: 'submit <text>', 'status <task_id>', 'list [status]', 'stats', 'quit'")
-
-    try:
-        while True:
-            user_input = input("\nCommand: ").strip()
-
-            if user_input.lower() == "quit":
-                break
-            elif user_input.lower() == "stats":
-                stats = task_manager.get_statistics()
-                for key, value in stats.items():
-                    print(f"  {key}: {value}")
-            elif user_input.lower().startswith("submit "):
-                text = user_input[7:].strip()
-                if text:
-                    task_id = task_manager.submit_task(text)
-                    print(f"Submitted task: {task_id}")
-            elif user_input.lower().startswith("status "):
-                task_id = user_input[7:].strip()
-                status = task_manager.get_task_status(task_id)
-                if status:
-                    print(f"Task {task_id}:")
-                    for key, value in status.items():
-                        print(f"  {key}: {value}")
-                else:
-                    print(f"Task {task_id} not found")
-            elif user_input.lower().startswith("list"):
-                parts = user_input.split()
-                status_filter = parts[1] if len(parts) > 1 else None
-                tasks = task_manager.get_all_tasks(status_filter)
-                print(f"Found {len(tasks)} tasks:")
-                for task in tasks[:10]:  # Show only first 10
-                    print(
-                        f"  {task['task_id']}: {task['status']} - {task['original_text'][:50]}..."
-                    )
-            else:
-                print("Unknown command")
-
-    except KeyboardInterrupt:
-        print("\nShutting down...")
-
-    # Cleanup
-    task_manager.stop_monitoring()
-    tts_service.stop_service()
-    print("Services stopped. Goodbye!")
-
-
-if __name__ == "__main__":
-    main()

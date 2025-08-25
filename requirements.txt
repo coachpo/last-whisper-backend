@@ -13,3 +13,4 @@ pydantic-settings
 jiwer
 unidecode
 alembic
+torch

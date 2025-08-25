@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from app.api.dependencies import get_task_manager, get_database_manager, get_tts_service
+from app.api.dependencies import get_tts_engine_manager, get_database_manager, get_tts_engine
 from app.api.routes import health, tts, items, attempts, stats
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
@@ -22,12 +22,12 @@ async def lifespan(app: FastAPI):
         print("Database manager initialized successfully")
 
         # Initialize TTS service
-        tts_service = get_tts_service()
+        tts_service = get_tts_engine()
         tts_service.initialize()
         print("TTS service initialized successfully")
 
         # Initialize unified task manager
-        task_manager = get_task_manager()
+        task_manager = get_tts_engine_manager()
         task_manager.start_monitoring()
         print("Task manager initialized successfully")
 
@@ -42,14 +42,14 @@ async def lifespan(app: FastAPI):
     try:
         # Shutdown unified task manager
         try:
-            task_manager = get_task_manager()
+            task_manager = get_tts_engine_manager()
             task_manager.stop_monitoring()
             print("Task manager shut down")
         except Exception as e:
             print(f"Error shutting down task manager: {e}")
 
         # Shutdown TTS service
-        tts_service = get_tts_service()
+        tts_service = get_tts_engine()
         tts_service.shutdown()
         print("TTS service shut down")
 

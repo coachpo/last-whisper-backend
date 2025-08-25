@@ -7,13 +7,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
-from app.api.dependencies import get_database_service, get_task_manager
+from app.api.dependencies import get_task_service, get_tts_engine_manager
 from app.core.config import settings
 from app.core.exceptions import TaskNotFoundException, TTSServiceException, ValidationException
 from app.models.schemas import ErrorResponse, TTSConvertRequest, TTSConvertResponse, TTSMultiConvertRequest, \
     TTSMultiConvertResponse, TTSTaskResponse
-from app.services.database import DatabaseService
-from app.services.outer.tts_task_manager import TTSTaskManager
+from app.services.task_service import TaskService
+from app.tts_engine.tts_engine_manager import TTSEngineManager
 
 router = APIRouter(prefix="/api/v1/tts", tags=["TTS"])
 
@@ -32,19 +32,19 @@ router = APIRouter(prefix="/api/v1/tts", tags=["TTS"])
 )
 async def convert_text(
         request: TTSConvertRequest,
-        task_mgr: TTSTaskManager = Depends(get_task_manager),
-        db_service: DatabaseService = Depends(get_database_service),
+        tts_engine_mgr: TTSEngineManager = Depends(get_tts_engine_manager),
+        task_service: TaskService = Depends(get_task_service),
 ):
     """Submit text for TTS conversion."""
     try:
         # Submit task to TTS manager
-        task_id = task_mgr.submit_task(text=request.text, custom_filename=request.custom_filename)
+        task_id = tts_engine_mgr.submit_task(text=request.text, custom_filename=request.custom_filename)
 
         if not task_id:
             raise TTSServiceException("Failed to submit TTS task")
 
         # Get the created task from database
-        task = db_service.get_task_by_id(task_id)
+        task = task_service.get_task_by_id(task_id)
 
         return TTSConvertResponse(
             conversion_id=task.task_id,
@@ -78,13 +78,13 @@ async def convert_text(
 )
 async def convert_multiple_texts(
         request: TTSMultiConvertRequest,
-        task_mgr: TTSTaskManager = Depends(get_task_manager),
-        db_service: DatabaseService = Depends(get_database_service),
+        tts_engine_mgr: TTSEngineManager = Depends(get_tts_engine_manager),
+        task_service: TaskService = Depends(get_task_service),
 ):
     """Submit multiple texts for TTS conversion."""
     try:
         # Submit multiple tasks to TTS manager
-        task_ids = task_mgr.submit_multiple_tasks(texts=request.texts)
+        task_ids = tts_engine_mgr.submit_multiple_tasks(texts=request.texts)
 
         if not task_ids:
             raise TTSServiceException("Failed to submit TTS tasks")
@@ -92,7 +92,7 @@ async def convert_multiple_texts(
         # Get the created tasks from database
         tasks = []
         for task_id in task_ids:
-            task = db_service.get_task_by_id(task_id)
+            task = task_service.get_task_by_id(task_id)
             tasks.append(task)
 
         return TTSMultiConvertResponse(
@@ -125,12 +125,12 @@ async def convert_multiple_texts(
     },
 )
 async def get_conversion_status(
-        conversion_id: str, db_service: DatabaseService = Depends(get_database_service)
+        conversion_id: str, task_service: TaskService = Depends(get_task_service)
 ):
     """Get TTS conversion status and details."""
     try:
         # Get task from database
-        task = db_service.get_task_by_id(conversion_id)
+        task = task_service.get_task_by_id(conversion_id)
 
         # Calculate duration if file exists and has metadata
         duration = None
@@ -188,7 +188,7 @@ async def get_conversion_status(
 async def list_conversions(
         status: Optional[str] = None,
         limit: int = 50,
-        db_service: DatabaseService = Depends(get_database_service),
+        task_service: TTSTaskService = Depends(get_task_service),
 ):
     """List TTS conversion tasks."""
     try:
@@ -202,7 +202,7 @@ async def list_conversions(
         if limit < 1 or limit > 1000:
             raise ValidationException("Limit must be between 1 and 1000")
 
-        tasks = db_service.get_all_tasks(status=status, limit=limit)
+        tasks = task_service.get_all_tasks(status=status, limit=limit)
 
         results = []
         for task in tasks:
@@ -258,12 +258,12 @@ async def list_conversions(
     },
 )
 async def download_audio_file(
-        conversion_id: str, db_service: DatabaseService = Depends(get_database_service)
+        conversion_id: str, task_service: TaskService = Depends(get_task_service)
 ):
     """Download the audio file for a completed TTS conversion."""
     try:
         # Get task from database
-        task = db_service.get_task_by_id(conversion_id)
+        task = task_service.get_task_by_id(conversion_id)
 
         # Check if task is completed
         if task.status not in ["completed", "done"]:
