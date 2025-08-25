@@ -1,7 +1,7 @@
 """Pydantic models for API request/response schemas."""
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -98,7 +98,7 @@ class ItemCreateRequest(BaseModel):
 
     locale: str = Field(..., min_length=2, max_length=10, description="Language locale (e.g., 'en', 'fi')")
     text: str = Field(..., min_length=1, max_length=10000, description="Text for dictation practice")
-    difficulty: Optional[int] = Field(None, ge=1, le=10, description="Difficulty level (1-10)")
+    difficulty: Optional[int] = Field(None, ge=1, le=10, description="Difficulty level (1-10). If not provided, will be auto-calculated based on text length.")
     tags: Optional[List[str]] = Field(None, description="Tags for categorization")
 
     @field_validator('tags')
@@ -114,6 +114,157 @@ class ItemCreateRequest(BaseModel):
                 if len(tag) > 50:
                     raise ValueError("Tag length cannot exceed 50 characters")
         return v
+
+
+class BulkItemCreateRequest(BaseModel):
+    """Request model for creating multiple dictation items."""
+
+    items: List[ItemCreateRequest] = Field(..., min_length=1, max_length=100, description="List of items to create")
+
+    @field_validator('items')
+    @classmethod
+    def validate_items_not_empty(cls, v):
+        """Validate that individual item requests are not empty."""
+        if not v:
+            raise ValueError("Items list cannot be empty")
+        if len(v) > 100:
+            raise ValueError("Maximum 100 items allowed per request")
+        return v
+
+
+class BulkItemCreateResponse(BaseModel):
+    """Response model for bulk item creation."""
+
+    created_items: List[ItemResponse] = Field(..., description="List of created items")
+    total_created: int = Field(..., description="Total number of items created")
+    failed_items: List[Dict[str, Any]] = Field(default_factory=list, description="List of failed items with error details")
+    total_failed: int = Field(..., description="Total number of items that failed to create")
+    submitted_at: datetime = Field(..., description="Timestamp when the bulk creation was submitted")
+
+
+class TagUpdateRequest(BaseModel):
+    """Request model for updating item tags."""
+
+    operation: str = Field(..., description="Tag operation: 'replace', 'add', 'remove', 'modify'")
+    
+    # For 'replace' operation - completely replace all tags
+    tags: Optional[List[str]] = Field(None, description="New tags list (for 'replace' operation)")
+    
+    # For 'add' operation - add new tags
+    add_tags: Optional[List[str]] = Field(None, description="Tags to add (for 'add' operation)")
+    
+    # For 'remove' operation - remove specific tags
+    remove_tags: Optional[List[str]] = Field(None, description="Tags to remove (for 'remove' operation)")
+    
+    # For 'modify' operation - modify specific tags
+    tag_modifications: Optional[List[Dict[str, str]]] = Field(None, description="Tag modifications: [{'old': 'old_tag', 'new': 'new_tag'}]")
+
+    @field_validator('operation')
+    @classmethod
+    def validate_operation(cls, v):
+        """Validate operation type."""
+        valid_operations = ['replace', 'add', 'remove', 'modify']
+        if v not in valid_operations:
+            raise ValueError(f"Operation must be one of: {', '.join(valid_operations)}")
+        return v
+
+    @field_validator('tags')
+    @classmethod
+    def validate_tags(cls, v):
+        """Validate tags for replace operation."""
+        if v is not None:
+            if len(v) > 20:
+                raise ValueError("Maximum 20 tags allowed")
+            for tag in v:
+                if not tag or len(tag.strip()) == 0:
+                    raise ValueError("Tags cannot be empty")
+                if len(tag) > 50:
+                    raise ValueError("Tag length cannot exceed 50 characters")
+        return v
+
+    @field_validator('add_tags')
+    @classmethod
+    def validate_add_tags(cls, v):
+        """Validate add_tags."""
+        if v is not None:
+            if len(v) > 20:
+                raise ValueError("Maximum 20 tags allowed")
+            for tag in v:
+                if not tag or len(tag.strip()) == 0:
+                    raise ValueError("Tags cannot be empty")
+                if len(tag) > 50:
+                    raise ValueError("Tag length cannot exceed 50 characters")
+        return v
+
+    @field_validator('remove_tags')
+    @classmethod
+    def validate_remove_tags(cls, v):
+        """Validate remove_tags."""
+        if v is not None:
+            for tag in v:
+                if not tag or len(tag.strip()) == 0:
+                    raise ValueError("Tags to remove cannot be empty")
+        return v
+
+    @field_validator('tag_modifications')
+    @classmethod
+    def validate_tag_modifications(cls, v):
+        """Validate tag modifications."""
+        if v is not None:
+            for mod in v:
+                if 'old' not in mod or 'new' not in mod:
+                    raise ValueError("Tag modifications must have 'old' and 'new' keys")
+                if not mod['old'] or not mod['new']:
+                    raise ValueError("Old and new tag values cannot be empty")
+                if len(mod['new']) > 50:
+                    raise ValueError("New tag length cannot exceed 50 characters")
+        return v
+
+    @field_validator('*')
+    @classmethod
+    def validate_operation_fields(cls, v, info):
+        """Validate that required fields are provided for each operation."""
+        operation = info.data.get('operation')
+        if operation == 'replace':
+            if info.field_name == 'tags' and v is None:
+                raise ValueError("Tags field is required for 'replace' operation")
+        elif operation == 'add':
+            if info.field_name == 'add_tags' and v is None:
+                raise ValueError("Add_tags field is required for 'add' operation")
+        elif operation == 'remove':
+            if info.field_name == 'remove_tags' and v is None:
+                raise ValueError("Remove_tags field is required for 'remove' operation")
+        elif operation == 'modify':
+            if info.field_name == 'tag_modifications' and v is None:
+                raise ValueError("Tag_modifications field is required for 'modify' operation")
+        return v
+
+
+class TagUpdateResponse(BaseModel):
+    """Response model for tag update operation."""
+
+    item_id: int = Field(..., description="Item ID")
+    operation: str = Field(..., description="Operation performed")
+    previous_tags: List[str] = Field(..., description="Tags before update")
+    current_tags: List[str] = Field(..., description="Tags after update")
+    updated_at: datetime = Field(..., description="Update timestamp")
+    message: str = Field(..., description="Description of the operation performed")
+
+
+class DifficultyUpdateRequest(BaseModel):
+    """Request model for updating item difficulty."""
+
+    difficulty: int = Field(..., ge=1, le=10, description="Difficulty level (1-10)")
+
+
+class DifficultyUpdateResponse(BaseModel):
+    """Response model for difficulty update operation."""
+
+    item_id: int = Field(..., description="Item ID")
+    previous_difficulty: Optional[int] = Field(None, description="Difficulty before update")
+    current_difficulty: int = Field(..., description="Difficulty after update")
+    updated_at: datetime = Field(..., description="Update timestamp")
+    message: str = Field(..., description="Description of the operation performed")
 
 
 class ItemResponse(BaseModel):

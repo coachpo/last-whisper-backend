@@ -1,6 +1,7 @@
 """Items API endpoints."""
 
 import os
+from datetime import datetime
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -12,6 +13,12 @@ from app.models.schemas import (
     ItemCreateRequest,
     ItemResponse,
     ItemListResponse,
+    BulkItemCreateRequest,
+    BulkItemCreateResponse,
+    TagUpdateRequest,
+    TagUpdateResponse,
+    DifficultyUpdateRequest,
+    DifficultyUpdateResponse,
 )
 from app.services.items_service import ItemsService
 
@@ -31,7 +38,7 @@ def get_items_service() -> ItemsService:
     response_model=ItemResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Create dictation item",
-    description="Create a new dictation item and enqueue TTS job.",
+    description="Create a new dictation item and enqueue TTS job. Difficulty will be auto-calculated based on text length if not provided.",
     responses={
         202: {"description": "Item created and TTS job queued"},
         422: {"model": ErrorResponse, "description": "Validation error"},
@@ -70,6 +77,66 @@ async def create_item(
         )
 
 
+@router.post(
+    "/bulk",
+    response_model=BulkItemCreateResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Create multiple dictation items",
+    description="Create multiple new dictation items and enqueue TTS jobs. Difficulty will be auto-calculated based on text length if not provided.",
+    responses={
+        202: {"description": "Items created and TTS jobs queued"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+    },
+)
+async def bulk_create_items(
+        request: BulkItemCreateRequest,
+        items_service: ItemsService = Depends(get_items_service),
+):
+    """Create multiple new dictation items."""
+    try:
+        # Prepare items data for the service
+        items_data = []
+        for item_request in request.items:
+            items_data.append({
+                "locale": item_request.locale,
+                "text": item_request.text,
+                "difficulty": item_request.difficulty,
+                "tags": item_request.tags or []
+            })
+
+        result = items_service.bulk_create_items(items_data)
+
+        # Convert created items to response format
+        created_items_response = []
+        for item in result["created_items"]:
+            created_items_response.append(ItemResponse(
+                id=item.id,
+                locale=item.locale,
+                text=item.text,
+                difficulty=item.difficulty,
+                tags=item.tags,
+                tts_status=item.tts_status,
+                audio_url=item.audio_url,
+                created_at=item.created_at,
+                updated_at=item.updated_at,
+                practiced=item.has_attempts,
+            ))
+
+        return BulkItemCreateResponse(
+            created_items=created_items_response,
+            total_created=len(result["created_items"]),
+            failed_items=result["failed_items"],
+            total_failed=len(result["failed_items"]),
+            submitted_at=datetime.now(),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create items: {str(e)}",
+        )
+
+
 @router.get(
     "",
     response_model=ItemListResponse,
@@ -83,8 +150,8 @@ async def create_item(
 async def list_items(
         locale: Optional[str] = Query(None, description="Filter by locale"),
         tag: Optional[List[str]] = Query(None, description="Filter by tags (repeat for multiple)"),
-        difficulty: Optional[str] = Query(None, description="Filter by difficulty (single value or 'min..max')"),
-        q: Optional[str] = Query(None, description="Full-text search query"),
+        difficulty: Optional[str] = Query(None, ge=1, le=5,
+                                          description="Filter by difficulty (single value or 'min..max')"),
         practiced: Optional[bool] = Query(None, description="Filter by practice status"),
         sort: str = Query("created_at.desc", description="Sort order"),
         page: int = Query(1, ge=1, description="Page number"),
@@ -105,7 +172,6 @@ async def list_items(
             locale=locale,
             tags=tag,
             difficulty=difficulty,
-            q=q,
             practiced=practiced,
             sort=sort,
             page=page,
@@ -208,6 +274,111 @@ async def delete_item(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete item: {str(e)}",
+        )
+
+
+@router.patch(
+    "/{item_id}/tags",
+    response_model=TagUpdateResponse,
+    summary="Update item tags",
+    description="Update tags for a dictation item. Supports replace, add, remove, and modify operations.",
+    responses={
+        200: {"description": "Tags updated successfully"},
+        404: {"model": ErrorResponse, "description": "Item not found"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+    },
+)
+async def update_item_tags(
+        item_id: int,
+        request: TagUpdateRequest,
+        items_service: ItemsService = Depends(get_items_service),
+):
+    """Update tags for a dictation item."""
+    try:
+        # Prepare kwargs based on operation
+        kwargs = {}
+        if request.operation == "replace":
+            kwargs["tags"] = request.tags
+        elif request.operation == "add":
+            kwargs["add_tags"] = request.add_tags
+        elif request.operation == "remove":
+            kwargs["remove_tags"] = request.remove_tags
+        elif request.operation == "modify":
+            kwargs["tag_modifications"] = request.tag_modifications
+
+        result = items_service.update_item_tags(
+            item_id=item_id,
+            operation=request.operation,
+            **kwargs
+        )
+
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Item not found",
+            )
+
+        return TagUpdateResponse(
+            item_id=result["item_id"],
+            operation=result["operation"],
+            previous_tags=result["previous_tags"],
+            current_tags=result["current_tags"],
+            updated_at=result["updated_at"],
+            message=result["message"],
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update tags: {str(e)}",
+        )
+
+
+@router.patch(
+    "/{item_id}/difficulty",
+    response_model=DifficultyUpdateResponse,
+    summary="Update item difficulty",
+    description="Update the difficulty level for a dictation item. Difficulty must be an integer between 1-10.",
+    responses={
+        200: {"description": "Difficulty updated successfully"},
+        404: {"model": ErrorResponse, "description": "Item not found"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+    },
+)
+async def update_item_difficulty(
+        item_id: int,
+        request: DifficultyUpdateRequest,
+        items_service: ItemsService = Depends(get_items_service),
+):
+    """Update the difficulty level for a dictation item."""
+    try:
+        result = items_service.update_item_difficulty(
+            item_id=item_id,
+            difficulty=request.difficulty
+        )
+
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Item not found",
+            )
+
+        return DifficultyUpdateResponse(
+            item_id=result["item_id"],
+            previous_difficulty=result["previous_difficulty"],
+            current_difficulty=result["current_difficulty"],
+            updated_at=result["updated_at"],
+            message=result["message"],
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update difficulty: {str(e)}",
         )
 
 

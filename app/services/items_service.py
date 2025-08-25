@@ -22,6 +22,24 @@ class ItemsService:
         self.db_manager = db_manager
         self.task_manager = task_manager
 
+    def _calculate_difficulty_from_text(self, text: str) -> int:
+        """Calculate difficulty level based on text length rules."""
+        # Count words and letters
+        words = len(text.split())
+        letters = len(text.replace(" ", ""))
+        
+        # Apply difficulty rules
+        if words <= 6 or letters <= 50:
+            return 1
+        elif 7 <= words <= 9 or 51 <= letters <= 80:
+            return 2
+        elif 10 <= words <= 12 or 81 <= letters <= 110:
+            return 3
+        elif 13 <= words <= 15 or 111 <= letters <= 140:
+            return 4
+        else:  # words >= 16 or letters >= 141
+            return 5
+
     def create_item(
             self,
             locale: str,
@@ -30,6 +48,10 @@ class ItemsService:
             tags: Optional[List[str]] = None,
     ) -> Item:
         """Create a new dictation item and enqueue TTS job."""
+        # Auto-calculate difficulty if not provided
+        if difficulty is None:
+            difficulty = self._calculate_difficulty_from_text(text)
+        
         with self.db_manager.get_session() as session:
             # Create item with pending TTS status
             item = Item(
@@ -67,6 +89,70 @@ class ItemsService:
 
             return item
 
+    def bulk_create_items(
+            self,
+            items_data: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Create multiple dictation items and enqueue TTS jobs."""
+        created_items = []
+        failed_items = []
+        
+        with self.db_manager.get_session() as session:
+            for item_data in items_data:
+                try:
+                    # Create item with pending TTS status
+                    item = Item(
+                        locale=item_data["locale"],
+                        text=item_data["text"],
+                        difficulty=item_data.get("difficulty"),
+                        tags_json=None,
+                        tts_status="pending",
+                        audio_url=None,
+                    )
+
+                    # Auto-calculate difficulty if not provided
+                    if item.difficulty is None:
+                        item.difficulty = self._calculate_difficulty_from_text(item_data["text"])
+
+                    if item_data.get("tags"):
+                        item.tags = item_data["tags"]
+
+                    session.add(item)
+                    session.flush()  # Get the ID without committing
+                    session.refresh(item)
+
+                    # Enqueue TTS job if task manager is available
+                    if self.task_manager:
+                        try:
+                            # Create a custom filename based on item ID
+                            custom_filename = f"item_{item.id}"
+                            task_id = self.task_manager.submit_task_for_item(item.id, item.text, custom_filename)
+
+                            if not task_id:
+                                # Mark TTS as failed if we couldn't submit
+                                item.tts_status = "failed"
+
+                        except Exception as e:
+                            logger.warning(f"Failed to enqueue TTS job for item {item.id}: {e}")
+                            item.tts_status = "failed"
+
+                    created_items.append(item)
+
+                except Exception as e:
+                    logger.error(f"Failed to create item: {e}")
+                    failed_items.append({
+                        "data": item_data,
+                        "error": str(e)
+                    })
+
+            # Commit all successful creations
+            session.commit()
+            
+            return {
+                "created_items": created_items,
+                "failed_items": failed_items
+            }
+
     def get_item(self, item_id: int) -> Optional[Item]:
         """Get an item by ID."""
         with self.db_manager.get_session() as session:
@@ -100,7 +186,6 @@ class ItemsService:
             locale: Optional[str] = None,
             tags: Optional[List[str]] = None,
             difficulty: Optional[str] = None,  # Single value or "min..max"
-            q: Optional[str] = None,  # FTS search query
             practiced: Optional[bool] = None,
             sort: str = "created_at.desc",
             page: int = 1,
@@ -140,10 +225,6 @@ class ItemsService:
                         query = query.filter(Item.difficulty == diff_value)
                     except ValueError:
                         pass  # Invalid number, ignore
-
-            if q:
-                # Simple text search using LIKE
-                query = query.filter(Item.text.like(f"%{q}%"))
 
             if practiced is not None:
                 if practiced:
@@ -201,6 +282,101 @@ class ItemsService:
 
             session.commit()
             return True
+
+    def update_item_tags(
+            self,
+            item_id: int,
+            operation: str,
+            **kwargs
+    ) -> Optional[Dict[str, Any]]:
+        """Update tags for an item based on the specified operation."""
+        with self.db_manager.get_session() as session:
+            item = session.query(Item).filter(Item.id == item_id).first()
+            if not item:
+                return None
+
+            previous_tags = item.tags.copy() if item.tags else []
+            current_tags = previous_tags.copy()
+            message = ""
+
+            if operation == "replace":
+                # Replace all tags
+                new_tags = kwargs.get("tags", [])
+                current_tags = new_tags
+                message = f"Replaced all tags with: {', '.join(new_tags) if new_tags else 'none'}"
+
+            elif operation == "add":
+                # Add new tags
+                add_tags = kwargs.get("add_tags", [])
+                for tag in add_tags:
+                    if tag not in current_tags:
+                        current_tags.append(tag)
+                message = f"Added tags: {', '.join(add_tags)}"
+
+            elif operation == "remove":
+                # Remove specific tags
+                remove_tags = kwargs.get("remove_tags", [])
+                for tag in remove_tags:
+                    if tag in current_tags:
+                        current_tags.remove(tag)
+                message = f"Removed tags: {', '.join(remove_tags)}"
+
+            elif operation == "modify":
+                # Modify specific tags
+                tag_modifications = kwargs.get("tag_modifications", [])
+                for mod in tag_modifications:
+                    old_tag = mod.get("old")
+                    new_tag = mod.get("new")
+                    if old_tag in current_tags:
+                        index = current_tags.index(old_tag)
+                        current_tags[index] = new_tag
+                message = f"Modified {len(tag_modifications)} tag(s)"
+
+            # Update the item
+            item.tags = current_tags
+            item.updated_at = datetime.now()
+            session.commit()
+
+            return {
+                "item_id": item.id,
+                "operation": operation,
+                "previous_tags": previous_tags,
+                "current_tags": current_tags,
+                "updated_at": item.updated_at,
+                "message": message
+            }
+
+    def update_item_difficulty(
+            self,
+            item_id: int,
+            difficulty: int
+    ) -> Optional[Dict[str, Any]]:
+        """Update the difficulty level for an item."""
+        with self.db_manager.get_session() as session:
+            item = session.query(Item).filter(Item.id == item_id).first()
+            if not item:
+                return None
+
+            previous_difficulty = item.difficulty
+            
+            # Update the difficulty
+            item.difficulty = difficulty
+            item.updated_at = datetime.now()
+            session.commit()
+
+            # Create message based on whether difficulty was previously set
+            if previous_difficulty is None:
+                message = f"Set difficulty to {difficulty}"
+            else:
+                message = f"Updated difficulty from {previous_difficulty} to {difficulty}"
+
+            return {
+                "item_id": item.id,
+                "previous_difficulty": previous_difficulty,
+                "current_difficulty": difficulty,
+                "updated_at": item.updated_at,
+                "message": message
+            }
 
     def build_audio_url(self, filename: str) -> str:
         """Build a full audio URL from filename."""
