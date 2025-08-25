@@ -9,7 +9,11 @@ from app.api.dependencies import get_tts_engine_manager, get_database_manager, g
 from app.api.routes import health, tts, items, attempts, stats
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
+from app.core.logging import setup_logging, get_logger
 from app.models.schemas import ErrorResponse
+
+# Setup logging
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -17,23 +21,27 @@ async def lifespan(app: FastAPI):
     """Manage application lifespan."""
     # Startup
     try:
+        # Setup logging
+        setup_logging()
+        logger.info("Logging initialized successfully")
+        
         # Initialize database manager
         db_manager = get_database_manager()
-        print("Database manager initialized successfully")
+        logger.info("Database manager initialized successfully")
 
         # Initialize TTS service
         tts_service = get_tts_engine()
         tts_service.initialize()
-        print("TTS service initialized successfully")
+        logger.info("TTS service initialized successfully")
 
         # Initialize unified task manager
         task_manager = get_tts_engine_manager()
         task_manager.start_monitoring()
-        print("Task manager initialized successfully")
+        logger.info("Task manager initialized successfully")
 
-        print("All API services initialized successfully")
+        logger.info("All API services initialized successfully")
     except Exception as e:
-        print(f"Failed to initialize services: {e}")
+        logger.error(f"Failed to initialize services: {e}")
         raise
 
     yield
@@ -44,18 +52,18 @@ async def lifespan(app: FastAPI):
         try:
             task_manager = get_tts_engine_manager()
             task_manager.stop_monitoring()
-            print("Task manager shut down")
+            logger.info("Task manager shut down")
         except Exception as e:
-            print(f"Error shutting down task manager: {e}")
+            logger.error(f"Error shutting down task manager: {e}")
 
         # Shutdown TTS service
         tts_service = get_tts_engine()
         tts_service.shutdown()
-        print("TTS service shut down")
+        logger.info("TTS service shut down")
 
-        print("All API services shut down")
+        logger.info("All API services shut down")
     except Exception as e:
-        print(f"Error during shutdown: {e}")
+        logger.error(f"Error during shutdown: {e}")
 
 
 # Initialize FastAPI app

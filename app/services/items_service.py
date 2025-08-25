@@ -8,7 +8,11 @@ from urllib.parse import urljoin
 from sqlalchemy import and_
 
 from app.core.config import settings
+from app.core.logging import get_logger
 from app.models.database import DatabaseManager, Item
+
+# Setup logger for this module
+logger = get_logger(__name__)
 
 
 class ItemsService:
@@ -57,7 +61,7 @@ class ItemsService:
                         session.commit()
 
                 except Exception as e:
-                    print(f"Warning: Failed to enqueue TTS job for item {item.id}: {e}")
+                    logger.warning(f"Failed to enqueue TTS job for item {item.id}: {e}")
                     item.tts_status = "failed"
                     session.commit()
 
@@ -84,7 +88,7 @@ class ItemsService:
                     if os.path.exists(file_path):
                         os.remove(file_path)
                 except Exception as e:
-                    print(f"Warning: Failed to delete audio file for item {item_id}: {e}")
+                    logger.warning(f"Failed to delete audio file for item {item_id}: {e}")
 
             # Delete the item (cascades to attempts and updates task)
             session.delete(item)

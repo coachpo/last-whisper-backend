@@ -9,7 +9,11 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import and_, func
 
 from app.core.config import settings
+from app.core.logging import get_logger
 from app.models.database import DatabaseManager, Task, Item
+
+# Setup logger for this module
+logger = get_logger(__name__)
 
 
 class TTSEngineManager:
@@ -35,11 +39,11 @@ class TTSEngineManager:
     def submit_task(self, text: str, custom_filename: Optional[str] = None) -> Optional[str]:
         """Submit a new TTS task and store it in database"""
         if not text.strip():
-            print("Error: Empty text provided")
+            logger.error("Error: Empty text provided")
             return None
 
         if not self.tts_service:
-            print("Error: TTS service not available")
+            logger.error("Error: TTS service not available")
             return None
 
         text_hash = self._calculate_text_hash(text)
@@ -51,10 +55,10 @@ class TTSEngineManager:
             task_id = existing_task.task_id
 
             if status in ["completed", "done"]:
-                print(f"Task with same text already completed (ID: {task_id})")
+                logger.info(f"Task with same text already completed (ID: {task_id})")
                 return task_id
             elif status in ["queued", "processing"]:
-                print(f"Task with same text already {status} (ID: {task_id})")
+                logger.info(f"Task with same text already {status} (ID: {task_id})")
                 return task_id
 
         # No existing task found, create new one
@@ -76,7 +80,7 @@ class TTSEngineManager:
             session.add(new_task)
             session.commit()
 
-        print(f"Created new task: {task_id}")
+        logger.info(f"Created new task: {task_id}")
         return task_id
 
     def _task_exists(self, task_id: str) -> bool:
@@ -188,14 +192,14 @@ class TTSEngineManager:
             self.is_running = True
             self.monitor_thread = threading.Thread(target=self._monitor_task_queue, daemon=True)
             self.monitor_thread.start()
-            print("Task monitoring started!")
+            logger.info("Task monitoring started!")
 
     def stop_monitoring(self):
         """Stop monitoring task queue"""
         self.is_running = False
         if self.monitor_thread:
             self.monitor_thread.join()
-        print("Task monitoring stopped!")
+        logger.info("Task monitoring stopped!")
 
     def _monitor_task_queue(self):
         """Monitor TTS service task queue and update database"""
@@ -211,7 +215,7 @@ class TTSEngineManager:
             except queue.Empty:
                 continue
             except Exception as e:
-                print(f"Error monitoring task queue: {e}")
+                logger.error(f"Error monitoring task queue: {e}")
 
     def _update_task_from_message(self, message: Dict[str, Any]):
         """Update task status based on task queue message"""
@@ -223,13 +227,13 @@ class TTSEngineManager:
         if not task_id:
             return
 
-        print(f"Updating task {task_id} status to {status}")
+        logger.info(f"Updating task {task_id} status to {status}")
 
         with self.db_manager.get_session() as session:
             task = session.query(Task).filter(Task.task_id == task_id).first()
 
             if not task:
-                print(f"Task {task_id} not found in database")
+                logger.warning(f"Task {task_id} not found in database")
                 return
 
             # Update basic fields
@@ -316,7 +320,7 @@ class TTSEngineManager:
             )
             session.commit()
 
-        print(f"Cleaned up {deleted_count} old failed tasks")
+        logger.info(f"Cleaned up {deleted_count} old failed tasks")
         return deleted_count
 
     def _update_item_from_task_status(self, task: Task, status: str, output_file_path: Optional[str],
@@ -353,16 +357,16 @@ class TTSEngineManager:
                     # Set the audio URL
                     item.audio_url = f"{settings.base_url}/api/v1/tts/audio/{audio_filename}"
 
-                    print(f"Audio file ready for item {item.id}: {audio_filename}")
+                    logger.info(f"Audio file ready for item {item.id}: {audio_filename}")
 
                 except Exception as e:
-                    print(f"Error handling audio file for item {item.id}: {e}")
+                    logger.error(f"Error handling audio file for item {item.id}: {e}")
                     item.tts_status = "failed"
 
         elif status == "failed":
             # TTS failed
             item.tts_status = "failed"
-            print(f"TTS failed for item {item.id}: {metadata.get('error', 'Unknown error')}")
+            logger.error(f"TTS failed for item {item.id}: {metadata.get('error', 'Unknown error')}")
 
         # Update timestamp
         item.updated_at = datetime.now(UTC)
@@ -380,7 +384,7 @@ class TTSEngineManager:
                 if task:
                     task.item_id = item_id
                     session.commit()
-                    print(f"Linked task {task_id} to item {item_id}")
+                    logger.info(f"Linked task {task_id} to item {item_id}")
 
         return task_id
 
@@ -446,7 +450,7 @@ class TTSEngineManager:
             )
             session.commit()
 
-            print(f"Cleaned up {deleted_count} orphaned completed tasks")
+            logger.info(f"Cleaned up {deleted_count} orphaned completed tasks")
             return deleted_count
 
     def get_tts_worker_health(self) -> Dict[str, Any]:
