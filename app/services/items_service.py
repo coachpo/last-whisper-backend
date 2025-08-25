@@ -227,10 +227,15 @@ class ItemsService:
                 "failed_items": failed_items
             }
 
-    def get_item(self, item_id: int) -> Optional[Item]:
+    def get_item(self, item_id: int) -> Optional[Dict[str, Any]]:
         """Get an item by ID."""
         with self.db_manager.get_session() as session:
-            return session.query(Item).filter(Item.id == item_id).first()
+            item = session.query(Item).filter(Item.id == item_id).first()
+            if not item:
+                return None
+            
+            # Return clean data structure to avoid session binding issues
+            return self._item_to_dict(item)
 
     def delete_item(self, item_id: int) -> bool:
         """Delete an item and its associated audio file."""
@@ -356,64 +361,28 @@ class ItemsService:
     def update_item_tags(
             self,
             item_id: int,
-            operation: str,
-            **kwargs
+            tags: List[str]
     ) -> Optional[Dict[str, Any]]:
-        """Update tags for an item based on the specified operation."""
+        """Update tags for an item by replacing all existing tags with new ones."""
         with self.db_manager.get_session() as session:
             item = session.query(Item).filter(Item.id == item_id).first()
             if not item:
                 return None
 
             previous_tags = item.tags.copy() if item.tags else []
-            current_tags = previous_tags.copy()
-            message = ""
-
-            if operation == "replace":
-                # Replace all tags
-                new_tags = kwargs.get("tags", [])
-                current_tags = new_tags
-                message = f"Replaced all tags with: {', '.join(new_tags) if new_tags else 'none'}"
-
-            elif operation == "add":
-                # Add new tags
-                add_tags = kwargs.get("add_tags", [])
-                for tag in add_tags:
-                    if tag not in current_tags:
-                        current_tags.append(tag)
-                message = f"Added tags: {', '.join(add_tags)}"
-
-            elif operation == "remove":
-                # Remove specific tags
-                remove_tags = kwargs.get("remove_tags", [])
-                for tag in remove_tags:
-                    if tag in current_tags:
-                        current_tags.remove(tag)
-                message = f"Removed tags: {', '.join(remove_tags)}"
-
-            elif operation == "modify":
-                # Modify specific tags
-                tag_modifications = kwargs.get("tag_modifications", [])
-                for mod in tag_modifications:
-                    old_tag = mod.get("old")
-                    new_tag = mod.get("new")
-                    if old_tag in current_tags:
-                        index = current_tags.index(old_tag)
-                        current_tags[index] = new_tag
-                message = f"Modified {len(tag_modifications)} tag(s)"
-
-            # Update the item
-            item.tags = current_tags
+            
+            # Simply replace all tags with the new ones
+            item.tags = tags
             item.updated_at = datetime.now()
             session.commit()
 
             return {
                 "item_id": item.id,
-                "operation": operation,
+                "operation": "replace",
                 "previous_tags": previous_tags,
-                "current_tags": current_tags,
+                "current_tags": tags,
                 "updated_at": item.updated_at,
-                "message": message
+                "message": f"Replaced all tags with: {', '.join(tags) if tags else 'none'}"
             }
 
     def update_item_difficulty(

@@ -194,24 +194,14 @@ async def get_item(
 ):
     """Get a specific dictation item."""
     try:
-        item = items_service.get_item(item_id)
-        if not item:
+        item_data = items_service.get_item(item_id)
+        if not item_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Item not found",
             )
 
-        return ItemResponse(
-            id=item.id,
-            locale=item.locale,
-            text=item.text,
-            difficulty=item.difficulty,
-            tags=item.tags,
-            tts_status=item.tts_status,
-            created_at=item.created_at,
-            updated_at=item.updated_at,
-            practiced=item.has_attempts,
-        )
+        return ItemResponse(**item_data)
 
     except HTTPException:
         raise
@@ -258,7 +248,7 @@ async def delete_item(
     "/{item_id}/tags",
     response_model=TagUpdateResponse,
     summary="Update item tags",
-    description="Update tags for a dictation item. Supports replace, add, remove, and modify operations.",
+    description="Update tags for a dictation item by replacing all existing tags with new ones.",
     responses={
         200: {"description": "Tags updated successfully"},
         404: {"model": ErrorResponse, "description": "Item not found"},
@@ -272,21 +262,9 @@ async def update_item_tags(
 ):
     """Update tags for a dictation item."""
     try:
-        # Prepare kwargs based on operation
-        kwargs = {}
-        if request.operation == "replace":
-            kwargs["tags"] = request.tags
-        elif request.operation == "add":
-            kwargs["add_tags"] = request.add_tags
-        elif request.operation == "remove":
-            kwargs["remove_tags"] = request.remove_tags
-        elif request.operation == "modify":
-            kwargs["tag_modifications"] = request.tag_modifications
-
         result = items_service.update_item_tags(
             item_id=item_id,
-            operation=request.operation,
-            **kwargs
+            tags=request.tags
         )
 
         if not result:
