@@ -5,18 +5,18 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from urllib.parse import urljoin
 
-from sqlalchemy import and_, text
+from sqlalchemy import and_
 
 from app.core.config import settings
-from app.models.database import DatabaseManager, Item, Task
+from app.models.database import DatabaseManager, Item
 
 
 class ItemsService:
     """Service for managing dictation items."""
 
-    def __init__(self, db_manager: DatabaseManager, tts_service=None):
+    def __init__(self, db_manager: DatabaseManager, task_manager=None):
         self.db_manager = db_manager
-        self.tts_service = tts_service
+        self.task_manager = task_manager
 
     def create_item(
             self,
@@ -44,20 +44,14 @@ class ItemsService:
             session.commit()
             session.refresh(item)
 
-            # Enqueue TTS job if service is available
-            if self.tts_service:
+            # Enqueue TTS job if task manager is available
+            if self.task_manager:
                 try:
                     # Create a custom filename based on item ID
                     custom_filename = f"item_{item.id}"
-                    task_id = self.tts_service.submit_request(text, custom_filename)
+                    task_id = self.task_manager.submit_task_for_item(item.id, text, custom_filename)
 
-                    if task_id:
-                        # Update any existing task to link to this item
-                        task = session.query(Task).filter(Task.task_id == task_id).first()
-                        if task:
-                            task.item_id = item.id
-                            session.commit()
-                    else:
+                    if not task_id:
                         # Mark TTS as failed if we couldn't submit
                         item.tts_status = "failed"
                         session.commit()
@@ -144,22 +138,8 @@ class ItemsService:
                         pass  # Invalid number, ignore
 
             if q:
-                # Use FTS5 search if available, fallback to LIKE
-                try:
-                    # Try FTS5 search first
-                    fts_query = session.query(text("id")).select_from(text("items_fts")).filter(
-                        text("items_fts MATCH :query")
-                    ).params(query=q)
-
-                    item_ids = [row[0] for row in fts_query.all()]
-                    if item_ids:
-                        query = query.filter(Item.id.in_(item_ids))
-                    else:
-                        # No FTS results, return empty
-                        query = query.filter(Item.id == -1)  # No results
-                except Exception:
-                    # FTS5 not available, fallback to LIKE
-                    query = query.filter(Item.text.like(f"%{q}%"))
+                # Simple text search using LIKE
+                query = query.filter(Item.text.like(f"%{q}%"))
 
             if practiced is not None:
                 if practiced:

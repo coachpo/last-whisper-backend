@@ -11,7 +11,7 @@ features:
 - **Attempts Scoring**: Submit user attempts and get automatic scoring using Word Error Rate (WER)
 - **Statistics**: Get aggregated statistics and practice logs
 - **Local TTS**: Uses existing local TTS models (no cloud dependencies)
-- **SQLite with WAL**: High-performance local database with Write-Ahead Logging
+- **SQLite Database**: Local database for persistence
 - **Session-less**: No authentication or user sessions required
 
 ## Architecture Components
@@ -34,7 +34,7 @@ features:
 #### Items (`/v1/items`)
 
 - `POST /v1/items` - Create new dictation item
-- `GET /v1/items` - List items with filtering (locale, tags, difficulty, search, practiced status)
+- `GET /v1/items` - List items with filtering (locale, tags, difficulty, text search, practiced status)
 - `GET /v1/items/{id}` - Get specific item
 - `DELETE /v1/items/{id}` - Delete item and associated files
 - `GET /v1/items/{id}/audio` - Download audio file
@@ -74,7 +74,7 @@ features:
 
 ### Filtering and Search
 
-- Full-text search using SQLite FTS5
+- Simple text search using SQL LIKE
 - Filter by locale, difficulty, tags
 - Practice status filtering (practiced/unpracticed)
 - Date range filtering for attempts and stats
@@ -146,17 +146,7 @@ CREATE TABLE attempts
 );
 ```
 
-### FTS5 Virtual Table
 
-```sql
-CREATE VIRTUAL TABLE items_fts USING fts5
-(
-    id UNINDEXED,
-    text,
-    content='items',
-    content_rowid='id'
-);
-```
 
 ## Usage Examples
 

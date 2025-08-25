@@ -122,10 +122,10 @@ Index('idx_attempts_item_created', Attempt.item_id, Attempt.created_at)
 
 
 class DatabaseManager:
-    """Database session manager for SQLAlchemy 2.x with WAL configuration."""
+    """Database session manager for SQLAlchemy 2.x."""
 
     def __init__(self, database_url: str = settings.database_url):
-        # Configure SQLite engine with WAL mode and other optimizations
+        # Configure database engine
         if database_url.startswith("sqlite"):
             # Add SQLite-specific options
             self.engine = create_engine(
@@ -133,40 +133,26 @@ class DatabaseManager:
                 echo=False,
                 connect_args={
                     "check_same_thread": False,
-                    "timeout": 30,  # 30 second timeout
                 },
-                pool_pre_ping=True,
-                pool_recycle=3600,  # Recycle connections every hour
             )
-
-            # Configure WAL mode and other pragmas
+            
+            # Configure basic SQLite pragmas
             @event.listens_for(self.engine, "connect")
             def set_sqlite_pragma(dbapi_connection, connection_record):
                 cursor = dbapi_connection.cursor()
-                # Enable WAL mode for better concurrency
-                cursor.execute("PRAGMA journal_mode=WAL")
-                # Increase cache size (in KB)
-                cursor.execute("PRAGMA cache_size=10000")
                 # Enable foreign keys
                 cursor.execute("PRAGMA foreign_keys=ON")
-                # Set synchronous mode to NORMAL for better performance
-                cursor.execute("PRAGMA synchronous=NORMAL")
-                # Set busy timeout to 30 seconds
-                cursor.execute("PRAGMA busy_timeout=30000")
                 cursor.close()
         else:
             self.engine = create_engine(database_url, echo=False)
 
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-
+        
         # Ensure audio directory exists
         os.makedirs(settings.audio_dir, exist_ok=True)
 
         # Create tables if they don't exist
         Base.metadata.create_all(bind=self.engine)
-
-        # Setup FTS5 virtual table for text search
-        self._setup_fts5()
 
     def get_session(self) -> Session:
         """Get a database session."""
@@ -206,66 +192,4 @@ class DatabaseManager:
         except Exception:
             return False
 
-    def _setup_fts5(self):
-        """Setup FTS5 virtual table for text search."""
-        if not self.engine.url.database or not self.engine.url.database.endswith('.db'):
-            return  # Only for SQLite databases
 
-        try:
-            with self.get_session() as session:
-                # Create FTS5 virtual table if it doesn't exist
-                session.execute("""
-                    CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
-                        id UNINDEXED,
-                        text,
-                        content='items',
-                        content_rowid='id'
-                    )
-                """)
-
-                # Create triggers to keep FTS table in sync
-                session.execute("""
-                                CREATE TRIGGER IF NOT EXISTS items_ai
-                                    AFTER INSERT
-                                    ON items
-                                BEGIN
-                                    INSERT INTO items_fts(id, text) VALUES (new.id, new.text);
-                                END
-                                """)
-
-                session.execute("""
-                                CREATE TRIGGER IF NOT EXISTS items_au
-                                    AFTER UPDATE
-                                    ON items
-                                BEGIN
-                                    UPDATE items_fts SET text = new.text WHERE id = new.id;
-                                END
-                                """)
-
-                session.execute("""
-                                CREATE TRIGGER IF NOT EXISTS items_ad
-                                    AFTER DELETE
-                                    ON items
-                                BEGIN
-                                    DELETE FROM items_fts WHERE id = old.id;
-                                END
-                                """)
-
-                session.commit()
-        except Exception as e:
-            print(f"Warning: Could not setup FTS5: {e}")
-
-    def rebuild_fts_index(self):
-        """Rebuild the FTS5 index from existing data."""
-        try:
-            with self.get_session() as session:
-                # Clear and rebuild FTS index
-                session.execute("DELETE FROM items_fts")
-                session.execute("""
-                                INSERT INTO items_fts(id, text)
-                                SELECT id, text
-                                FROM items
-                                """)
-                session.commit()
-        except Exception as e:
-            print(f"Warning: Could not rebuild FTS index: {e}")

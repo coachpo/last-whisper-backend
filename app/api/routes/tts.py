@@ -12,7 +12,7 @@ from app.core.exceptions import TaskNotFoundException, TTSServiceException, Vali
 from app.models.schemas import ErrorResponse, TTSConvertRequest, TTSConvertResponse, TTSMultiConvertRequest, \
     TTSMultiConvertResponse, TTSTaskResponse
 from app.services.database import DatabaseService
-from app.services.task_manager import TaskManagerWrapper
+from app.services.outer.tts_task_manager import TTSTaskManager
 
 router = APIRouter(prefix="/api/v1/tts", tags=["TTS"])
 
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/api/v1/tts", tags=["TTS"])
 )
 async def convert_text(
         request: TTSConvertRequest,
-        task_mgr: TaskManagerWrapper = Depends(get_task_manager),
+        task_mgr: TTSTaskManager = Depends(get_task_manager),
         db_service: DatabaseService = Depends(get_database_service),
 ):
     """Submit text for TTS conversion."""
@@ -77,7 +77,7 @@ async def convert_text(
 )
 async def convert_multiple_texts(
         request: TTSMultiConvertRequest,
-        task_mgr: TaskManagerWrapper = Depends(get_task_manager),
+        task_mgr: TTSTaskManager = Depends(get_task_manager),
         db_service: DatabaseService = Depends(get_database_service),
 ):
     """Submit multiple texts for TTS conversion."""

@@ -59,5 +59,4 @@ class TTSServiceWrapper:
         return self._is_initialized
 
 
-# Global TTS service instance
-tts_service = TTSServiceWrapper()
+# No global instance - use get_tts_service() from dependencies.py instead

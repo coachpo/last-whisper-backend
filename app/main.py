@@ -5,13 +5,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from app.api.dependencies import get_item_task_manager, get_database_manager
-from app.api.routes import health, tts, items, attempts, stats
+from app.api.dependencies import get_task_manager, get_database_manager, get_tts_service
+from app.api.routes import health, tts, items, attempts, stats, audio
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
 from app.models.schemas import ErrorResponse
-from app.services.outer.tts_service import tts_service
-from app.services.task_manager import task_manager
 
 
 @asynccontextmanager
@@ -24,17 +22,14 @@ async def lifespan(app: FastAPI):
         print("Database manager initialized successfully")
 
         # Initialize TTS service
+        tts_service = get_tts_service()
         tts_service.initialize()
         print("TTS service initialized successfully")
 
-        # Initialize legacy task manager
-        task_manager.initialize()
-        print("Legacy task manager initialized successfully")
-
-        # Initialize item task manager
-        item_task_manager = get_item_task_manager()
-        item_task_manager.start_monitoring()
-        print("Item task manager initialized successfully")
+        # Initialize unified task manager
+        task_manager = get_task_manager()
+        task_manager.start_monitoring()
+        print("Task manager initialized successfully")
 
         print("All API services initialized successfully")
     except Exception as e:
@@ -45,19 +40,16 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     try:
-        # Shutdown item task manager
+        # Shutdown unified task manager
         try:
-            item_task_manager = get_item_task_manager()
-            item_task_manager.stop_monitoring()
-            print("Item task manager shut down")
+            task_manager = get_task_manager()
+            task_manager.stop_monitoring()
+            print("Task manager shut down")
         except Exception as e:
-            print(f"Error shutting down item task manager: {e}")
-
-        # Shutdown legacy task manager
-        task_manager.shutdown()
-        print("Legacy task manager shut down")
+            print(f"Error shutting down task manager: {e}")
 
         # Shutdown TTS service
+        tts_service = get_tts_service()
         tts_service.shutdown()
         print("TTS service shut down")
 
@@ -103,3 +95,4 @@ app.include_router(tts.router)
 app.include_router(items.router)
 app.include_router(attempts.router)
 app.include_router(stats.router)
+app.include_router(audio.router)

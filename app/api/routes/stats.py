@@ -155,7 +155,7 @@ async def get_item_stats(
 
 
 @router.get(
-    "/progress/{item_id}",
+    "/progress",
     summary="Get progress over time",
     description="Get progress over time for a specific item or all items.",
     responses={
