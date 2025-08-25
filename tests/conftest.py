@@ -1,132 +1,136 @@
 """Pytest configuration and fixtures."""
 
-from datetime import UTC, datetime
 from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from app.api.dependencies import get_database_service, get_task_manager, get_tts_service
-from app.core.exceptions import TaskNotFoundException
 from app.main import app
-from app.models.database import DatabaseManager, Task
-
-
-class TestDatabaseService:
-    """Test database service using in-memory SQLite."""
-
-    def __init__(self):
-        self.db_manager = DatabaseManager("sqlite:///:memory:")
-        # Ensure tables are created by accessing the engine
-        self.db_manager.engine
-
-    def get_task_by_id(self, task_id: str):
-        """Mock get task by ID."""
-        if task_id == "test_task_id_123":
-            # Return a mock task for testing
-            task = Task(
-                task_id="test_task_id_123",
-                original_text="Hello world",
-                text_hash="test_hash",
-                status="queued",
-                created_at=datetime.now(UTC),
-                submitted_at=datetime.now(UTC),
-            )
-            return task
-        elif task_id in ["task_1", "task_2", "task_3"]:
-            # Return mock tasks for multiple text conversion testing
-            task = Task(
-                task_id=task_id,
-                original_text=f"Text for {task_id}",
-                text_hash=f"hash_{task_id}",
-                status="queued",
-                created_at=datetime.now(UTC),
-                submitted_at=datetime.now(UTC),
-            )
-            return task
-        # For any other task ID, raise TaskNotFoundException to simulate not found
-        raise TaskNotFoundException(task_id)
-
-    def get_all_tasks(self, status=None, limit=100):
-        """Mock get all tasks."""
-        # Return a list with the sample task
-        task = Task(
-            task_id="test_task_id_123",
-            original_text="Hello world",
-            text_hash="test_hash",
-            status="queued",
-            created_at=datetime.now(UTC),
-            submitted_at=datetime.now(UTC),
-        )
-        return [task]
-
-    def get_database_manager(self):
-        """Get the underlying database manager."""
-        return self.db_manager
+from app.models.database import DatabaseManager, Base
 
 
 @pytest.fixture
-def test_db_service():
-    """Create a test database service."""
-    return TestDatabaseService()
+def test_db():
+    """Create a test database."""
+    # Create in-memory SQLite database
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+
+    # Create session factory
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    yield ":memory:", TestingSessionLocal
+
+
+@pytest.fixture
+def db_manager(test_db):
+    """Create a database manager for testing."""
+    db_path, _ = test_db
+    return DatabaseManager(f"sqlite:///{db_path}")
 
 
 @pytest.fixture
 def mock_tts_service():
     """Create a mock TTS service."""
-    service = Mock()
-    service.is_initialized = True
-    service.submit_request.return_value = "test_task_id_123"
-    service.initialize.return_value = None
-    service.shutdown.return_value = None
-    return service
+    mock_service = Mock()
+    mock_service.is_initialized = True
+    mock_service.submit_request.return_value = "test_task_123"
+    mock_service.get_task_queue.return_value = Mock()
+    return mock_service
 
 
 @pytest.fixture
-def mock_task_manager():
+def mock_task_manager(mock_tts_service):
     """Create a mock task manager."""
-    manager = Mock()
-    manager.is_initialized = True
-    manager.initialize.return_value = None
-    manager.shutdown.return_value = None
-
-    # Mock the task manager methods that the API actually calls
-    manager.submit_task = Mock(return_value="test_task_id_123")
-    manager.submit_multiple_tasks = Mock(return_value=["task_1", "task_2", "task_3"])
-
-    return manager
+    mock_manager = Mock()
+    mock_manager.is_initialized = True
+    mock_manager.submit_task.return_value = "test_task_123"
+    mock_manager.submit_task_for_item.return_value = "test_task_123"
+    mock_manager.get_task_status.return_value = {
+        "task_id": "test_task_123",
+        "status": "completed",
+        "original_text": "Test text",
+        "output_file_path": "/tmp/test.wav",
+        "custom_filename": "test",
+        "created_at": "2024-01-01T00:00:00",
+        "submitted_at": "2024-01-01T00:00:00",
+        "started_at": "2024-01-01T00:00:01",
+        "completed_at": "2024-01-01T00:00:02",
+        "failed_at": None,
+        "file_size": 1024,
+        "sampling_rate": 22050,
+        "device": "cpu",
+        "error_message": None,
+        "item_id": None,
+    }
+    return mock_manager
 
 
 @pytest.fixture
-def client(test_db_service, mock_task_manager, mock_tts_service):
+def test_client(test_db, mock_tts_service, mock_task_manager):
     """Create a test client with mocked dependencies."""
-
     # Override dependencies
-    app.dependency_overrides[get_database_service] = lambda: test_db_service
-    app.dependency_overrides[get_task_manager] = lambda: mock_task_manager
-    app.dependency_overrides[get_tts_service] = lambda: mock_tts_service
+    from app.api.dependencies import get_database_manager, get_tts_service, get_task_manager
 
-    client = TestClient(app=app)
+    def override_get_database_manager():
+        db_path, _ = test_db
+        return DatabaseManager(f"sqlite:///{db_path}")
 
-    yield client
+    def override_get_tts_service():
+        return mock_tts_service
 
-    # Clean up
+    def override_get_task_manager():
+        return mock_task_manager
+
+    app.dependency_overrides[get_database_manager] = override_get_database_manager
+    app.dependency_overrides[get_tts_service] = override_get_tts_service
+    app.dependency_overrides[get_task_manager] = override_get_task_manager
+
+    with TestClient(app) as client:
+        yield client
+
+    # Cleanup
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def sample_task(test_db_service):
-    """Create a sample task in the test database."""
-    with test_db_service.db_manager.get_session() as session:
-        task = Task(
-            task_id="test_task_id_123",
-            original_text="Hello world",
-            text_hash="test_hash",
-            status="queued",
-            created_at=datetime.now(UTC),
-            submitted_at=datetime.now(UTC),
-        )
-        session.add(task)
-        session.commit()
-        session.refresh(task)
-        return task
+def sample_item_data():
+    """Sample item data for testing."""
+    return {
+        "locale": "fi",
+        "text": "Hei, tämä on testi!",
+        "difficulty": 3,
+        "tags": ["test", "basic"]
+    }
+
+
+@pytest.fixture
+def sample_attempt_data():
+    """Sample attempt data for testing."""
+    return {
+        "item_id": 1,
+        "text": "Hei, tämä on testi!"
+    }
+
+
+@pytest.fixture
+def sample_tts_request():
+    """Sample TTS request data for testing."""
+    return {
+        "text": "Test text for TTS conversion",
+        "custom_filename": "test_audio"
+    }
+
+
+@pytest.fixture
+def sample_tts_multiple_request():
+    """Sample multiple TTS request data for testing."""
+    return {
+        "texts": [
+            "First test text",
+            "Second test text",
+            "Third test text"
+        ]
+    }
