@@ -167,8 +167,8 @@ class AttemptsService:
         if HAS_UNIDECODE:
             text = unidecode(text)
 
-        # Remove punctuation and extra whitespace
-        text = re.sub(r'[^\w\s]', ' ', text)
+        # Remove punctuation (but keep apostrophes) and extra whitespace
+        text = re.sub(r'[^\w\s\']', ' ', text)
         text = re.sub(r'\s+', ' ', text)
         text = text.strip()
 
@@ -181,7 +181,7 @@ class AttemptsService:
 
         # Simple whitespace tokenization after normalization
         words = text.split()
-        return [word for word in words if word]  # Remove empty strings
+        return [word.lower() for word in words if word]  # Remove empty strings and convert to lowercase
 
     def _calculate_wer_manual(self, ref_words: List[str], hyp_words: List[str]) -> tuple[float, int]:
         """Manual WER calculation using edit distance."""
