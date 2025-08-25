@@ -3,10 +3,14 @@
 import uvicorn
 
 from app.core.config import settings
+from app.core.logging import setup_logging
 
 
 def main():
     """Run the API server."""
+    # Setup logging before starting the server
+    setup_logging()
+    
     uvicorn.run(
         "app.main:app",
         host=settings.host,

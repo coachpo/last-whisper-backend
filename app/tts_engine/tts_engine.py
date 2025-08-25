@@ -8,10 +8,15 @@ import scipy
 import torch
 from transformers import AutoTokenizer, VitsModel
 
+from app.core.logging import get_logger
+
+# Setup logger for this module
+logger = get_logger(__name__)
+
 
 class TTSEngine:
     def __init__(self, device=None):
-        print("Loading TTS model...")
+        logger.info("Loading TTS model...")
 
         # Device detection and setup
         if device is None:
@@ -19,7 +24,7 @@ class TTSEngine:
         else:
             self.device = torch.device(device)
 
-        print(f"Using device: {self.device}")
+        logger.info(f"Using device: {self.device}")
 
         # Load model and tokenizer
         self.model = VitsModel.from_pretrained("facebook/mms-tts-fin")
@@ -38,7 +43,7 @@ class TTSEngine:
         self.output_dir = "output"
         os.makedirs(self.output_dir, exist_ok=True)
 
-        print(f"TTS model loaded successfully on {self.device}!")
+        logger.info(f"TTS model loaded successfully on {self.device}!")
 
     def get_task_queue(self):
         """Returns the task queue for external services to consume task messages"""
@@ -50,7 +55,7 @@ class TTSEngine:
             self.is_running = True
             self.worker_thread = threading.Thread(target=self._process_queue, daemon=True)
             self.worker_thread.start()
-            print("TTS service started!")
+            logger.info("TTS service started!")
 
     def stop_service(self):
         """Stop the TTS service"""
@@ -58,12 +63,12 @@ class TTSEngine:
         if self.worker_thread:
             self.worker_thread.join()
             self.worker_thread = None
-        print("TTS service stopped!")
+        logger.info("TTS service stopped!")
 
     def submit_request(self, text, custom_filename=None):
         """Submit a text-to-speech conversion request"""
         if not text.strip():
-            print("Error: Empty text provided")
+            logger.error("Error: Empty text provided")
             return None
 
         # Generate filename based on timestamp and text hash
@@ -93,7 +98,7 @@ class TTSEngine:
         # Publish initial task message to external queue
         self._publish_task_message(request_id, filename, "queued", text=text)
 
-        print(f"Request {request_id} submitted and queued. Output file: {filename}")
+        logger.info(f"Request {request_id} submitted and queued. Output file: {filename}")
         return request_id
 
     def _publish_task_message(self, request_id, output_file_path, status, **metadata):
@@ -118,12 +123,12 @@ class TTSEngine:
             except queue.Empty:
                 continue
             except Exception as e:
-                print(f"Error processing request: {e}")
+                logger.error(f"Error processing request: {e}")
 
     def _process_request(self, request):
         """Process a single TTS request"""
         try:
-            print(f"Processing request {request['id']} on {self.device}...")
+            logger.info(f"Processing request {request['id']} on {self.device}...")
             request["status"] = "processing"
 
             # Publish processing status
@@ -186,7 +191,7 @@ class TTSEngine:
                 device=str(self.device),
             )
 
-            print(f"Request {request['id']} completed! Audio saved as: {request['filename']}")
+            logger.info(f"Request {request['id']} completed! Audio saved as: {request['filename']}")
 
         except Exception as e:
             request["status"] = "failed"
@@ -202,7 +207,7 @@ class TTSEngine:
                 failed_at=datetime.now().isoformat(),
                 device=str(self.device),
             )
-            print(f"Request {request['id']} failed: {e}")
+            logger.error(f"Request {request['id']} failed: {e}")
 
     def get_queue_size(self):
         """Get the current queue size"""
@@ -238,8 +243,8 @@ class TTSEngine:
             old_device = self.device
             self.device = torch.device(new_device)
             self.model = self.model.to(self.device)
-            print(f"Successfully switched from {old_device} to {self.device}")
+            logger.info(f"Successfully switched from {old_device} to {self.device}")
             return True
         except Exception as e:
-            print(f"Failed to switch to {new_device}: {e}")
+            logger.error(f"Failed to switch to {new_device}: {e}")
             return False

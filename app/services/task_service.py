@@ -36,7 +36,3 @@ class TaskService:
             return self.db_manager.get_all_tasks(status=status, limit=limit)
         except Exception as e:
             raise DatabaseException(f"Failed to retrieve tasks: {str(e)}")
-
-    def get_database_manager(self) -> DatabaseManager:
-        """Get the underlying database manager."""
-        return self.db_manager
