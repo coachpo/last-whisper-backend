@@ -51,6 +51,7 @@ async def health_check(
         checks["tts_service"] = "healthy" if tts_service.is_initialized else "not_initialized"
     except Exception as e:
         checks["tts_service"] = f"error: {str(e)}"
+        overall_status = "unhealthy"
 
     # Check task manager
     try:
@@ -58,6 +59,7 @@ async def health_check(
         checks["task_manager"] = "healthy" if task_mgr.is_initialized else "not_initialized"
     except Exception as e:
         checks["task_manager"] = f"error: {str(e)}"
+        overall_status = "unhealthy"
 
     # Add basic service info
     checks["service"] = settings.app_name
