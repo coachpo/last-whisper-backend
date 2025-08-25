@@ -386,9 +386,9 @@ async def update_item_difficulty(
 @router.get(
     "/{item_id}/audio",
     summary="Get item audio",
-    description="Download the audio file for a dictation item.",
+    description="Stream the audio file for a dictation item.",
     responses={
-        200: {"description": "Audio file", "content": {"audio/wav": {}}},
+        200: {"description": "Audio file stream", "content": {"audio/wav": {}}},
         404: {"model": ErrorResponse, "description": "Item or audio not found"},
         400: {"model": ErrorResponse, "description": "Audio not ready"},
     },
@@ -397,7 +397,7 @@ async def get_item_audio(
         item_id: int,
         items_service: ItemsService = Depends(get_items_service),
 ):
-    """Get the audio file for a dictation item."""
+    """Stream the audio file for a dictation item."""
     try:
         item = items_service.get_item(item_id)
         if not item:
