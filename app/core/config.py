@@ -30,7 +30,6 @@ class Settings(BaseSettings):
     base_url: str = "http://localhost:8000"  # For building audio URLs
 
     # TTS Service Settings
-    tts_output_dir: str = "output"  # Legacy, use audio_dir instead
     tts_device: Optional[str] = None  # None for auto-detection
     tts_thread_count: int = 1
 

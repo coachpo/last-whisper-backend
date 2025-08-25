@@ -8,6 +8,7 @@ import scipy
 import torch
 from transformers import AutoTokenizer, VitsModel
 
+from app.core.config import settings
 from app.core.logging import get_logger
 
 # Setup logger for this module
@@ -40,7 +41,7 @@ class TTSEngine:
         self.worker_thread = None
 
         # Create output directory if it doesn't exist
-        self.output_dir = "output"
+        self.output_dir = settings.audio_dir
         os.makedirs(self.output_dir, exist_ok=True)
 
         logger.info(f"TTS engine: TTS model loaded successfully on {self.device}!")
