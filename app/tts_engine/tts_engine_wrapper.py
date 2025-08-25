@@ -46,12 +46,12 @@ class TTSEngineWrapper:
         except Exception as e:
             raise TTSServiceException(f"Failed to submit TTS request: {str(e)}")
 
-    def get_task_queue(self):
-        """Get the task queue for monitoring."""
+    def get_task_message_queue(self):
+        """Get the task message queue for monitoring."""
         if not self._is_initialized or not self._service:
             raise TTSServiceException("TTS service not initialized")
 
-        return self._service.get_task_queue()
+        return self._service.get_task_message_queue()
 
     @property
     def is_initialized(self) -> bool:

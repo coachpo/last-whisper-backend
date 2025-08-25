@@ -4,7 +4,6 @@ import os
 import threading
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-from urllib.parse import urljoin
 
 from sqlalchemy import and_
 
@@ -134,7 +133,6 @@ class ItemsService:
                 difficulty=difficulty,
                 tags_json=None,
                 tts_status="pending",
-                audio_url=None,
             )
 
             if tags:
@@ -176,7 +174,6 @@ class ItemsService:
                         difficulty=item_data.get("difficulty"),
                         tags_json=None,
                         tts_status="pending",
-                        audio_url=None,
                     )
 
                     # Auto-calculate difficulty if not provided
@@ -243,13 +240,12 @@ class ItemsService:
                 return False
 
             # Delete associated audio file if it exists
-            if item.audio_url:
+            # Check if audio file exists using predictable naming convention
+            audio_filename = f"item_{item_id}.wav"
+            file_path = os.path.join(settings.audio_dir, audio_filename)
+            if os.path.exists(file_path):
                 try:
-                    # Extract filename from URL
-                    filename = item.audio_url.split('/')[-1]
-                    file_path = os.path.join(settings.audio_dir, filename)
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
+                    os.remove(file_path)
                 except Exception as e:
                     logger.warning(f"Failed to delete audio file for item {item_id}: {e}")
 
@@ -343,18 +339,15 @@ class ItemsService:
     def update_item_tts_status(
             self,
             item_id: int,
-            status: str,
-            audio_url: Optional[str] = None
+            status: str
     ) -> bool:
-        """Update the TTS status and audio URL for an item."""
+        """Update the TTS status for an item."""
         with self.db_manager.get_session() as session:
             item = session.query(Item).filter(Item.id == item_id).first()
             if not item:
                 return False
 
             item.tts_status = status
-            if audio_url:
-                item.audio_url = audio_url
             item.updated_at = datetime.now()
 
             session.commit()
@@ -466,16 +459,11 @@ class ItemsService:
                     "id": item.id,
                     "text": item.text[:100] + "..." if len(item.text) > 100 else item.text,
                     "tts_status": item.tts_status,
-                    "audio_url": item.audio_url,
                     "created_at": item.created_at.isoformat() if item.created_at else None,
                     "updated_at": item.updated_at.isoformat() if item.updated_at else None,
                 }
             
             return status_info
-
-    def build_audio_url(self, filename: str) -> str:
-        """Build a full audio URL from filename."""
-        return urljoin(settings.base_url, f"/api/v1/tts/audio/{filename}")
 
     def _item_to_dict(self, item: Item) -> Dict[str, Any]:
         """Convert Item model to dictionary."""
@@ -486,7 +474,6 @@ class ItemsService:
             "difficulty": item.difficulty,
             "tags": item.tags,
             "tts_status": item.tts_status,
-            "audio_url": item.audio_url,
             "created_at": item.created_at.isoformat() if item.created_at else None,
             "updated_at": item.updated_at.isoformat() if item.updated_at else None,
             "practiced": item.has_attempts,

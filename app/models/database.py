@@ -68,7 +68,6 @@ class Item(Base):
     difficulty = Column(Integer, nullable=True, index=True)
     tags_json = Column(Text, nullable=True)  # JSON array of strings
     tts_status = Column(String(20), nullable=False, default="pending", index=True)
-    audio_url = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC), index=True)
     updated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 

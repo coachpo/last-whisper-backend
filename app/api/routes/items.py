@@ -208,7 +208,6 @@ async def get_item(
             difficulty=item.difficulty,
             tags=item.tags,
             tts_status=item.tts_status,
-            audio_url=item.audio_url,
             created_at=item.created_at,
             updated_at=item.updated_at,
             practiced=item.has_attempts,

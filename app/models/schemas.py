@@ -268,7 +268,6 @@ class ItemResponse(BaseModel):
     difficulty: Optional[int] = Field(None, description="Difficulty level")
     tags: List[str] = Field(default_factory=list, description="Tags")
     tts_status: str = Field(..., description="TTS status: pending, ready, failed")
-    audio_url: Optional[str] = Field(None, description="URL to audio file")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     practiced: bool = Field(..., description="Whether item has been practiced")
@@ -339,7 +338,6 @@ class PracticeLogEntry(BaseModel):
 
     item_id: int = Field(..., description="Item ID")
     text: str = Field(..., description="Item text")
-    audio_url: Optional[str] = Field(None, description="Audio URL")
     attempts_count: int = Field(..., description="Number of attempts")
     first_attempt_at: Optional[datetime] = Field(None, description="First attempt timestamp")
     last_attempt_at: Optional[datetime] = Field(None, description="Last attempt timestamp")

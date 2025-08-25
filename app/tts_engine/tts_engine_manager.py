@@ -190,7 +190,7 @@ class TTSEngineManager:
         """Start monitoring TTS service task queue"""
         if not self.is_running and self.tts_service:
             self.is_running = True
-            self.monitor_thread = threading.Thread(target=self._monitor_task_queue, daemon=True)
+            self.monitor_thread = threading.Thread(target=self._monitor_task_message_queue, daemon=True)
             self.monitor_thread.start()
             logger.info("TTS engine manager task monitoring started!")
 
@@ -201,18 +201,16 @@ class TTSEngineManager:
             self.monitor_thread.join()
         logger.info("TTS engine manager task monitoring stopped!")
 
-    def _monitor_task_queue(self):
+    def _monitor_task_message_queue(self):
         """Monitor TTS service task queue and update database"""
-        task_queue = self.tts_service.get_task_queue()
+        task_message_queue = self.tts_service.get_task_message_queue()
 
         while self.is_running:
             try:
                 # Get task message from queue with timeout
-                task_message = task_queue.get_nowait()
-                if not task_message:
-                    continue
+                task_message = task_message_queue.get()
                 self._update_task_from_message(task_message)
-                task_queue.task_done()
+                task_message_queue.task_done()
 
             except queue.Empty:
                 continue
@@ -337,13 +335,12 @@ class TTSEngineManager:
             return
 
         # Update item based on task status
-        if status == "completed":
+        if status in ["completed", "done"]:
             # TTS completed successfully
             item.tts_status = "ready"
 
-            # Build audio URL from output file
+            # Move file to audio directory with proper naming
             if output_file_path and os.path.exists(output_file_path):
-                # Move file to audio directory with proper naming
                 audio_filename = f"item_{item.id}.wav"
                 audio_path = os.path.join(settings.audio_dir, audio_filename)
 
@@ -351,13 +348,10 @@ class TTSEngineManager:
                     # Ensure audio directory exists
                     os.makedirs(settings.audio_dir, exist_ok=True)
 
-                    # Copy or move the file
+                    # Copy or move the file only if it's not already in the correct location
                     if output_file_path != audio_path:
                         import shutil
                         shutil.copy2(output_file_path, audio_path)
-
-                    # Set the audio URL
-                    item.audio_url = f"{settings.base_url}/api/v1/tts/audio/{audio_filename}"
 
                     logger.info(f"TTS engine manager: Audio file ready for item {item.id}: {audio_filename}")
 
@@ -428,7 +422,6 @@ class TTSEngineManager:
                     "text": item.text[:100] + "..." if len(item.text) > 100 else item.text,
                     "locale": item.locale,
                     "tts_status": item.tts_status,
-                    "audio_url": item.audio_url,
                     "created_at": item.created_at.isoformat() if item.created_at else None,
                     "updated_at": item.updated_at.isoformat() if item.updated_at else None,
                 }
@@ -462,9 +455,9 @@ class TTSEngineManager:
         # Get queue status if available
         queue_size = 0
         try:
-            if self.tts_service and hasattr(self.tts_service, 'get_task_queue'):
-                task_queue = self.tts_service.get_task_queue()
-                queue_size = task_queue.qsize() if hasattr(task_queue, 'qsize') else 0
+            if self.tts_service and hasattr(self.tts_service, 'get_task_message_queue'):
+                task_message_queue = self.tts_service.get_task_message_queue()
+                queue_size = task_message_queue.qsize() if hasattr(task_message_queue, 'qsize') else 0
         except Exception:
             pass
 

@@ -86,7 +86,6 @@ class StatsService:
                 session.query(
                     Item.id.label("item_id"),
                     Item.text,
-                    Item.audio_url,
                     func.count(attempts_subq.c.id).label("attempts_count"),
                     func.min(attempts_subq.c.created_at).label("first_attempt_at"),
                     func.max(attempts_subq.c.created_at).label("last_attempt_at"),
@@ -96,7 +95,7 @@ class StatsService:
                 )
                 .outerjoin(attempts_subq, Item.id == attempts_subq.c.item_id)
                 .filter(attempts_subq.c.id.isnot(None))  # Only items with attempts
-                .group_by(Item.id, Item.text, Item.audio_url)
+                .group_by(Item.id, Item.text)
                 .order_by(func.max(attempts_subq.c.created_at).desc())  # Most recently practiced first
             )
 
@@ -113,7 +112,6 @@ class StatsService:
                 practice_log.append({
                     "item_id": result.item_id,
                     "text": result.text,
-                    "audio_url": result.audio_url,
                     "attempts_count": result.attempts_count,
                     "first_attempt_at": result.first_attempt_at.isoformat() if result.first_attempt_at else None,
                     "last_attempt_at": result.last_attempt_at.isoformat() if result.last_attempt_at else None,
@@ -146,7 +144,6 @@ class StatsService:
                 return {
                     "item_id": item_id,
                     "text": item.text,
-                    "audio_url": item.audio_url,
                     "attempts_count": 0,
                     "first_attempt_at": None,
                     "last_attempt_at": None,
@@ -176,7 +173,6 @@ class StatsService:
             return {
                 "item_id": item_id,
                 "text": item.text,
-                "audio_url": item.audio_url,
                 "attempts_count": attempts_count,
                 "first_attempt_at": stats.first_attempt_at.isoformat() if stats.first_attempt_at else None,
                 "last_attempt_at": stats.last_attempt_at.isoformat() if stats.last_attempt_at else None,
@@ -184,8 +180,8 @@ class StatsService:
                 "best_percentage": stats.best_percentage or 0,
                 "worst_percentage": stats.worst_percentage or 0,
                 "avg_wer": round(float(stats.avg_wer or 0), 4),
-                "best_wer": round(float(stats.best_wer or 0), 4),
-                "worst_wer": round(float(stats.worst_wer or 0), 4),
+                "best_wer": stats.best_wer or 0.0,
+                "worst_wer": stats.worst_wer or 0.0,
             }
 
     def get_progress_over_time(

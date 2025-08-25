@@ -36,7 +36,7 @@ class TTSEngine:
 
         self.request_queue = queue.Queue()
         # New task queue for external services to consume
-        self.task_queue = queue.Queue()
+        self.task_message_queue = queue.Queue()
         self.is_running = False
         self.worker_thread = None
 
@@ -46,9 +46,9 @@ class TTSEngine:
 
         logger.info(f"TTS engine: TTS model loaded successfully on {self.device}!")
 
-    def get_task_queue(self):
+    def get_task_message_queue(self):
         """Returns the task queue for external services to consume task messages"""
-        return self.task_queue
+        return self.task_message_queue
 
     def start_service(self):
         """Start the TTS service worker thread"""
@@ -111,16 +111,14 @@ class TTSEngine:
             "timestamp": datetime.now().isoformat(),
             "metadata": metadata,
         }
-        self.task_queue.put_nowait(task_message)
+        self.task_message_queue.put_nowait(task_message)
 
     def _process_queue(self):
         """Worker thread function to process queued requests"""
         while self.is_running:
             try:
                 # Get request from queue with timeout
-                request = self.request_queue.get_nowait()
-                if request is None:
-                    continue
+                request = self.request_queue.get()
                 self._process_request(request)
                 self.request_queue.task_done()
             except queue.Empty:
@@ -217,9 +215,9 @@ class TTSEngine:
         """Get the current queue size"""
         return self.request_queue.qsize()
 
-    def get_task_queue_size(self):
+    def get_task_message_queue_size(self):
         """Get the current task queue size"""
-        return self.task_queue.qsize()
+        return self.task_message_queue.qsize()
 
     def get_device_info(self):
         """Get information about the current device being used"""
