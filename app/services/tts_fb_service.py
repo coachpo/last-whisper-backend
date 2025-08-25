@@ -57,6 +57,7 @@ class FBTTSService:
         self.is_running = False
         if self.worker_thread:
             self.worker_thread.join()
+            self.worker_thread = None
         print("TTS service stopped!")
 
     def submit_request(self, text, custom_filename=None):
