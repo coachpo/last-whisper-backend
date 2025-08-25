@@ -1,6 +1,7 @@
 # Whisper TTS API
 
-A production-grade FastAPI service for Text-to-Speech conversion using Facebook's MMS-TTS-Fin model with clean architecture, comprehensive testing, and robust task management.
+A production-grade FastAPI service for Text-to-Speech conversion using Facebook's MMS-TTS-Fin model with clean
+architecture, comprehensive testing, and robust task management.
 
 ## Features
 

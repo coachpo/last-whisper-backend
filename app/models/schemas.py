@@ -1,7 +1,7 @@
 """Pydantic models for API request/response schemas."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -89,3 +89,123 @@ class HealthResponse(BaseModel):
     service: str = Field(..., description="Service name")
     version: str = Field(..., description="Service version")
     timestamp: datetime = Field(..., description="Current timestamp")
+
+
+# New schemas for dictation API
+
+class ItemCreateRequest(BaseModel):
+    """Request model for creating a new dictation item."""
+
+    locale: str = Field(..., min_length=2, max_length=10, description="Language locale (e.g., 'en', 'fi')")
+    text: str = Field(..., min_length=1, max_length=10000, description="Text for dictation practice")
+    difficulty: Optional[int] = Field(None, ge=1, le=10, description="Difficulty level (1-10)")
+    tags: Optional[List[str]] = Field(None, description="Tags for categorization")
+
+    @field_validator('tags')
+    @classmethod
+    def validate_tags(cls, v):
+        """Validate tags."""
+        if v is not None:
+            if len(v) > 20:
+                raise ValueError("Maximum 20 tags allowed")
+            for tag in v:
+                if not tag or len(tag.strip()) == 0:
+                    raise ValueError("Tags cannot be empty")
+                if len(tag) > 50:
+                    raise ValueError("Tag length cannot exceed 50 characters")
+        return v
+
+
+class ItemResponse(BaseModel):
+    """Response model for dictation item."""
+
+    id: int = Field(..., description="Item ID")
+    locale: str = Field(..., description="Language locale")
+    text: str = Field(..., description="Text for dictation")
+    difficulty: Optional[int] = Field(None, description="Difficulty level")
+    tags: List[str] = Field(default_factory=list, description="Tags")
+    tts_status: str = Field(..., description="TTS status: pending, ready, failed")
+    audio_url: Optional[str] = Field(None, description="URL to audio file")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+    practiced: bool = Field(..., description="Whether item has been practiced")
+
+
+class ItemListResponse(BaseModel):
+    """Response model for item list."""
+
+    items: List[ItemResponse] = Field(..., description="List of items")
+    total: int = Field(..., description="Total number of items")
+    page: int = Field(..., description="Current page number")
+    per_page: int = Field(..., description="Items per page")
+    total_pages: int = Field(..., description="Total number of pages")
+
+
+class AttemptCreateRequest(BaseModel):
+    """Request model for creating an attempt."""
+
+    item_id: int = Field(..., description="Item ID")
+    text: str = Field(..., min_length=0, max_length=10000, description="User's dictation attempt")
+
+
+class AttemptResponse(BaseModel):
+    """Response model for dictation attempt."""
+
+    id: int = Field(..., description="Attempt ID")
+    item_id: int = Field(..., description="Item ID")
+    text: str = Field(..., description="User's attempt text")
+    percentage: int = Field(..., description="Score percentage (0-100)")
+    wer: float = Field(..., description="Word Error Rate (0.0-1.0)")
+    words_ref: int = Field(..., description="Number of words in reference")
+    words_correct: int = Field(..., description="Number of correct words")
+    created_at: datetime = Field(..., description="Attempt timestamp")
+
+
+class AttemptListResponse(BaseModel):
+    """Response model for attempt list."""
+
+    attempts: List[AttemptResponse] = Field(..., description="List of attempts")
+    total: int = Field(..., description="Total number of attempts")
+    page: int = Field(..., description="Current page number")
+    per_page: int = Field(..., description="Items per page")
+    total_pages: int = Field(..., description="Total number of pages")
+
+
+class StatsSummaryResponse(BaseModel):
+    """Response model for summary statistics."""
+
+    attempts: int = Field(..., description="Total number of attempts")
+    audios_practiced: int = Field(..., description="Number of unique audios practiced")
+    avg_percentage: float = Field(..., description="Average score percentage")
+    avg_wer: float = Field(..., description="Average Word Error Rate")
+
+
+class PracticeLogEntry(BaseModel):
+    """Entry in practice log."""
+
+    item_id: int = Field(..., description="Item ID")
+    text: str = Field(..., description="Item text")
+    audio_url: Optional[str] = Field(None, description="Audio URL")
+    attempts_count: int = Field(..., description="Number of attempts")
+    first_attempt_at: Optional[datetime] = Field(None, description="First attempt timestamp")
+    last_attempt_at: Optional[datetime] = Field(None, description="Last attempt timestamp")
+    avg_percentage: float = Field(..., description="Average score percentage")
+    best_percentage: int = Field(..., description="Best score percentage")
+    avg_wer: float = Field(..., description="Average Word Error Rate")
+
+
+class PracticeLogResponse(BaseModel):
+    """Response model for practice log."""
+
+    practice_log: List[PracticeLogEntry] = Field(..., description="Practice log entries")
+    total: int = Field(..., description="Total number of entries")
+    page: int = Field(..., description="Current page number")
+    per_page: int = Field(..., description="Items per page")
+    total_pages: int = Field(..., description="Total number of pages")
+
+
+class HealthCheckResponse(BaseModel):
+    """Response model for health check."""
+
+    status: str = Field(..., description="Overall health status")
+    checks: dict = Field(..., description="Individual health checks")

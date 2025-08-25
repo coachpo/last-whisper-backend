@@ -9,10 +9,10 @@ class Settings(BaseSettings):
     """Application settings."""
 
     # API Settings
-    app_name: str = "TTS API"
+    app_name: str = "Dictation Backend API"
     app_version: str = "1.0.0"
     app_description: str = (
-        "Text-to-Speech conversion API that orchestrates with existing TTS services"
+        "Dictation practice backend with local TTS, scoring, and session-less workflow"
     )
 
     # Server Settings
@@ -22,11 +22,17 @@ class Settings(BaseSettings):
     log_level: str = "info"
 
     # Database Settings
-    database_url: str = "sqlite:///tts_tasks.db"
+    database_url: str = "sqlite:///dictation.db"
+    db_path: str = "dictation.db"
+
+    # Audio Storage Settings
+    audio_dir: str = "audio"
+    base_url: str = "http://localhost:8000"  # For building audio URLs
 
     # TTS Service Settings
-    tts_output_dir: str = "output"
+    tts_output_dir: str = "output"  # Legacy, use audio_dir instead
     tts_device: Optional[str] = None  # None for auto-detection
+    tts_thread_count: int = 1
 
     # API Settings
     docs_url: str = "/docs"

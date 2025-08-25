@@ -10,3 +10,6 @@ httpx
 ruff
 black
 pydantic-settings
+jiwer
+unidecode
+alembic
