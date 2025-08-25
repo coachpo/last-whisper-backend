@@ -1,7 +1,7 @@
 # Whisper TTS API
 
 A production-grade FastAPI service for Text-to-Speech conversion using Facebook's MMS-TTS-Fin model with clean
-architecture, comprehensive testing, and robust task management.
+architecture, comprehensive testing, and robust task management. The project has been extended to include a comprehensive dictation practice backend.
 
 ## Features
 
@@ -15,6 +15,9 @@ architecture, comprehensive testing, and robust task management.
 - **Error Handling**: Custom exceptions and proper HTTP status codes
 - **Task Queue Management**: Robust task processing with status tracking
 - **Multi-device Support**: Automatic GPU/CPU detection with manual override options
+- **Dictation Practice Backend**: Complete workflow for creating, practicing, and scoring dictation exercises
+- **Automatic Scoring**: Word Error Rate (WER) calculation for practice attempts
+- **Statistics and Analytics**: Comprehensive practice tracking and progress monitoring
 
 ## Project Structure
 
@@ -24,27 +27,35 @@ whisper-tts/
 │   ├── api/
 │   │   ├── routes/          # API route definitions
 │   │   │   ├── health.py    # Health check endpoints
-│   │   │   └── tts.py       # TTS conversion endpoints
+│   │   │   ├── tts.py       # TTS conversion endpoints
+│   │   │   ├── items.py     # Dictation items management
+│   │   │   ├── attempts.py  # Practice attempts and scoring
+│   │   │   └── stats.py     # Statistics and analytics
 │   │   └── dependencies.py  # FastAPI dependencies
 │   ├── core/
 │   │   ├── config.py        # Application configuration
-│   │   └── exceptions.py    # Custom exceptions
+│   │   ├── exceptions.py    # Custom exceptions
+│   │   └── logging.py       # Logging configuration
 │   ├── models/
 │   │   ├── schemas.py       # Pydantic models and schemas
 │   │   └── database.py      # SQLAlchemy models
 │   ├── services/
-│   │   ├── database.py      # Database operations
-│   │   ├── outer/           # External service integrations
-│   │   │   ├── tts_service.py      # TTS service wrapper
-│   │   │   └── tts_task_manager.py # Task management service
-│   │   ├── task_manager.py  # Core task management
-│   │   └── tts_fb_service.py # Facebook TTS service implementation
+│   │   ├── task_service.py      # Task management service
+│   │   ├── items_service.py     # Dictation items service
+│   │   ├── attempts_service.py  # Practice attempts service
+│   │   └── stats_service.py     # Statistics service
+│   ├── tts_engine/
+│   │   ├── tts_engine.py         # Core TTS engine implementation
+│   │   ├── tts_engine_manager.py # Task orchestration and monitoring
+│   │   └── tts_engine_wrapper.py # TTS service wrapper
 │   └── main.py              # FastAPI application entry point
 ├── tests/                   # Comprehensive test suite
 │   ├── test_api/           # API endpoint tests
 │   └── test_services/      # Service layer tests
 ├── requirements.txt         # Python dependencies
 ├── run_api.py              # Server startup script
+├── dictation.db            # SQLite database
+├── audio/                  # Generated audio files
 └── README.md               # This file
 ```
 
@@ -57,10 +68,23 @@ This API provides high-quality text-to-speech conversion using:
 - **Language Support**: Finnish and multilingual capabilities
 - **Device Optimization**: Automatic GPU/CPU detection with manual override
 - **Batch Processing**: Queue-based request handling for scalability
+- **Task Management**: Comprehensive task lifecycle tracking and deduplication
+
+## Dictation Practice Features
+
+The extended backend provides a complete dictation practice workflow:
+
+- **Item Management**: Create, read, update, delete dictation items with automatic TTS generation
+- **Practice Tracking**: Submit attempts and get automatic scoring using Word Error Rate (WER)
+- **Statistics**: Comprehensive analytics and progress monitoring
+- **Local Processing**: Uses existing local TTS models (no cloud dependencies)
+- **Session-less**: No authentication or user sessions required
 
 ## API Endpoints
 
-### POST /api/v1/tts/convert
+### TTS Endpoints
+
+#### POST /api/v1/tts/convert
 
 Submit text for TTS conversion.
 
@@ -84,17 +108,65 @@ Submit text for TTS conversion.
 }
 ```
 
-### GET /api/v1/tts/{id}
+#### GET /api/v1/tts/{id}
 
 Get conversion status and metadata.
 
-### GET /api/v1/tts
+#### GET /api/v1/tts
 
 List conversions with optional status filtering.
 
-### GET /health
+#### POST /api/v1/tts/convert-multiple
 
-Health check endpoint.
+Submit multiple texts for batch TTS conversion.
+
+### Dictation Endpoints
+
+#### POST /v1/items
+
+Create a new dictation item.
+
+**Request:**
+
+```json
+{
+  "locale": "en",
+  "text": "The quick brown fox jumps over the lazy dog",
+  "difficulty": 3,
+  "tags": ["animals", "classic"]
+}
+```
+
+#### GET /v1/items
+
+List items with filtering (locale, tags, difficulty, text search, practiced status).
+
+#### POST /v1/attempts
+
+Submit and score a practice attempt.
+
+**Request:**
+
+```json
+{
+  "item_id": 1,
+  "text": "The quick brown fox jumps over lazy dog"
+}
+```
+
+#### GET /v1/stats/summary
+
+Get summary statistics for practice sessions.
+
+#### GET /v1/stats/practice-log
+
+Get detailed practice log with per-item statistics.
+
+### Health Endpoints
+
+#### GET /health
+
+Comprehensive health check with detailed service status.
 
 ## Installation
 
@@ -146,7 +218,7 @@ Configuration is managed through environment variables or `.env` file:
 
 ```bash
 # API Settings
-APP_NAME="Whisper TTS API"
+APP_NAME="Dictation Backend API"
 APP_VERSION="1.0.0"
 HOST="0.0.0.0"
 PORT=8000
@@ -154,10 +226,10 @@ RELOAD=true
 LOG_LEVEL="info"
 
 # Database
-DATABASE_URL="sqlite:///tts_tasks.db"
+DATABASE_URL="sqlite:///dictation.db"
 
 # TTS Settings
-TTS_OUTPUT_DIR="output"
+TTS_OUTPUT_DIR="audio"
 TTS_DEVICE="cpu"  # or "cuda" for GPU, None for auto-detection
 
 # API Documentation
@@ -207,10 +279,13 @@ The application follows clean architecture principles:
 
 ### Key Components
 
-- **TTSServiceWrapper**: High-level interface for TTS operations
-- **FBTTSService**: Facebook TTS model integration with queue management
-- **TaskManager**: Centralized task processing and status tracking
-- **Database Services**: Persistent storage for conversion tasks
+- **TTSEngine**: Core TTS engine with Hugging Face model integration
+- **TTSEngineManager**: Task orchestration and monitoring
+- **TTSEngineWrapper**: Service lifecycle management
+- **ItemsService**: Dictation item management with TTS integration
+- **AttemptsService**: Practice attempt scoring and tracking
+- **StatsService**: Analytics and reporting
+- **TaskService**: TTS task database operations
 
 This design provides:
 
@@ -228,6 +303,8 @@ This design provides:
 - **SQLAlchemy**: Database ORM and management
 - **Pydantic**: Data validation and settings management
 - **Uvicorn**: ASGI server for production deployment
+- **jiwer**: Word Error Rate calculation for scoring
+- **unidecode**: Unicode normalization for text processing
 
 ## Contributing
 

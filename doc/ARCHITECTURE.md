@@ -15,7 +15,7 @@ project.
 
 - **API Layer (FastAPI)**: HTTP endpoints, request/response validation, error translation.
 - **Service Layer**: Business logic orchestration and integration with external systems.
-    - `TTSEngineWrapper` encapsulates the concrete TTS engine implementation (`TTSEngine`).
+    - `TTSEngine` encapsulates the concrete TTS engine implementation with Hugging Face models.
     - `TTSEngineManager` orchestrates TTS tasks and synchronizes task statuses with database.
     - Service classes provide business logic for items, attempts, stats, and tasks.
 - **Data Layer**:
@@ -32,6 +32,7 @@ app/
   core/
     config.py         # Settings (env/.env driven)
     exceptions.py     # Domain exceptions mapped to HTTP
+    logging.py        # Logging configuration
   models/
     database.py       # SQLAlchemy ORM models and DB manager
     schemas.py        # Pydantic request/response models
@@ -51,7 +52,7 @@ run_api.py            # Uvicorn runner
 ### Component Responsibilities
 
 - **FastAPI app (`app/main.py`)**
-    - Initializes services on startup (`lifespan`): `TTSEngineWrapper.initialize()` then
+    - Initializes services on startup (`lifespan`): `TTSEngine.initialize()` then
       `TTSEngineManager.start_monitoring()`.
     - Registers exception handlers to consistently return `ErrorResponse`.
     - Mounts routers from `app/api/routes`.
@@ -65,32 +66,31 @@ run_api.py            # Uvicorn runner
     - All routes validate inputs using Pydantic schemas and delegate to appropriate services
 
 - **Service layer**
-    - **TTSEngineWrapper** (`tts_engine/tts_engine_wrapper.py`)
-        - Owns `TTSEngine` instance, ensures correct lifecycle (start/stop), and exposes a minimal API (
-          `submit_request`, `get_task_queue`).
-        - Guards usage via `is_initialized` and raises `TTSServiceException` on misuse.
+    - **TTSEngine** (`tts_engine/tts_engine.py`)
+        - Loads the Hugging Face model `facebook/mms-tts-fin` and tokenizer.
+        - Supports device selection (auto CPU/GPU) and switching.
+        - Uses two queues:
+            - An internal `request_queue` for inbound synthesis jobs.
+            - A public `task_message_queue` for publishing task lifecycle events to observers.
+        - A worker thread processes requests: tokenizes, runs inference, writes a WAV file, and emits `queued` →
+          `processing` → `completed` → `done` (or `failed`) messages.
     - **TTSEngineManager** (`tts_engine/tts_engine_manager.py`)
         - Wraps `TTSEngine` and starts a monitoring thread to watch the TTS service task queue.
         - Provides `submit_task`, `submit_multiple_tasks`, `get_task_status` for API usage.
         - Handles task deduplication by `text_hash` and database synchronization.
+    - **TTSEngineWrapper** (`tts_engine/tts_engine_wrapper.py`)
+        - Owns `TTSEngine` instance, ensures correct lifecycle (start/stop), and exposes a minimal API (
+          `submit_request`, `get_task_queue`).
+        - Guards usage via `is_initialized` and raises `TTSServiceException` on misuse.
     - **Service classes** (`services/`)
         - `TaskService`: Database operations for TTS tasks
         - `ItemsService`: Dictation item management with TTS integration
         - `AttemptsService`: User practice tracking and scoring
         - `StatsService`: Analytics and reporting
 
-- **Concrete TTS implementation (`tts_engine/tts_engine.py`)**
-    - Loads the Hugging Face model `facebook/mms-tts-fin` and tokenizer.
-    - Supports device selection (auto CPU/GPU) and switching.
-    - Uses two queues:
-        - An internal `request_queue` for inbound synthesis jobs.
-        - A public `task_queue` for publishing task lifecycle events to observers.
-    - A worker thread processes requests: tokenizes, runs inference, writes a WAV file, and emits `queued` →
-      `processing` → `completed` → `done` (or `failed`) messages.
-
 - **Task manager (`tts_engine/tts_engine_manager.py`)**
     - Persists new tasks in the DB on submission and deduplicates by `text_hash` (MD5 of original text).
-    - Monitors the TTS service `task_queue` in a background thread and updates persisted task records as statuses
+    - Monitors the TTS service `task_message_queue` in a background thread and updates persisted task records as statuses
       change.
     - Provides reporting (status counts, averages, duplicates) and cleanup utilities.
     - Integrates with `Item` model for dictation workflow.
@@ -115,22 +115,22 @@ run_api.py            # Uvicorn runner
 3) `TTSEngineManager.submit_task` checks for duplicates by `text_hash`. If a prior non-failed task exists, returns its
    `task_id` to avoid redundant synthesis.
 4) Otherwise, it forwards to `TTSEngine.submit_request`, which enqueues the job and immediately emits a
-   `queued` message to the public `task_queue`.
+   `queued` message to the public `task_message_queue`.
 5) `TTSEngineManager` writes a `Task` row with `status='queued'` and timestamps.
 6) The `TTSEngine` worker processes the job, writes the WAV file to the configured output directory, and emits
-   `processing` → `completed` → `done` messages with metadata (timestamps, file size, sampling rate, device).
+   `processing` → `completed` → `done` (or `failed`) messages with metadata (timestamps, file size, sampling rate, device).
 7) The `TTSEngineManager` monitoring thread consumes these messages and updates the `Task` row accordingly (status and
    metadata fields).
 8) Clients poll `GET /api/v1/tts/{conversion_id}` or list via `GET /api/v1/tts`.
 9) When complete, clients download audio with `GET /api/v1/tts/{conversion_id}/download`.
 
 #### Dictation Item Flow
-1) Client calls `POST /api/v1/items` to create a dictation item.
+1) Client calls `POST /v1/items` to create a dictation item.
 2) `ItemsService.create_item` creates the item with `tts_status="pending"`.
 3) If TTS manager is available, it automatically submits a TTS task for the item.
 4) TTS processing follows the standard flow above.
 5) When TTS completes, the item's `tts_status` is updated to `"ready"` and `audio_url` is set.
-6) Users can practice with `POST /api/v1/items/{item_id}/attempts` and track progress.
+6) Users can practice with `POST /v1/items/{item_id}/attempts` and track progress.
 
 ### Data Models
 
@@ -161,7 +161,7 @@ run_api.py            # Uvicorn runner
 ### Concurrency and Threads
 
 - `TTSEngine` runs a worker thread for synthesis.
-- `TTSEngineManager` runs a monitor thread that consumes the public `task_queue` and updates the database.
+- `TTSEngineManager` runs a monitor thread that consumes the public `task_message_queue` and updates the database.
 - API requests are handled by the ASGI server (Uvicorn) independently.
 
 ### Configuration
@@ -171,10 +171,10 @@ run_api.py            # Uvicorn runner
 
 ### Observability and Operations
 
-- Health endpoints: `/` and `/health` return `HealthResponse` with version and timestamp.
+- Health endpoints: `/health` returns `HealthCheckResponse` with detailed service checks.
 - File outputs are stored under the configured audio directory; filenames allow deterministic overrides via
   `custom_filename` and default to timestamp+hash.
-- The architecture supports external consumers of the `task_queue` if needed (e.g., metrics, notifications) without
+- The architecture supports external consumers of the `task_message_queue` if needed (e.g., metrics, notifications) without
   coupling them to the API.
 
 ### Scalability Considerations
@@ -212,5 +212,7 @@ run_api.py            # Uvicorn runner
 - **Service Layer Consolidation**: Consolidated business logic into focused service classes
 - **TTS Integration**: Seamless integration between TTS processing and dictation items
 - **Audio Management**: Centralized audio file handling with proper URL generation
+- **Health Monitoring**: Enhanced health checks for all system components
+- **Logging System**: Comprehensive logging configuration and setup
 
 

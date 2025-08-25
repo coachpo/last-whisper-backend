@@ -27,7 +27,7 @@ features:
 - **ItemsService**: CRUD operations for dictation items and TTS job management
 - **AttemptsService**: Scoring and persistence of practice attempts
 - **StatsService**: Aggregated statistics and practice logs
-- **ItemTaskManager**: TTS workflow management with Items integration
+- **TTSEngineManager**: TTS workflow management with Items integration
 
 ### API Endpoints
 
@@ -38,23 +38,23 @@ features:
 - `GET /v1/items/{id}` - Get specific item
 - `DELETE /v1/items/{id}` - Delete item and associated files
 - `GET /v1/items/{id}/audio` - Download audio file
+- `POST /v1/items/bulk` - Create multiple items in batch
+- `PATCH /v1/items/{id}/tags` - Update item tags
+- `PATCH /v1/items/{id}/difficulty` - Update item difficulty
 
 #### Attempts (`/v1/attempts`)
 
 - `POST /v1/attempts` - Submit and score practice attempt
 - `GET /v1/attempts` - List attempts with filtering
-- `GET /v1/attempts/{id}` - Get specific attempt
 
 #### Stats (`/v1/stats`)
 
 - `GET /v1/stats/summary` - Get summary statistics
 - `GET /v1/stats/practice-log` - Get per-audio practice log
-- `GET /v1/stats/items/{id}` - Get item-specific statistics
-- `GET /v1/stats/progress/{id}` - Get progress over time
 
-#### Health (`/healthz`)
+#### Health (`/health`)
 
-- Item health checks for database, audio directory, and TTS worker
+- Comprehensive health checks for database, audio directory, and TTS worker
 
 ## Features
 
@@ -64,13 +64,15 @@ features:
 - Support for different locales
 - Audio files stored locally with stable URLs
 - Background processing with status tracking
+- Task deduplication to avoid redundant TTS generation
 
 ### Scoring System
 
-- Word Error Rate (WER) calculation
+- Word Error Rate (WER) calculation using `jiwer` library
 - Unicode normalization for fair comparison
 - Punctuation and case-insensitive scoring
 - Percentage scores (0-100)
+- Word-level accuracy tracking
 
 ### Filtering and Search
 
@@ -78,6 +80,7 @@ features:
 - Filter by locale, difficulty, tags
 - Practice status filtering (practiced/unpracticed)
 - Date range filtering for attempts and stats
+- Pagination support for large result sets
 
 ### Statistics and Analytics
 
@@ -85,10 +88,11 @@ features:
 - Practice log: per-item statistics with attempt counts and scores
 - Progress tracking over time
 - Best/worst/average scores per item
+- Time-window based filtering for trend analysis
 
 ## Configuration
 
-New configuration options in `app/core/config.py`:
+Configuration options in `app/core/config.py`:
 
 ```python
 # Database
@@ -100,16 +104,26 @@ audio_dir: str = "audio"
 base_url: str = "http://localhost:8000"
 
 # TTS Settings
+tts_device: Optional[str] = None  # None for auto-detection
 tts_thread_count: int = 1
+
+# API Settings
+app_name: str = "Dictation Backend API"
+app_version: str = "1.0.0"
 ```
 
 ## Dependencies
 
-Added dependencies in `requirements.txt`:
+Dependencies in `requirements.txt`:
 
 - `jiwer` - Word Error Rate calculation
 - `unidecode` - Unicode normalization
 - `alembic` - Database migrations (future use)
+- `transformers` - Hugging Face TTS models
+- `torch` - PyTorch for model inference
+- `fastapi` - Web framework
+- `sqlalchemy` - Database ORM
+- `pydantic` - Data validation
 
 ## Database Schema
 
@@ -146,6 +160,32 @@ CREATE TABLE attempts
 );
 ```
 
+### Tasks Table
+
+```sql
+CREATE TABLE tasks
+(
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id           VARCHAR NOT NULL UNIQUE,
+    original_text     TEXT    NOT NULL,
+    text_hash         VARCHAR NOT NULL,
+    status            VARCHAR NOT NULL DEFAULT 'pending',
+    output_file_path  TEXT,
+    custom_filename   TEXT,
+    created_at        DATETIME NOT NULL,
+    submitted_at      DATETIME,
+    started_at        DATETIME,
+    completed_at      DATETIME,
+    failed_at         DATETIME,
+    error_message     TEXT,
+    file_size         INTEGER,
+    sampling_rate     INTEGER,
+    device            VARCHAR,
+    metadata          TEXT,
+    item_id           INTEGER REFERENCES items (id) ON DELETE SET NULL
+);
+```
+
 ## Usage Examples
 
 ### Create a dictation item
@@ -179,6 +219,29 @@ curl "http://localhost:8000/v1/stats/summary"
 curl "http://localhost:8000/v1/stats/practice-log"
 ```
 
+### Create multiple items in batch
+
+```bash
+curl -X POST "http://localhost:8000/v1/items/bulk" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "items": [
+         {
+           "locale": "en",
+           "text": "First dictation text",
+           "difficulty": 2,
+           "tags": ["beginner"]
+         },
+         {
+           "locale": "en", 
+           "text": "Second dictation text",
+           "difficulty": 4,
+           "tags": ["intermediate"]
+         }
+       ]
+     }'
+```
+
 ## Testing
 
 Comprehensive test suites have been added:
@@ -199,7 +262,18 @@ The original TTS API endpoints remain functional:
 
 - `POST /api/v1/tts/convert` - Legacy TTS conversion
 - `GET /api/v1/tts/{id}` - Legacy task status
+- `POST /api/v1/tts/convert-multiple` - Batch TTS conversion
 - All existing functionality preserved
+
+## Health Monitoring
+
+The system provides comprehensive health monitoring:
+
+- Database connectivity and health
+- Audio directory accessibility and permissions
+- TTS service initialization status
+- Task manager monitoring status
+- Overall system health aggregation
 
 ## Future Enhancements
 
@@ -211,3 +285,6 @@ Potential areas for expansion:
 - Audio quality analysis
 - Real-time pronunciation feedback
 - Integration with speech recognition for auto-transcription
+- Multi-language support expansion
+- Performance optimization for large datasets
+- API rate limiting and usage quotas
