@@ -94,7 +94,7 @@ class TTSEngine:
             "submitted_at": datetime.now(),
         }
 
-        self.request_queue.put(request)
+        self.request_queue.put_nowait(request)
 
         # Publish initial task message to external queue
         self._publish_task_message(request_id, filename, "queued", text=text)
@@ -111,14 +111,16 @@ class TTSEngine:
             "timestamp": datetime.now().isoformat(),
             "metadata": metadata,
         }
-        self.task_queue.put(task_message)
+        self.task_queue.put_nowait(task_message)
 
     def _process_queue(self):
         """Worker thread function to process queued requests"""
         while self.is_running:
             try:
                 # Get request from queue with timeout
-                request = self.request_queue.get(timeout=1)
+                request = self.request_queue.get_nowait()
+                if request is None:
+                    continue
                 self._process_request(request)
                 self.request_queue.task_done()
             except queue.Empty:
@@ -192,7 +194,8 @@ class TTSEngine:
                 device=str(self.device),
             )
 
-            logger.info(f"TTS engine: Request {request['id']} completed successfully! Audio saved as: {request['filename']}")
+            logger.info(
+                f"TTS engine: Request {request['id']} completed successfully! Audio saved as: {request['filename']}")
 
         except Exception as e:
             request["status"] = "failed"

@@ -208,7 +208,9 @@ class TTSEngineManager:
         while self.is_running:
             try:
                 # Get task message from queue with timeout
-                task_message = task_queue.get(timeout=1)
+                task_message = task_queue.get_nowait()
+                if not task_message:
+                    continue
                 self._update_task_from_message(task_message)
                 task_queue.task_done()
 

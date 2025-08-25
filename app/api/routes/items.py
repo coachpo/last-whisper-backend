@@ -38,9 +38,9 @@ def get_items_service() -> ItemsService:
     response_model=ItemResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Create dictation item",
-    description="Create a new dictation item and enqueue TTS job. Difficulty will be auto-calculated based on text length if not provided.",
+    description="Create a new dictation item. The item is immediately created in the database with 'pending' TTS status, and TTS processing happens in the background. The API response is returned immediately without waiting for TTS completion. Difficulty will be auto-calculated based on text length if not provided.",
     responses={
-        202: {"description": "Item created and TTS job queued"},
+        202: {"description": "Item created successfully. TTS processing started in background."},
         422: {"model": ErrorResponse, "description": "Validation error"},
     },
 )
@@ -50,25 +50,14 @@ async def create_item(
 ):
     """Create a new dictation item."""
     try:
-        item = items_service.create_item(
+        item_data = items_service.create_item(
             locale=request.locale,
             text=request.text,
             difficulty=request.difficulty,
             tags=request.tags or [],
         )
 
-        return ItemResponse(
-            id=item.id,
-            locale=item.locale,
-            text=item.text,
-            difficulty=item.difficulty,
-            tags=item.tags,
-            tts_status=item.tts_status,
-            audio_url=item.audio_url,
-            created_at=item.created_at,
-            updated_at=item.updated_at,
-            practiced=item.has_attempts,
-        )
+        return ItemResponse(**item_data)
 
     except Exception as e:
         raise HTTPException(
@@ -82,9 +71,9 @@ async def create_item(
     response_model=BulkItemCreateResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Create multiple dictation items",
-    description="Create multiple new dictation items and enqueue TTS jobs. Difficulty will be auto-calculated based on text length if not provided.",
+    description="Create multiple new dictation items. All items are immediately created in the database with 'pending' TTS status, and TTS processing for all items happens in the background. The API response is returned immediately without waiting for TTS completion. Difficulty will be auto-calculated based on text length if not provided.",
     responses={
-        202: {"description": "Items created and TTS jobs queued"},
+        202: {"description": "Items created successfully. TTS processing started in background for all items."},
         422: {"model": ErrorResponse, "description": "Validation error"},
     },
 )
@@ -108,19 +97,8 @@ async def bulk_create_items(
 
         # Convert created items to response format
         created_items_response = []
-        for item in result["created_items"]:
-            created_items_response.append(ItemResponse(
-                id=item.id,
-                locale=item.locale,
-                text=item.text,
-                difficulty=item.difficulty,
-                tags=item.tags,
-                tts_status=item.tts_status,
-                audio_url=item.audio_url,
-                created_at=item.created_at,
-                updated_at=item.updated_at,
-                practiced=item.has_attempts,
-            ))
+        for item_data in result["created_items"]:
+            created_items_response.append(ItemResponse(**item_data))
 
         return BulkItemCreateResponse(
             created_items=created_items_response,

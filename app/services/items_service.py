@@ -1,6 +1,7 @@
 """Items service for managing dictation items."""
 
 import os
+import threading
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from urllib.parse import urljoin
@@ -40,14 +41,87 @@ class ItemsService:
         else:  # words >= 16 or letters >= 141
             return 5
 
+    def _submit_tts_job_background(self, item_id: int, text: str, custom_filename: str):
+        """Submit TTS job in background thread."""
+        try:
+            if self.task_manager:
+                task_id = self.task_manager.submit_task_for_item(item_id, text, custom_filename)
+                
+                if not task_id:
+                    # Mark TTS as failed if we couldn't submit
+                    with self.db_manager.get_session() as session:
+                        item = session.query(Item).filter(Item.id == item_id).first()
+                        if item:
+                            item.tts_status = "failed"
+                            session.commit()
+                            logger.warning(f"Failed to submit TTS job for item {item_id}")
+                
+                logger.info(f"TTS job submitted in background for item {item_id}: {task_id}")
+            else:
+                logger.warning(f"No task manager available for item {item_id}")
+                
+        except Exception as e:
+            logger.error(f"Error submitting TTS job in background for item {item_id}: {e}")
+            # Mark TTS as failed
+            try:
+                with self.db_manager.get_session() as session:
+                    item = session.query(Item).filter(Item.id == item_id).first()
+                    if item:
+                        item.tts_status = "failed"
+                        session.commit()
+            except Exception as db_error:
+                logger.error(f"Failed to update TTS status to failed for item {item_id}: {db_error}")
+
+    def _submit_bulk_tts_jobs_background(self, items_data: List[Dict[str, Any]]):
+        """Submit TTS jobs for multiple items in a single background thread."""
+        try:
+            if not self.task_manager:
+                logger.warning("No task manager available for bulk TTS job submission")
+                return
+
+            for item_data in items_data:
+                try:
+                    item_id = item_data["id"]
+                    text = item_data["text"]
+                    custom_filename = f"item_{item_id}"
+                    task_id = self.task_manager.submit_task_for_item(item_id, text, custom_filename)
+                    
+                    if not task_id:
+                        # Mark TTS as failed if we couldn't submit
+                        with self.db_manager.get_session() as session:
+                            item = session.query(Item).filter(Item.id == item_id).first()
+                            if item:
+                                item.tts_status = "failed"
+                                session.commit()
+                                logger.warning(f"Failed to submit TTS job for item {item_id}")
+                    
+                    logger.info(f"TTS job submitted in background for item {item_id}: {task_id}")
+                    
+                except Exception as e:
+                    logger.error(f"Error submitting TTS job for item {item_data.get('id', 'unknown')}: {e}")
+                    # Mark TTS as failed
+                    try:
+                        item_id = item_data.get("id")
+                        if item_id:
+                            with self.db_manager.get_session() as session:
+                                item = session.query(Item).filter(Item.id == item_id).first()
+                                if item:
+                                    item.tts_status = "failed"
+                                    session.commit()
+                    except Exception as db_error:
+                        logger.error(f"Failed to update TTS status to failed for item {item_data.get('id', 'unknown')}: {db_error}")
+                        
+        except Exception as e:
+            logger.error(f"Error in bulk TTS job submission: {e}")
+
     def create_item(
             self,
             locale: str,
             text: str,
             difficulty: Optional[int] = None,
             tags: Optional[List[str]] = None,
-    ) -> Item:
-        """Create a new dictation item and enqueue TTS job."""
+    ) -> Dict[str, Any]:
+        """Create a new dictation item and enqueue TTS job in background."""
         # Auto-calculate difficulty if not provided
         if difficulty is None:
             difficulty = self._calculate_difficulty_from_text(text)
@@ -70,30 +144,25 @@ class ItemsService:
             session.commit()
             session.refresh(item)
 
-            # Enqueue TTS job if task manager is available
+            # Submit TTS job in background thread
             if self.task_manager:
-                try:
-                    # Create a custom filename based on item ID
-                    custom_filename = f"item_{item.id}"
-                    task_id = self.task_manager.submit_task_for_item(item.id, text, custom_filename)
+                custom_filename = f"item_{item.id}"
+                background_thread = threading.Thread(
+                    target=self._submit_tts_job_background,
+                    args=(item.id, text, custom_filename),
+                    daemon=True
+                )
+                background_thread.start()
+                logger.info(f"Started background TTS job for item {item.id}")
 
-                    if not task_id:
-                        # Mark TTS as failed if we couldn't submit
-                        item.tts_status = "failed"
-                        session.commit()
-
-                except Exception as e:
-                    logger.warning(f"Failed to enqueue TTS job for item {item.id}: {e}")
-                    item.tts_status = "failed"
-                    session.commit()
-
-            return item
+            # Return clean data structure to avoid session binding issues
+            return self._item_to_dict(item)
 
     def bulk_create_items(
             self,
             items_data: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Create multiple dictation items and enqueue TTS jobs."""
+        """Create multiple dictation items and enqueue TTS jobs in background."""
         created_items = []
         failed_items = []
         
@@ -121,21 +190,6 @@ class ItemsService:
                     session.flush()  # Get the ID without committing
                     session.refresh(item)
 
-                    # Enqueue TTS job if task manager is available
-                    if self.task_manager:
-                        try:
-                            # Create a custom filename based on item ID
-                            custom_filename = f"item_{item.id}"
-                            task_id = self.task_manager.submit_task_for_item(item.id, item.text, custom_filename)
-
-                            if not task_id:
-                                # Mark TTS as failed if we couldn't submit
-                                item.tts_status = "failed"
-
-                        except Exception as e:
-                            logger.warning(f"Failed to enqueue TTS job for item {item.id}: {e}")
-                            item.tts_status = "failed"
-
                     created_items.append(item)
 
                 except Exception as e:
@@ -148,8 +202,31 @@ class ItemsService:
             # Commit all successful creations
             session.commit()
             
+            # Submit TTS jobs in a single background thread for all created items
+            if self.task_manager and created_items:
+                # Prepare data for background thread (avoid session binding issues)
+                background_items_data = [
+                    {
+                        "id": item.id,
+                        "text": item.text,
+                        "locale": item.locale
+                    }
+                    for item in created_items
+                ]
+                
+                background_thread = threading.Thread(
+                    target=self._submit_bulk_tts_jobs_background,
+                    args=(background_items_data,),
+                    daemon=True
+                )
+                background_thread.start()
+                logger.info(f"Started background TTS job processing for {len(created_items)} items")
+            
+            # Convert items to clean data structures to avoid session binding issues
+            created_items_data = [self._item_to_dict(item) for item in created_items]
+            
             return {
-                "created_items": created_items,
+                "created_items": created_items_data,
                 "failed_items": failed_items
             }
 
@@ -377,6 +454,24 @@ class ItemsService:
                 "updated_at": item.updated_at,
                 "message": message
             }
+
+    def get_items_tts_status(self, item_ids: List[int]) -> Dict[str, Any]:
+        """Get TTS status for multiple items."""
+        with self.db_manager.get_session() as session:
+            items = session.query(Item).filter(Item.id.in_(item_ids)).all()
+            
+            status_info = {}
+            for item in items:
+                status_info[item.id] = {
+                    "id": item.id,
+                    "text": item.text[:100] + "..." if len(item.text) > 100 else item.text,
+                    "tts_status": item.tts_status,
+                    "audio_url": item.audio_url,
+                    "created_at": item.created_at.isoformat() if item.created_at else None,
+                    "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+                }
+            
+            return status_info
 
     def build_audio_url(self, filename: str) -> str:
         """Build a full audio URL from filename."""
