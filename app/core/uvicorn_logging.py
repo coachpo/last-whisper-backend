@@ -9,7 +9,7 @@ LOGGING_CONFIG = {
             "datefmt": "%Y-%m-%d %H:%M:%S,%f"[:-3],
         },
         "access": {
-            "format": "%(asctime)s - %(name)-25s - %(levelname)-8s - %(client_addr)s - %(request_line)s - %(status_code)s",
+            "format": "%(asctime)s - %(name)-25s - %(levelname)-8s - %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S,%f"[:-3],
         },
     },

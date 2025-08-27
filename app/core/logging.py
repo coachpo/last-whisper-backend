@@ -44,18 +44,17 @@ def setup_logging(log_level: str = None, log_file: Optional[str] = None) -> logg
     logging.getLogger("transformers").setLevel(logging.WARNING)
     logging.getLogger("torch").setLevel(logging.WARNING)
     
-    # Intercept Uvicorn logs and format them consistently
+    # Don't interfere with uvicorn's access logging - let it use its own handlers
+    # Only configure uvicorn error and general logs
     uvicorn_logger = logging.getLogger("uvicorn")
     for handler in uvicorn_logger.handlers[:]:
         uvicorn_logger.removeHandler(handler)
     
-    uvicorn_access_logger = logging.getLogger("uvicorn.access")
-    for handler in uvicorn_access_logger.handlers[:]:
-        uvicorn_access_logger.removeHandler(handler)
-    
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
     for handler in uvicorn_error_logger.handlers[:]:
         uvicorn_error_logger.removeHandler(handler)
+    
+    # Let uvicorn.access use its own handlers from LOGGING_CONFIG
     
     return logging.getLogger(__name__)
 
