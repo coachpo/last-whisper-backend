@@ -194,3 +194,7 @@ class DatabaseManager:
     def close(self):
         """Dispose of the database engine."""
         self.engine.dispose()
+
+
+# Import Tag model to ensure it's registered with Base
+from .tag import Tag

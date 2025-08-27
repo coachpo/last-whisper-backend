@@ -6,6 +6,7 @@ from app.services.attempts_service import AttemptsService
 from app.services.items_service import ItemsService
 from app.services.stats_service import StatsService
 from app.services.task_service import TaskService
+from app.services.tags_service import TagsService
 from app.tts_engine.tts_engine_manager import TTSEngineManager
 
 from app.tts_engine.tts_engine_wrapper import TTSEngineWrapper
@@ -18,6 +19,7 @@ _stats_service = None
 _task_manager = None
 _tts_engine = None
 _task_service = None
+_tags_service = None
 
 
 def get_database_manager() -> DatabaseManager:
@@ -72,6 +74,15 @@ def get_tts_engine() -> TTSEngineWrapper:
     if _tts_engine is None:
         _tts_engine = TTSEngineWrapper()
     return _tts_engine
+
+
+def get_tags_service() -> TagsService:
+    """Dependency to get tags service."""
+    global _tags_service
+    if _tags_service is None:
+        db_manager = get_database_manager()
+        _tags_service = TagsService(db_manager)
+    return _tags_service
 
 
 # Legacy dependencies for backward compatibility

@@ -3,10 +3,11 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.dependencies import get_tts_engine_manager, get_database_manager, get_tts_engine
-from app.api.routes import health, tts, items, attempts, stats
+from app.api.routes import health, tts, items, attempts, stats, tags
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
 from app.core.logging import setup_logging, get_logger
@@ -82,6 +83,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
+
 
 @app.exception_handler(TTSAPIException)
 async def tts_api_exception_handler(request, exc: TTSAPIException):
@@ -108,3 +118,4 @@ app.include_router(tts.router)
 app.include_router(items.router)
 app.include_router(attempts.router)
 app.include_router(stats.router)
+app.include_router(tags.router)

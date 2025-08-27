@@ -270,3 +270,35 @@ class HealthCheckResponse(BaseModel):
 
     status: str = Field(..., description="Overall health status")
     checks: dict = Field(..., description="Individual health checks")
+
+
+# Tag schemas for preset tags
+
+class TagCreateRequest(BaseModel):
+    """Request model for creating a new preset tag."""
+
+    name: str = Field(..., min_length=1, max_length=50, description="Tag name")
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        """Validate tag name."""
+        if not v or not v.strip():
+            raise ValueError("Tag name cannot be empty")
+        return v.strip()
+
+
+class TagResponse(BaseModel):
+    """Response model for preset tag."""
+
+    id: int = Field(..., description="Tag ID")
+    name: str = Field(..., description="Tag name")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+
+class TagListResponse(BaseModel):
+    """Response model for tag list."""
+
+    tags: List[TagResponse] = Field(..., description="List of tags")
+    total: int = Field(..., description="Total number of tags")
