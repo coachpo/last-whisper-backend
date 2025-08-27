@@ -146,7 +146,7 @@ run_api.py            # Uvicorn runner
 2) `ItemsService.create_item` creates the item with `tts_status="pending"`.
 3) If TTS manager is available, it automatically submits a TTS task for the item.
 4) TTS processing follows the standard flow above.
-5) When TTS completes, the item's `tts_status` is updated to `"ready"` and `audio_url` is set.
+5) When TTS completes, the item's `tts_status` is updated to `"ready"`.
 6) Users can practice with `POST /v1/items/{item_id}/attempts` and track progress.
 
 ### Data Models
@@ -160,13 +160,13 @@ run_api.py            # Uvicorn runner
 
 #### Item Model
 - Identity: `id` (PK), `locale`, `text`
-- Metadata: `difficulty`, `tags_json`, `tts_status`, `audio_url`
+- Metadata: `difficulty`, `tags_json`, `tts_status`
 - Timestamps: `created_at`, `updated_at`
 - Relationships: `attempts`, `task`
 
 #### Attempt Model
 - Identity: `id` (PK), `item_id` (FK), `user_id`
-- Practice data: `audio_url`, `transcription`, `score`, `feedback`
+- Practice data: `transcription`, `score`, `feedback`
 - Timestamps: `created_at`
 
 ### Error Handling
@@ -239,5 +239,3 @@ run_api.py            # Uvicorn runner
 - **Logging System**: Comprehensive logging configuration and setup
 - **Configuration Management**: Extended settings to support multiple TTS provider configurations
 - **Backward Compatibility**: Maintained compatibility with existing TTS API endpoints
-
-

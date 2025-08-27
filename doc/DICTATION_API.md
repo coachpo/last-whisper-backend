@@ -173,7 +173,6 @@ CREATE TABLE items
     difficulty INTEGER,
     tags_json  TEXT,
     tts_status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    audio_url  TEXT,
     created_at DATETIME    NOT NULL,
     updated_at DATETIME    NOT NULL
 );
