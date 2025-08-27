@@ -36,7 +36,7 @@ class TTSEngineManager:
                 .first()
             )
 
-    def submit_task(self, text: str, custom_filename: Optional[str] = None) -> Optional[str]:
+    def submit_task(self, text: str, custom_filename: Optional[str] = None, language: str = "fi") -> Optional[str]:
         """Submit a new TTS task and store it in database"""
         if not text.strip():
             logger.error("Error: Empty text provided")
@@ -44,6 +44,11 @@ class TTSEngineManager:
 
         if not self.tts_service:
             logger.error("Error: TTS service not available")
+            return None
+        
+        # Validate language support
+        if language not in settings.tts_supported_languages:
+            logger.error(f"Error: Language '{language}' is not supported. Supported languages: {settings.tts_supported_languages}")
             return None
 
         text_hash = self._calculate_text_hash(text)
@@ -62,7 +67,7 @@ class TTSEngineManager:
                 return task_id
 
         # No existing task found, create new one
-        task_id = self.tts_service.submit_request(text, custom_filename)
+        task_id = self.tts_service.submit_request(text, custom_filename, language)
         if not task_id:
             return None
 
@@ -368,10 +373,10 @@ class TTSEngineManager:
         item.updated_at = datetime.now()
         session.commit()
 
-    def submit_task_for_item(self, item_id: int, text: str, custom_filename: Optional[str] = None) -> Optional[str]:
+    def submit_task_for_item(self, item_id: int, text: str, custom_filename: Optional[str] = None, language: str = "fi") -> Optional[str]:
         """Submit a TTS task specifically for an item."""
         # Submit the task using parent method
-        task_id = self.submit_task(text, custom_filename)
+        task_id = self.submit_task(text, custom_filename, language)
 
         if task_id:
             # Link the task to the item
@@ -409,7 +414,7 @@ class TTSEngineManager:
 
             # Submit new TTS task
             custom_filename = f"item_{item.id}"
-            return self.submit_task_for_item(item.id, item.text, custom_filename)
+            return self.submit_task_for_item(item.id, item.text, custom_filename, "fi")
 
     def get_items_by_tts_status(self, status: str = "pending") -> list[Dict[str, Any]]:
         """Get items by TTS status."""
@@ -476,11 +481,11 @@ class TTSEngineManager:
             "tts_service_available": self.tts_service is not None,
         }
 
-    def submit_multiple_tasks(self, texts: list[str]) -> list[str]:
+    def submit_multiple_tasks(self, texts: list[str], language: str = "fi") -> list[str]:
         """Submit multiple tasks for processing."""
         task_ids = []
         for text in texts:
-            task_id = self.submit_task(text)
+            task_id = self.submit_task(text, language=language)
             if task_id:
                 task_ids.append(task_id)
         return task_ids
@@ -514,3 +519,7 @@ class TTSEngineManager:
     def is_initialized(self) -> bool:
         """Check if the manager is initialized."""
         return self.tts_service is not None
+    
+    def get_supported_languages(self) -> list[str]:
+        """Get list of supported languages for TTS."""
+        return settings.tts_supported_languages.copy()

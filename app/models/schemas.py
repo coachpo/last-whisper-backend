@@ -13,12 +13,14 @@ class TTSConvertRequest(BaseModel):
     custom_filename: Optional[str] = Field(
         None, max_length=255, description="Optional custom filename (without extension)"
     )
+    language: str = Field(default="fi", min_length=2, max_length=10, description="Language code for TTS (default: 'fi')")
 
 
 class TTSMultiConvertRequest(BaseModel):
     """Request model for multiple text TTS conversion."""
 
     texts: list[str] = Field(..., min_length=1, max_length=100, description="List of texts to convert to speech")
+    language: str = Field(default="fi", min_length=2, max_length=10, description="Language code for TTS (default: 'fi')")
 
     @field_validator('texts')
     @classmethod

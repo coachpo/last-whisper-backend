@@ -36,13 +36,13 @@ class TTSEngineWrapper:
                 self._service = None
                 self._is_initialized = False
 
-    def submit_request(self, text: str, custom_filename: Optional[str] = None) -> Optional[str]:
+    def submit_request(self, text: str, custom_filename: Optional[str] = None, language: str = "fi") -> Optional[str]:
         """Submit a TTS request."""
         if not self._is_initialized or not self._service:
             raise TTSServiceException("TTS service not initialized")
 
         try:
-            return self._service.submit_request(text, custom_filename)
+            return self._service.submit_request(text, custom_filename, language)
         except Exception as e:
             raise TTSServiceException(f"Failed to submit TTS request: {str(e)}")
 

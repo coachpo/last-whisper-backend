@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     # TTS Service Settings
     tts_device: Optional[str] = None  # None for auto-detection
     tts_thread_count: int = 1
+    tts_supported_languages: list[str] = ["fi"]  # Supported languages for TTS
 
     # API Settings
     docs_url: str = "/docs"

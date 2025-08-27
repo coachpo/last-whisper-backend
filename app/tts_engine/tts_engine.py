@@ -66,10 +66,15 @@ class TTSEngine:
             self.worker_thread = None
         logger.info("TTS engine: Service stopped successfully!")
 
-    def submit_request(self, text, custom_filename=None):
+    def submit_request(self, text, custom_filename=None, language="fi"):
         """Submit a text-to-speech conversion request"""
         if not text.strip():
             logger.error("Error: Empty text provided")
+            return None
+        
+        # Validate language support
+        if language not in settings.tts_supported_languages:
+            logger.error(f"Error: Language '{language}' is not supported. Supported languages: {settings.tts_supported_languages}")
             return None
 
         # Generate filename based on timestamp and text hash
@@ -90,6 +95,7 @@ class TTSEngine:
             "id": request_id,
             "text": text,
             "filename": filename,
+            "language": language,
             "status": "queued",
             "submitted_at": datetime.now(),
         }
@@ -97,7 +103,7 @@ class TTSEngine:
         self.request_queue.put_nowait(request)
 
         # Publish initial task message to external queue
-        self._publish_task_message(request_id, filename, "queued", text=text)
+        self._publish_task_message(request_id, filename, "queued", text=text, language=language)
 
         logger.info(f"TTS engine: Request {request_id} submitted and queued. Output file: {filename}")
         return request_id
@@ -138,6 +144,7 @@ class TTSEngine:
                 request["filename"],
                 "processing",
                 text=request["text"],
+                language=request["language"],
                 started_at=datetime.now().isoformat(),
                 device=str(self.device),
             )
@@ -166,6 +173,7 @@ class TTSEngine:
                 request["filename"],
                 "completed",
                 text=request["text"],
+                language=request["language"],
                 completed_at=request["completed_at"].isoformat(),
                 file_size=(
                     os.path.getsize(request["filename"])
@@ -182,6 +190,7 @@ class TTSEngine:
                 request["filename"],
                 "done",
                 text=request["text"],
+                language=request["language"],
                 completed_at=request["completed_at"].isoformat(),
                 file_size=(
                     os.path.getsize(request["filename"])
@@ -205,6 +214,7 @@ class TTSEngine:
                 request["filename"],
                 "failed",
                 text=request["text"],
+                language=request["language"],
                 error=str(e),
                 failed_at=datetime.now().isoformat(),
                 device=str(self.device),
