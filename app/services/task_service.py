@@ -4,7 +4,8 @@ from typing import List, Optional
 
 from app.core.config import settings
 from app.core.exceptions import DatabaseException, TaskNotFoundException
-from app.models.database import DatabaseManager, Task
+from app.models.database_manager import DatabaseManager
+from app.models.models import Task
 
 
 class TaskService:

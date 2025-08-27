@@ -19,7 +19,8 @@ try:
 except ImportError:
     HAS_UNIDECODE = False
 
-from app.models.database import DatabaseManager, Attempt, Item
+from app.models.database_manager import DatabaseManager
+from app.models.models import Attempt, Item
 
 
 class AttemptsService:

@@ -5,7 +5,8 @@ from typing import Optional, Dict, Any, List
 
 from sqlalchemy import func, distinct
 
-from app.models.database import DatabaseManager, Attempt, Item
+from app.models.database_manager import DatabaseManager
+from app.models.models import Attempt, Item
 
 
 class StatsService:

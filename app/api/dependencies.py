@@ -1,7 +1,7 @@
 """FastAPI dependencies."""
 
 from app.core.config import settings
-from app.models.database import DatabaseManager
+from app.models.database_manager import DatabaseManager
 from app.services.attempts_service import AttemptsService
 from app.services.items_service import ItemsService
 from app.services.stats_service import StatsService

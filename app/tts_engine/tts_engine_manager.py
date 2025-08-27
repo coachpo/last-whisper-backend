@@ -10,7 +10,8 @@ from sqlalchemy import and_, func
 
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.models.database import DatabaseManager, Task, Item
+from app.models.database_manager import DatabaseManager
+from app.models.models import Task, Item
 
 # Setup logger for this module
 logger = get_logger(__name__)

@@ -4,8 +4,8 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
-from app.models.database import DatabaseManager
-from app.models.tag import Tag
+from app.models.database_manager import DatabaseManager
+from app.models.models import Tag
 from app.models.schemas import TagCreateRequest, TagResponse, TagListResponse
 from app.core.exceptions import DatabaseException, ValidationException
 

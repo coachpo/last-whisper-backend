@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.dependencies import get_database_manager, get_tts_engine, get_tts_engine_manager
 from app.core.config import settings
-from app.models.database import DatabaseManager
+from app.models.database_manager import DatabaseManager
 from app.models.schemas import HealthCheckResponse
 
 router = APIRouter()
