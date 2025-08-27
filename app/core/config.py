@@ -9,10 +9,10 @@ class Settings(BaseSettings):
     """Application settings."""
 
     # API Settings
-    app_name: str = "Dictation Training Backend"
+    app_name: str = "Last Whisper"
     app_version: str = "1.0.0"
     app_description: str = (
-        "Dictation training backend with local TTS, scoring, and session-less workflow"
+        "Last Whisper's backend service - Dictation training with local TTS, scoring, and session-less workflow"
     )
 
     # Server Settings

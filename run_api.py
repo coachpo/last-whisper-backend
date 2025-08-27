@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Script to run the TTS API server."""
+"""Script to run the Last Whisper backend API server."""
 import uvicorn
 
 from app.core.config import settings

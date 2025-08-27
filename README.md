@@ -1,4 +1,4 @@
-# Whisper TTS - Dictation Training Backend
+# Last Whisper - Backend Service
 
 A production-grade FastAPI service for Text-to-Speech conversion with multiple TTS providers (Local, Azure, Google Cloud) and comprehensive dictation training capabilities. Features clean architecture, robust task management, and automatic scoring for dictation practice.
 
@@ -23,7 +23,7 @@ A production-grade FastAPI service for Text-to-Speech conversion with multiple T
 ## Project Structure
 
 ```
-whisper-tts/
+last-whisper-backend/
 ├── app/
 │   ├── api/
 │   │   ├── routes/          # API route definitions
@@ -226,7 +226,7 @@ Comprehensive health check with detailed service status.
 
 ```bash
 git clone <repository-url>
-cd dictation-training-backend
+cd last-whisper-backend
 ```
 
 2. Create a virtual environment (recommended):
@@ -270,7 +270,7 @@ Configuration is managed through environment variables or `.env` file:
 
 ```bash
 # API Settings
-APP_NAME="Dictation Training Backend"
+APP_NAME="Last Whisper"
 APP_VERSION="1.0.0"
 HOST="0.0.0.0"
 PORT=8000

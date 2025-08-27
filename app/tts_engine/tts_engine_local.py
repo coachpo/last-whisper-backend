@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 class TTSEngine:
     def __init__(self, device=None):
-        logger.info("TTS engine: Loading Whisper TTS model...")
+        logger.info("TTS engine: Loading Last Whisper TTS model...")
 
         # Device detection and setup
         if device is None:

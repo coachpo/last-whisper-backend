@@ -1,4 +1,4 @@
-# Whisper TTS - Dictation Backend API
+# Last Whisper - Backend Service API
 
 This document describes the comprehensive dictation backend functionality with multiple TTS provider support.
 
@@ -145,72 +145,6 @@ tts_thread_count: int = 1
 # gcp_sample_rate_hz: int = 24000
 
 # API Settings
-app_name: str = "Dictation Training Backend"
+app_name: str = "Last Whisper"
 app_version: str = "1.0.0"
 ```
-
-## Dependencies
-
-Dependencies in `requirements.txt`:
-
-### Core Framework
-- `fastapi` - Web framework
-- `sqlalchemy` - Database ORM
-- `pydantic` - Data validation
-- `pydantic-settings` - Configuration management
-
-### TTS Engines
-- `transformers` - Hugging Face TTS models (Local)
-- `torch` - PyTorch for model inference (Local)
-- `azure-cognitiveservices-speech` - Azure Speech TTS
-- `google-cloud-texttospeech` - Google Cloud TTS
-
-### Dictation Features
-- `jiwer` - Word Error Rate calculation
-- `unidecode` - Unicode normalization
-
-### Development Tools
-- `alembic` - Database migrations
-- `pytest` - Testing framework
-- `black` - Code formatting
-- `ruff` - Code linting
-
-## Backward Compatibility
-
-The original TTS API endpoints remain functional and work with all TTS providers:
-
-- `POST /api/v1/tts/convert` - TTS conversion (works with all providers)
-- `GET /api/v1/tts/{id}` - Task status (works with all providers)
-- `POST /api/v1/tts/convert-multiple` - Batch TTS conversion (works with all providers)
-- All existing functionality preserved across provider changes
-
-## Health Monitoring
-
-The system provides comprehensive health monitoring:
-
-- Database connectivity and health
-- Audio directory accessibility and permissions
-- TTS service initialization status (all providers)
-- Task manager monitoring status
-- TTS worker health and queue status
-- Provider-specific health checks (Local/Azure/GCP)
-- Overall system health aggregation
-
-## Future Enhancements
-
-Potential areas for expansion:
-
-- **Additional TTS Providers**: Support for Amazon Polly, IBM Watson, or other TTS services
-- **User authentication and multi-tenant support**: User management and data isolation
-- **Advanced analytics and learning metrics**: Detailed progress tracking and insights
-- **Export/import functionality for items**: Bulk operations and data portability
-- **Audio quality analysis**: Quality metrics and optimization suggestions
-- **Real-time pronunciation feedback**: Live feedback during practice sessions
-- **Integration with speech recognition**: Auto-transcription for practice attempts
-- **Multi-language support expansion**: Support for additional languages across all providers
-- **Performance optimization**: Caching, CDN integration, and scalability improvements
-- **API rate limiting and usage quotas**: Usage monitoring and limits
-- **Provider-specific features**: Advanced voice customization, SSML templates, etc.
-- **Advanced tag management**: Tag hierarchies, tag-based filtering, and tag analytics
-- **Batch operations**: Bulk item updates, bulk tag assignments, and batch processing
-- **Audio format support**: Support for additional audio formats and quality options

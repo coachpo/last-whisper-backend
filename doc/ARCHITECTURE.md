@@ -1,6 +1,6 @@
-# Whisper TTS - Dictation Training Backend – Architecture Overview
+# Last Whisper - Backend Service – Architecture Overview
 
-This document explains the system design, major components, data flows, and key decisions of the Whisper TTS Dictation Training Backend project.
+This document explains the system design, major components, data flows, and key decisions of the Last Whisper Backend Service project.
 
 ### Goals and Constraints
 
