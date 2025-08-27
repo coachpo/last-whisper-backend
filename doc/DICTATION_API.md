@@ -64,8 +64,8 @@ features:
 
 #### Tags (`/v1/tags`)
 
-- `POST /v1/tags/` - Create a new preset tag
-- `GET /v1/tags/` - Get list of preset tags
+- `POST /v1/tags` - Create a new preset tag
+- `GET /v1/tags` - Get list of preset tags
 - `DELETE /v1/tags/{tag_id}` - Delete a preset tag
 
 #### Health (`/health`)
