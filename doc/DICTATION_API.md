@@ -10,6 +10,7 @@ features:
 - **Items Management**: Create, read, update, delete dictation items with automatic TTS generation
 - **Attempts Scoring**: Submit user attempts and get automatic scoring using Word Error Rate (WER)
 - **Statistics**: Get aggregated statistics and practice logs
+- **Tags Management**: Create and manage preset tags for item categorization
 - **Multiple TTS Providers**: Support for Local (Facebook MMS-TTS-Fin), Azure Speech, and Google Cloud TTS
 - **Provider Flexibility**: Easy switching between TTS providers via configuration
 - **SQLite Database**: Local database for persistence
@@ -22,13 +23,16 @@ features:
 
 - **Item**: Dictation items with text, locale, difficulty, tags, and TTS status
 - **Attempt**: User practice attempts with scoring metrics
-- **Task**: TTS processing tasks (item from original)
+- **Task**: TTS processing tasks with lifecycle tracking
+- **Tag**: Preset tags for item categorization
 
 ### Services
 
 - **ItemsService**: CRUD operations for dictation items and TTS job management
 - **AttemptsService**: Scoring and persistence of practice attempts
 - **StatsService**: Aggregated statistics and practice logs
+- **TagsService**: Management of preset tags for item categorization
+- **TaskService**: Database operations for TTS tasks
 - **TTSEngineManager**: TTS workflow management with Items integration across all providers
 - **TTSEngineWrapper**: Provider selection and unified TTS interface
 
@@ -37,7 +41,7 @@ features:
 #### Items (`/v1/items`)
 
 - `POST /v1/items` - Create new dictation item
-- `GET /v1/items` - List items with filtering (locale, tags, difficulty, text search, practiced status)
+- `GET /v1/items` - List items with filtering (locale, tags, difficulty, practiced status)
 - `GET /v1/items/{id}` - Get specific item
 - `DELETE /v1/items/{id}` - Delete item and associated files
 - `GET /v1/items/{id}/audio` - Download audio file
@@ -49,11 +53,20 @@ features:
 
 - `POST /v1/attempts` - Submit and score practice attempt
 - `GET /v1/attempts` - List attempts with filtering
+- `GET /v1/attempts/{id}` - Get specific attempt
 
 #### Stats (`/v1/stats`)
 
 - `GET /v1/stats/summary` - Get summary statistics
 - `GET /v1/stats/practice-log` - Get per-audio practice log
+- `GET /v1/stats/items/{item_id}` - Get detailed statistics for a specific item
+- `GET /v1/stats/progress` - Get progress over time
+
+#### Tags (`/v1/tags`)
+
+- `POST /v1/tags/` - Create a new preset tag
+- `GET /v1/tags/` - Get list of preset tags
+- `DELETE /v1/tags/{tag_id}` - Delete a preset tag
 
 #### Health (`/health`)
 
@@ -83,11 +96,11 @@ features:
 
 ### Filtering and Search
 
-- Simple text search using SQL LIKE
 - Filter by locale, difficulty, tags
 - Practice status filtering (practiced/unpracticed)
 - Date range filtering for attempts and stats
 - Pagination support for large result sets
+- Sorting options for items and attempts
 
 ### Statistics and Analytics
 
@@ -96,6 +109,7 @@ features:
 - Progress tracking over time
 - Best/worst/average scores per item
 - Time-window based filtering for trend analysis
+- Individual item statistics and detailed metrics
 
 ## Configuration
 
@@ -120,11 +134,12 @@ tts_thread_count: int = 1
 
 # Azure TTS Settings (when tts_provider="azure")
 # azure_speech_key: str (from environment)
-# azure_speech_region: str (from environment)
+# azure_service_region: str (from environment)
 # azure_language_code: str = "fi-FI"
 # azure_sample_rate_hz: int = 24000
 
 # GCP TTS Settings (when tts_provider="gcp")
+# google_application_credentials: str (from environment)
 # gcp_voice_name: str = "fi-FI-Wavenet-B"
 # gcp_language_code: str = "fi-FI"
 # gcp_sample_rate_hz: int = 24000
@@ -215,8 +230,20 @@ CREATE TABLE tasks
     file_size         INTEGER,
     sampling_rate     INTEGER,
     device            VARCHAR,
-    metadata          TEXT,
+    task_metadata     TEXT,
     item_id           INTEGER REFERENCES items (id) ON DELETE SET NULL
+);
+```
+
+### Tags Table
+
+```sql
+CREATE TABLE tags
+(
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       VARCHAR(50) NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
 );
 ```
 
@@ -251,6 +278,23 @@ curl -X POST "http://localhost:8000/v1/attempts" \
 ```bash
 curl "http://localhost:8000/v1/stats/summary"
 curl "http://localhost:8000/v1/stats/practice-log"
+curl "http://localhost:8000/v1/stats/items/1"
+curl "http://localhost:8000/v1/stats/progress?days=30"
+```
+
+### Manage preset tags
+
+```bash
+# Create a new tag
+curl -X POST "http://localhost:8000/v1/tags/" \
+     -H "Content-Type: application/json" \
+     -d '{"name": "beginner"}'
+
+# List all tags
+curl "http://localhost:8000/v1/tags/"
+
+# Delete a tag
+curl -X DELETE "http://localhost:8000/v1/tags/1"
 ```
 
 ### Create multiple items in batch
@@ -278,16 +322,16 @@ curl -X POST "http://localhost:8000/v1/items/bulk" \
 
 ## Testing
 
-Comprehensive test suites have been added:
+The project includes comprehensive testing capabilities:
 
-- `tests/test_services/test_items_service.py` - Items service tests
-- `tests/test_services/test_attempts_service.py` - Attempts service tests
-- `tests/test_api/test_items.py` - API endpoint tests
+- Service layer tests for business logic
+- API endpoint tests for HTTP interfaces
+- Integration tests for TTS workflows
 
 Run tests with:
 
 ```bash
-pytest tests/
+pytest
 ```
 
 ## Backward Compatibility
@@ -326,3 +370,6 @@ Potential areas for expansion:
 - **Performance optimization**: Caching, CDN integration, and scalability improvements
 - **API rate limiting and usage quotas**: Usage monitoring and limits
 - **Provider-specific features**: Advanced voice customization, SSML templates, etc.
+- **Advanced tag management**: Tag hierarchies, tag-based filtering, and tag analytics
+- **Batch operations**: Bulk item updates, bulk tag assignments, and batch processing
+- **Audio format support**: Support for additional audio formats and quality options

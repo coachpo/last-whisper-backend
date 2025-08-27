@@ -17,6 +17,7 @@ A production-grade FastAPI service for Text-to-Speech conversion with multiple T
 - **Dictation Practice Backend**: Complete workflow for creating, practicing, and scoring dictation exercises
 - **Automatic Scoring**: Word Error Rate (WER) calculation for practice attempts
 - **Statistics and Analytics**: Comprehensive practice tracking and progress monitoring
+- **Tag Management**: Preset tag system for item categorization and organization
 - **Provider Flexibility**: Easy switching between TTS providers via configuration
 
 ## Project Structure
@@ -30,7 +31,8 @@ whisper-tts/
 │   │   │   ├── tts.py       # TTS conversion endpoints
 │   │   │   ├── items.py     # Dictation items management
 │   │   │   ├── attempts.py  # Practice attempts and scoring
-│   │   │   └── stats.py     # Statistics and analytics
+│   │   │   ├── stats.py     # Statistics and analytics
+│   │   │   └── tags.py      # Preset tag management
 │   │   └── dependencies.py  # FastAPI dependencies
 │   ├── core/
 │   │   ├── config.py        # Application configuration
@@ -39,12 +41,14 @@ whisper-tts/
 │   │   └── uvicorn_logging.py # Uvicorn logging setup
 │   ├── models/
 │   │   ├── schemas.py       # Pydantic models and schemas
-│   │   └── database.py      # SQLAlchemy models
+│   │   ├── models.py        # SQLAlchemy models
+│   │   └── database_manager.py # Database management
 │   ├── services/
 │   │   ├── task_service.py      # Task management service
 │   │   ├── items_service.py     # Dictation items service
 │   │   ├── attempts_service.py  # Practice attempts service
-│   │   └── stats_service.py     # Statistics service
+│   │   ├── stats_service.py     # Statistics service
+│   │   └── tags_service.py      # Preset tag service
 │   ├── tts_engine/
 │   │   ├── tts_engine_local.py     # Local TTS engine (Facebook MMS-TTS-Fin)
 │   │   ├── tts_engine_azure.py     # Azure Speech TTS engine
@@ -56,7 +60,7 @@ whisper-tts/
 │   ├── ARCHITECTURE.md      # System architecture documentation
 │   └── DICTATION_API.md     # API documentation
 ├── keys/                    # API keys and credentials
-│   └── dictation-key.json   # Service account keys
+│   └── google-credentials.json # Google Cloud service account keys
 ├── audio/                   # Generated audio files
 ├── requirements.txt         # Python dependencies
 ├── run_api.py              # Server startup script
@@ -102,7 +106,8 @@ The extended backend provides a complete dictation practice workflow:
 - **Item Management**: Create, read, update, delete dictation items with automatic TTS generation
 - **Practice Tracking**: Submit attempts and get automatic scoring using Word Error Rate (WER)
 - **Statistics**: Comprehensive analytics and progress monitoring
-- **Local Processing**: Uses existing local TTS models (no cloud dependencies)
+- **Tag Management**: Create and manage preset tags for item categorization
+- **Multiple TTS Providers**: Support for Local, Azure, and Google Cloud TTS
 - **Session-less**: No authentication or user sessions required
 
 ## API Endpoints
@@ -187,6 +192,28 @@ Get summary statistics for practice sessions.
 
 Get detailed practice log with per-item statistics.
 
+#### GET /v1/stats/items/{item_id}
+
+Get detailed statistics for a specific item.
+
+#### GET /v1/stats/progress
+
+Get progress over time for practice sessions.
+
+### Tag Endpoints
+
+#### POST /v1/tags/
+
+Create a new preset tag.
+
+#### GET /v1/tags/
+
+Get list of preset tags.
+
+#### DELETE /v1/tags/{tag_id}
+
+Delete a preset tag.
+
 ### Health Endpoints
 
 #### GET /health
@@ -263,7 +290,7 @@ TTS_SUPPORTED_LANGUAGES=["fi"]
 
 # Azure TTS Settings (when TTS_PROVIDER="azure")
 AZURE_SPEECH_KEY="your_azure_key"
-AZURE_SPEECH_REGION="your_azure_region"
+AZURE_SERVICE_REGION="your_azure_region"
 AZURE_LANGUAGE_CODE="fi-FI"
 AZURE_SAMPLE_RATE_HZ=24000
 
@@ -294,8 +321,7 @@ pytest
 Run specific test modules:
 
 ```bash
-pytest tests/test_api/test_health.py -v
-pytest tests/test_api/test_tts.py -v
+pytest tests/test_api/ -v
 pytest tests/test_services/ -v
 ```
 
@@ -330,6 +356,7 @@ The application follows clean architecture principles:
 - **ItemsService**: Dictation item management with TTS integration
 - **AttemptsService**: Practice attempt scoring and tracking
 - **StatsService**: Analytics and reporting
+- **TagsService**: Preset tag management and categorization
 - **TaskService**: TTS task database operations
 
 This design provides:
@@ -362,7 +389,6 @@ This design provides:
 - **pytest**: Testing framework
 - **black**: Code formatting
 - **ruff**: Code linting
-- **alembic**: Database migrations
 
 ## Contributing
 

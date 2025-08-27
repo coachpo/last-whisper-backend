@@ -1,4 +1,4 @@
-## Whisper TTS - Dictation Training Backend – Architecture Overview
+# Whisper TTS - Dictation Training Backend – Architecture Overview
 
 This document explains the system design, major components, data flows, and key decisions of the Whisper TTS Dictation Training Backend project.
 
@@ -19,9 +19,9 @@ This document explains the system design, major components, data flows, and key 
     - `TTSEngineWrapper` provides unified interface and provider selection logic.
     - Multiple TTS engines: `TTSEngine` (Local), `TTSEngine` (Azure), `TTSEngine` (GCP).
     - `TTSEngineManager` orchestrates TTS tasks and synchronizes task statuses with database.
-    - Service classes provide business logic for items, attempts, stats, and tasks.
+    - Service classes provide business logic for items, attempts, stats, tags, and tasks.
 - **Data Layer**:
-    - SQLAlchemy models (`Task`, `Item`, `Attempt`) and a `DatabaseManager` that owns the engine/session lifecycle.
+    - SQLAlchemy models (`Task`, `Item`, `Attempt`, `Tag`) and a `DatabaseManager` that owns the engine/session lifecycle.
 - **Core**: Configuration (`Settings`) and domain-level exceptions.
 
 Directory layout (key parts):
@@ -44,6 +44,7 @@ app/
     items_service.py      # ItemsService for dictation items
     attempts_service.py   # AttemptsService for practice tracking
     stats_service.py      # StatsService for analytics
+    tags_service.py       # TagsService for preset tag management
   tts_engine/
     tts_engine_local.py     # Local TTS engine (Facebook MMS-TTS-Fin)
     tts_engine_azure.py     # Azure Speech TTS engine
@@ -67,6 +68,7 @@ run_api.py            # Uvicorn runner
     - **Items Routes** (`app/api/routes/items.py`): Dictation item management
     - **Attempts Routes** (`app/api/routes/attempts.py`): Practice attempt tracking
     - **Stats Routes** (`app/api/routes/stats.py`): Analytics and reporting
+    - **Tags Routes** (`app/api/routes/tags.py`): Preset tag management
     - **Health Routes** (`app/api/routes/health.py`): System health monitoring
     - All routes validate inputs using Pydantic schemas and delegate to appropriate services
 
@@ -101,6 +103,7 @@ run_api.py            # Uvicorn runner
         - `ItemsService`: Dictation item management with TTS integration
         - `AttemptsService`: User practice tracking and scoring
         - `StatsService`: Analytics and reporting
+        - `TagsService`: Preset tag management and categorization
 
 - **Task manager (`tts_engine/tts_engine_manager.py`)**
     - Persists new tasks in the DB on submission and deduplicates by `text_hash` (MD5 of original text).
@@ -109,11 +112,12 @@ run_api.py            # Uvicorn runner
     - Provides reporting (status counts, averages, duplicates) and cleanup utilities.
     - Integrates with `Item` model for dictation workflow.
 
-- **Persistence layer (`models/database.py`)**
+- **Persistence layer (`models/models.py`)**
     - SQLAlchemy models:
         - `Task`: TTS task lifecycle with fields for timestamps, output location, audio metadata and device
         - `Item`: Dictation items with TTS status and audio URL
         - `Attempt`: User practice attempts with scoring
+        - `Tag`: Preset tags for item categorization
     - `DatabaseManager` encapsulates engine and session factory and ensures tables exist.
 
 - **Core (`core/config.py`, `core/exceptions.py`, `core/logging.py`)**
@@ -160,14 +164,18 @@ run_api.py            # Uvicorn runner
 
 #### Item Model
 - Identity: `id` (PK), `locale`, `text`
-- Metadata: `difficulty`, `tags_json`, `tts_status`
+- Metadata: `difficulty`, `tags_json`, `tts_status`, `task_id`
 - Timestamps: `created_at`, `updated_at`
 - Relationships: `attempts`, `task`
 
 #### Attempt Model
-- Identity: `id` (PK), `item_id` (FK), `user_id`
-- Practice data: `transcription`, `score`, `feedback`
+- Identity: `id` (PK), `item_id` (FK)
+- Practice data: `text`, `percentage`, `wer`, `words_ref`, `words_correct`
 - Timestamps: `created_at`
+
+#### Tag Model
+- Identity: `id` (PK), `name` (unique)
+- Timestamps: `created_at`, `updated_at`
 
 ### Error Handling
 
@@ -187,7 +195,7 @@ run_api.py            # Uvicorn runner
   - **API Settings**: host, port, log level, database URL, docs URLs
   - **TTS Provider Selection**: `TTS_PROVIDER` (local/azure/gcp)
   - **Local TTS**: device selection, thread count, supported languages
-  - **Azure TTS**: speech key, region, voice configuration, SSML settings
+  - **Azure TTS**: speech key, service region, voice configuration, SSML settings
   - **GCP TTS**: voice name, language code, authentication via service account
   - **Storage**: output directory, audio directory, base URL
 
@@ -210,9 +218,10 @@ run_api.py            # Uvicorn runner
 
 ### Testing Strategy
 
-- API tests for health and TTS endpoints (`tests/test_api`).
-- Service-level tests for task manager and TTS service (`tests/test_services`).
+- API tests for all endpoints including health, TTS, items, attempts, stats, and tags.
+- Service-level tests for all service classes and TTS engines.
 - Components are factored to allow mocking (`TTSEngineWrapper`, `TTSEngineManager`, service classes).
+- Integration tests for TTS workflows and database operations.
 
 ### Security Notes
 
@@ -231,7 +240,7 @@ run_api.py            # Uvicorn runner
 
 - **Multiple TTS Providers**: Added support for Local (Facebook MMS-TTS-Fin), Azure Speech, and Google Cloud TTS
 - **Provider Selection**: Implemented `TTSEngineWrapper` for easy switching between TTS providers via configuration
-- **Enhanced Data Models**: Added `Item` and `Attempt` models for dictation workflow
+- **Enhanced Data Models**: Added `Item`, `Attempt`, and `Tag` models for comprehensive dictation workflow
 - **Service Layer Consolidation**: Consolidated business logic into focused service classes
 - **TTS Integration**: Seamless integration between TTS processing and dictation items across all providers
 - **Audio Management**: Centralized audio file handling with proper URL generation
@@ -239,3 +248,6 @@ run_api.py            # Uvicorn runner
 - **Logging System**: Comprehensive logging configuration and setup
 - **Configuration Management**: Extended settings to support multiple TTS provider configurations
 - **Backward Compatibility**: Maintained compatibility with existing TTS API endpoints
+- **Tag Management**: Added preset tag system for item categorization and management
+- **Enhanced Statistics**: Extended analytics with progress tracking and detailed item statistics
+- **Improved API Design**: Added comprehensive filtering, pagination, and sorting capabilities
