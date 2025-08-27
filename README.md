@@ -1,11 +1,10 @@
-# Dictation Training Backend
+# Whisper TTS - Dictation Training Backend
 
-A production-grade FastAPI service for Text-to-Speech conversion using Facebook's MMS-TTS-Fin model with clean
-architecture, comprehensive testing, and robust task management. The project has been extended to include a comprehensive dictation training backend.
+A production-grade FastAPI service for Text-to-Speech conversion with multiple TTS providers (Local, Azure, Google Cloud) and comprehensive dictation training capabilities. Features clean architecture, robust task management, and automatic scoring for dictation practice.
 
 ## Features
 
-- **Advanced TTS Engine**: Powered by Facebook's MMS-TTS-Fin model for high-quality speech synthesis
+- **Multiple TTS Providers**: Support for Local (Facebook MMS-TTS-Fin), Azure Speech, and Google Cloud Text-to-Speech
 - **Clean Architecture**: Organized with proper separation of concerns and modular design
 - **FastAPI Framework**: Modern, fast web framework with automatic OpenAPI documentation
 - **SQLAlchemy 2.x**: Modern ORM with type hints and async support
@@ -14,15 +13,16 @@ architecture, comprehensive testing, and robust task management. The project has
 - **Configuration Management**: Centralized settings with environment variable support
 - **Error Handling**: Custom exceptions and proper HTTP status codes
 - **Task Queue Management**: Robust task processing with status tracking
-- **Multi-device Support**: Automatic GPU/CPU detection with manual override options
+- **Multi-device Support**: Automatic GPU/CPU detection with manual override options (Local TTS)
 - **Dictation Practice Backend**: Complete workflow for creating, practicing, and scoring dictation exercises
 - **Automatic Scoring**: Word Error Rate (WER) calculation for practice attempts
 - **Statistics and Analytics**: Comprehensive practice tracking and progress monitoring
+- **Provider Flexibility**: Easy switching between TTS providers via configuration
 
 ## Project Structure
 
 ```
-dictation-training-backend/
+whisper-tts/
 ├── app/
 │   ├── api/
 │   │   ├── routes/          # API route definitions
@@ -35,7 +35,8 @@ dictation-training-backend/
 │   ├── core/
 │   │   ├── config.py        # Application configuration
 │   │   ├── exceptions.py    # Custom exceptions
-│   │   └── logging.py       # Logging configuration
+│   │   ├── logging.py       # Logging configuration
+│   │   └── uvicorn_logging.py # Uvicorn logging setup
 │   ├── models/
 │   │   ├── schemas.py       # Pydantic models and schemas
 │   │   └── database.py      # SQLAlchemy models
@@ -45,30 +46,54 @@ dictation-training-backend/
 │   │   ├── attempts_service.py  # Practice attempts service
 │   │   └── stats_service.py     # Statistics service
 │   ├── tts_engine/
-│   │   ├── tts_engine.py         # Core TTS engine implementation
-│   │   ├── tts_engine_manager.py # Task orchestration and monitoring
-│   │   └── tts_engine_wrapper.py # TTS service wrapper
+│   │   ├── tts_engine_local.py     # Local TTS engine (Facebook MMS-TTS-Fin)
+│   │   ├── tts_engine_azure.py     # Azure Speech TTS engine
+│   │   ├── tts_engine_gcp.py       # Google Cloud TTS engine
+│   │   ├── tts_engine_manager.py   # Task orchestration and monitoring
+│   │   └── tts_engine_wrapper.py   # TTS service wrapper and provider selection
 │   └── main.py              # FastAPI application entry point
-├── tests/                   # Comprehensive test suite
-│   ├── test_api/           # API endpoint tests
-│   └── test_services/      # Service layer tests
+├── doc/                     # Documentation
+│   ├── ARCHITECTURE.md      # System architecture documentation
+│   └── DICTATION_API.md     # API documentation
+├── keys/                    # API keys and credentials
+│   └── dictation-key.json   # Service account keys
+├── audio/                   # Generated audio files
 ├── requirements.txt         # Python dependencies
 ├── run_api.py              # Server startup script
 ├── dictation.db            # SQLite database
-├── audio/                  # Generated audio files
 └── README.md               # This file
 ```
 
 ## TTS Capabilities
 
-This API provides high-quality text-to-speech conversion using:
+This API provides high-quality text-to-speech conversion with multiple provider options:
 
+### Local TTS Engine
 - **Model**: Facebook's MMS-TTS-Fin (Multilingual TTS model)
-- **Output Format**: WAV audio files
+- **Output Format**: WAV audio files (24kHz, 16-bit)
 - **Language Support**: Finnish and multilingual capabilities
 - **Device Optimization**: Automatic GPU/CPU detection with manual override
+- **Performance**: Fast local inference with no external dependencies
+
+### Azure Speech TTS
+- **Provider**: Microsoft Azure Cognitive Services Speech
+- **Voice Options**: Multiple Finnish neural voices
+- **Output Format**: WAV audio files (24kHz, 16-bit mono)
+- **Features**: SSML support, prosody controls, high-quality neural voices
+- **Scalability**: Cloud-based processing with high availability
+
+### Google Cloud Text-to-Speech
+- **Provider**: Google Cloud Platform Text-to-Speech API
+- **Voice Options**: WaveNet voices (fi-FI-Wavenet-B)
+- **Output Format**: WAV audio files (24kHz, 16-bit mono)
+- **Features**: Advanced neural voice synthesis, SSML support
+- **Quality**: Premium WaveNet voices for natural speech
+
+### Common Features
 - **Batch Processing**: Queue-based request handling for scalability
 - **Task Management**: Comprehensive task lifecycle tracking and deduplication
+- **Provider Switching**: Easy configuration-based provider selection
+- **Error Handling**: Robust error handling and retry mechanisms
 
 ## Dictation Practice Features
 
@@ -218,7 +243,7 @@ Configuration is managed through environment variables or `.env` file:
 
 ```bash
 # API Settings
-APP_NAME="Dictation Backend API"
+APP_NAME="Dictation Training Backend"
 APP_VERSION="1.0.0"
 HOST="0.0.0.0"
 PORT=8000
@@ -228,9 +253,29 @@ LOG_LEVEL="info"
 # Database
 DATABASE_URL="sqlite:///dictation.db"
 
-# TTS Settings
-TTS_OUTPUT_DIR="audio"
+# TTS Provider Selection
+TTS_PROVIDER="local"  # Options: "local", "azure", "gcp"
+
+# Local TTS Settings (when TTS_PROVIDER="local")
 TTS_DEVICE="cpu"  # or "cuda" for GPU, None for auto-detection
+TTS_THREAD_COUNT=1
+TTS_SUPPORTED_LANGUAGES=["fi"]
+
+# Azure TTS Settings (when TTS_PROVIDER="azure")
+AZURE_SPEECH_KEY="your_azure_key"
+AZURE_SPEECH_REGION="your_azure_region"
+AZURE_LANGUAGE_CODE="fi-FI"
+AZURE_SAMPLE_RATE_HZ=24000
+
+# Google Cloud TTS Settings (when TTS_PROVIDER="gcp")
+# Set GOOGLE_APPLICATION_CREDENTIALS environment variable
+GCP_VOICE_NAME="fi-FI-Wavenet-B"
+GCP_LANGUAGE_CODE="fi-FI"
+GCP_SAMPLE_RATE_HZ=24000
+
+# Audio Storage
+AUDIO_DIR="audio"
+BASE_URL="http://localhost:8000"
 
 # API Documentation
 DOCS_URL="/docs"
@@ -297,14 +342,27 @@ This design provides:
 
 ## Dependencies
 
+### Core Framework
 - **FastAPI**: Modern web framework for building APIs
-- **Transformers**: Hugging Face transformers for TTS models
-- **PyTorch**: Deep learning framework for model inference
 - **SQLAlchemy**: Database ORM and management
 - **Pydantic**: Data validation and settings management
 - **Uvicorn**: ASGI server for production deployment
+
+### TTS Engines
+- **Transformers**: Hugging Face transformers for local TTS models
+- **PyTorch**: Deep learning framework for local model inference
+- **Azure Cognitive Services Speech**: Azure TTS integration
+- **Google Cloud Text-to-Speech**: GCP TTS integration
+
+### Dictation Features
 - **jiwer**: Word Error Rate calculation for scoring
 - **unidecode**: Unicode normalization for text processing
+
+### Development Tools
+- **pytest**: Testing framework
+- **black**: Code formatting
+- **ruff**: Code linting
+- **alembic**: Database migrations
 
 ## Contributing
 

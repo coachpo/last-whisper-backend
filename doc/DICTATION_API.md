@@ -1,18 +1,20 @@
-# Dictation Backend API
+# Whisper TTS - Dictation Backend API
 
-This document describes the extended dictation backend functionality that has been added to the TTS project.
+This document describes the comprehensive dictation backend functionality with multiple TTS provider support.
 
 ## Overview
 
-The project has been extended from a simple TTS API to a comprehensive dictation practice backend with the following
+The project provides a comprehensive dictation practice backend with multiple TTS provider support and the following
 features:
 
 - **Items Management**: Create, read, update, delete dictation items with automatic TTS generation
 - **Attempts Scoring**: Submit user attempts and get automatic scoring using Word Error Rate (WER)
 - **Statistics**: Get aggregated statistics and practice logs
-- **Local TTS**: Uses existing local TTS models (no cloud dependencies)
+- **Multiple TTS Providers**: Support for Local (Facebook MMS-TTS-Fin), Azure Speech, and Google Cloud TTS
+- **Provider Flexibility**: Easy switching between TTS providers via configuration
 - **SQLite Database**: Local database for persistence
 - **Session-less**: No authentication or user sessions required
+- **Backward Compatibility**: Maintains existing TTS API endpoints
 
 ## Architecture Components
 
@@ -27,7 +29,8 @@ features:
 - **ItemsService**: CRUD operations for dictation items and TTS job management
 - **AttemptsService**: Scoring and persistence of practice attempts
 - **StatsService**: Aggregated statistics and practice logs
-- **TTSEngineManager**: TTS workflow management with Items integration
+- **TTSEngineManager**: TTS workflow management with Items integration across all providers
+- **TTSEngineWrapper**: Provider selection and unified TTS interface
 
 ### API Endpoints
 
@@ -60,11 +63,15 @@ features:
 
 ### Text-to-Speech Integration
 
-- Automatic TTS generation when items are created
-- Support for different locales
-- Audio files stored locally with stable URLs
-- Background processing with status tracking
-- Task deduplication to avoid redundant TTS generation
+- **Multiple Provider Support**: Automatic TTS generation using configured provider (Local/Azure/GCP)
+- **Provider Selection**: Easy switching between TTS providers via `TTS_PROVIDER` configuration
+- **Local TTS**: Facebook MMS-TTS-Fin model with GPU/CPU support
+- **Azure TTS**: Microsoft Azure Speech with neural voices and SSML support
+- **GCP TTS**: Google Cloud Text-to-Speech with WaveNet voices
+- **Support for different locales**: Configurable language support per provider
+- **Audio files stored locally**: Stable URLs with proper file management
+- **Background processing**: Status tracking across all providers
+- **Task deduplication**: Avoid redundant TTS generation regardless of provider
 
 ### Scoring System
 
@@ -103,12 +110,27 @@ db_path: str = "dictation.db"
 audio_dir: str = "audio"
 base_url: str = "http://localhost:8000"
 
-# TTS Settings
+# TTS Provider Selection
+tts_provider: str = "local"  # Options: "local", "azure", "gcp"
+tts_supported_languages: list[str] = ["fi"]
+
+# Local TTS Settings (when tts_provider="local")
 tts_device: Optional[str] = None  # None for auto-detection
 tts_thread_count: int = 1
 
+# Azure TTS Settings (when tts_provider="azure")
+# azure_speech_key: str (from environment)
+# azure_speech_region: str (from environment)
+# azure_language_code: str = "fi-FI"
+# azure_sample_rate_hz: int = 24000
+
+# GCP TTS Settings (when tts_provider="gcp")
+# gcp_voice_name: str = "fi-FI-Wavenet-B"
+# gcp_language_code: str = "fi-FI"
+# gcp_sample_rate_hz: int = 24000
+
 # API Settings
-app_name: str = "Dictation Backend API"
+app_name: str = "Dictation Training Backend"
 app_version: str = "1.0.0"
 ```
 
@@ -116,14 +138,27 @@ app_version: str = "1.0.0"
 
 Dependencies in `requirements.txt`:
 
-- `jiwer` - Word Error Rate calculation
-- `unidecode` - Unicode normalization
-- `alembic` - Database migrations (future use)
-- `transformers` - Hugging Face TTS models
-- `torch` - PyTorch for model inference
+### Core Framework
 - `fastapi` - Web framework
 - `sqlalchemy` - Database ORM
 - `pydantic` - Data validation
+- `pydantic-settings` - Configuration management
+
+### TTS Engines
+- `transformers` - Hugging Face TTS models (Local)
+- `torch` - PyTorch for model inference (Local)
+- `azure-cognitiveservices-speech` - Azure Speech TTS
+- `google-cloud-texttospeech` - Google Cloud TTS
+
+### Dictation Features
+- `jiwer` - Word Error Rate calculation
+- `unidecode` - Unicode normalization
+
+### Development Tools
+- `alembic` - Database migrations
+- `pytest` - Testing framework
+- `black` - Code formatting
+- `ruff` - Code linting
 
 ## Database Schema
 
@@ -258,12 +293,12 @@ pytest tests/
 
 ## Backward Compatibility
 
-The original TTS API endpoints remain functional:
+The original TTS API endpoints remain functional and work with all TTS providers:
 
-- `POST /api/v1/tts/convert` - Legacy TTS conversion
-- `GET /api/v1/tts/{id}` - Legacy task status
-- `POST /api/v1/tts/convert-multiple` - Batch TTS conversion
-- All existing functionality preserved
+- `POST /api/v1/tts/convert` - TTS conversion (works with all providers)
+- `GET /api/v1/tts/{id}` - Task status (works with all providers)
+- `POST /api/v1/tts/convert-multiple` - Batch TTS conversion (works with all providers)
+- All existing functionality preserved across provider changes
 
 ## Health Monitoring
 
@@ -271,20 +306,24 @@ The system provides comprehensive health monitoring:
 
 - Database connectivity and health
 - Audio directory accessibility and permissions
-- TTS service initialization status
+- TTS service initialization status (all providers)
 - Task manager monitoring status
+- TTS worker health and queue status
+- Provider-specific health checks (Local/Azure/GCP)
 - Overall system health aggregation
 
 ## Future Enhancements
 
 Potential areas for expansion:
 
-- User authentication and multi-tenant support
-- Advanced analytics and learning metrics
-- Export/import functionality for items
-- Audio quality analysis
-- Real-time pronunciation feedback
-- Integration with speech recognition for auto-transcription
-- Multi-language support expansion
-- Performance optimization for large datasets
-- API rate limiting and usage quotas
+- **Additional TTS Providers**: Support for Amazon Polly, IBM Watson, or other TTS services
+- **User authentication and multi-tenant support**: User management and data isolation
+- **Advanced analytics and learning metrics**: Detailed progress tracking and insights
+- **Export/import functionality for items**: Bulk operations and data portability
+- **Audio quality analysis**: Quality metrics and optimization suggestions
+- **Real-time pronunciation feedback**: Live feedback during practice sessions
+- **Integration with speech recognition**: Auto-transcription for practice attempts
+- **Multi-language support expansion**: Support for additional languages across all providers
+- **Performance optimization**: Caching, CDN integration, and scalability improvements
+- **API rate limiting and usage quotas**: Usage monitoring and limits
+- **Provider-specific features**: Advanced voice customization, SSML templates, etc.
