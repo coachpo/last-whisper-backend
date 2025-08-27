@@ -3,7 +3,7 @@ import json
 import os
 import queue
 import threading
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import and_, func
@@ -46,10 +46,11 @@ class TTSEngineManager:
         if not self.tts_service:
             logger.error("Error: TTS service not available")
             return None
-        
+
         # Validate language support
         if language not in settings.tts_supported_languages:
-            logger.error(f"Error: Language '{language}' is not supported. Supported languages: {settings.tts_supported_languages}")
+            logger.error(
+                f"Error: Language '{language}' is not supported. Supported languages: {settings.tts_supported_languages}")
             return None
 
         text_hash = self._calculate_text_hash(text)
@@ -332,61 +333,68 @@ class TTSEngineManager:
     def _update_item_from_task_status(self, task: Task, status: str, output_file_path: Optional[str],
                                       metadata: Dict[str, Any], session):
         """Update item status and related data when task status changes."""
-        if not task.item_id:
+        # Get all items linked to this task
+        items = session.query(Item).filter(Item.task_id == task.task_id).all()
+        if not items:
             return
 
-        # Get the related item
-        item = session.query(Item).filter(Item.id == task.item_id).first()
-        if not item:
-            return
+        # Update all items based on task status
+        for item in items:
+            if status in ["completed", "done"]:
+                # TTS completed successfully
+                item.tts_status = "ready"
 
-        # Update item based on task status
-        if status in ["completed", "done"]:
-            # TTS completed successfully
-            item.tts_status = "ready"
+                # Move file to audio directory with proper naming
+                if output_file_path and os.path.exists(output_file_path):
+                    audio_filename = f"item_{item.id}.wav"
+                    audio_path = os.path.join(settings.audio_dir, audio_filename)
 
-            # Move file to audio directory with proper naming
-            if output_file_path and os.path.exists(output_file_path):
-                audio_filename = f"item_{item.id}.wav"
-                audio_path = os.path.join(settings.audio_dir, audio_filename)
+                    try:
+                        # Ensure audio directory exists
+                        os.makedirs(settings.audio_dir, exist_ok=True)
 
-                try:
-                    # Ensure audio directory exists
-                    os.makedirs(settings.audio_dir, exist_ok=True)
+                        # Copy or move the file only if it's not already in the correct location
+                        if output_file_path != audio_path:
+                            import shutil
+                            shutil.copy2(output_file_path, audio_path)
 
-                    # Copy or move the file only if it's not already in the correct location
-                    if output_file_path != audio_path:
-                        import shutil
-                        shutil.copy2(output_file_path, audio_path)
+                        logger.info(f"TTS engine manager: Audio file ready for item {item.id}: {audio_filename}")
 
-                    logger.info(f"TTS engine manager: Audio file ready for item {item.id}: {audio_filename}")
+                    except Exception as e:
+                        logger.error(f"Error handling audio file for item {item.id}: {e}")
+                        item.tts_status = "failed"
 
-                except Exception as e:
-                    logger.error(f"Error handling audio file for item {item.id}: {e}")
-                    item.tts_status = "failed"
+            elif status == "failed":
+                # TTS failed
+                item.tts_status = "failed"
+                logger.error(f"TTS failed for item {item.id}: {metadata.get('error', 'Unknown error')}")
 
-        elif status == "failed":
-            # TTS failed
-            item.tts_status = "failed"
-            logger.error(f"TTS failed for item {item.id}: {metadata.get('error', 'Unknown error')}")
+            # Update timestamp
+            item.updated_at = datetime.now()
 
-        # Update timestamp
-        item.updated_at = datetime.now()
         session.commit()
 
-    def submit_task_for_item(self, item_id: int, text: str, custom_filename: Optional[str] = None, language: str = "fi") -> Optional[str]:
+    def submit_task_for_item(self, item_id: int, text: str, custom_filename: Optional[str] = None,
+                             language: str = "fi") -> Optional[str]:
         """Submit a TTS task specifically for an item."""
         # Submit the task using parent method
         task_id = self.submit_task(text, custom_filename, language)
 
         if task_id:
-            # Link the task to the item
+            # Link the item to the task
             with self.db_manager.get_session() as session:
-                task = session.query(Task).filter(Task.task_id == task_id).first()
-                if task:
-                    task.item_id = item_id
+                item = session.query(Item).filter(Item.id == item_id).first()
+                if item:
+                    item.task_id = task_id
                     session.commit()
-                    logger.info(f"TTS engine manager linked task {task_id} to item {item_id}")
+                    logger.info(f"TTS engine manager linked item {item_id} to task {task_id}")
+
+                    # If the task is already completed, update the item status immediately
+                    task = session.query(Task).filter(Task.task_id == task_id).first()
+                    if task and task.status in ["completed", "done"]:
+                        self._update_item_from_task_status(task, task.status, task.output_file_path,
+                                                           json.loads(task.task_metadata) if task.task_metadata else {},
+                                                           session)
 
         return task_id
 
@@ -440,15 +448,23 @@ class TTSEngineManager:
             # Delete completed tasks older than 24 hours that have no item link
             cutoff_date = datetime.now() - timedelta(hours=24)
 
-            deleted_count = (
+            # Find tasks that are not referenced by any items
+            orphaned_tasks = (
                 session.query(Task)
+                .outerjoin(Item, Task.task_id == Item.task_id)
                 .filter(
-                    Task.item_id.is_(None),
+                    Item.task_id.is_(None),
                     Task.status == "completed",
                     Task.completed_at < cutoff_date
                 )
-                .delete()
+                .all()
             )
+
+            deleted_count = 0
+            for task in orphaned_tasks:
+                session.delete(task)
+                deleted_count += 1
+
             session.commit()
 
             logger.info(f"TTS engine manager cleaned up {deleted_count} orphaned completed tasks")
@@ -513,14 +529,13 @@ class TTSEngineManager:
                 "sampling_rate": task.sampling_rate,
                 "device": task.device,
                 "error_message": task.error_message,
-                "item_id": task.item_id,
             }
 
     @property
     def is_initialized(self) -> bool:
         """Check if the manager is initialized."""
         return self.tts_service is not None
-    
+
     def get_supported_languages(self) -> list[str]:
         """Get list of supported languages for TTS."""
         return settings.tts_supported_languages.copy()
