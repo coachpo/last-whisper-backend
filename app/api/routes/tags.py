@@ -17,7 +17,7 @@ router = APIRouter(prefix="/v1/tags", tags=["Tags"])
 
 
 @router.post(
-    "/",
+    "",
     response_model=TagResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new preset tag",
@@ -43,7 +43,7 @@ async def create_tag(
 
 
 @router.get(
-    "/",
+    "",
     response_model=TagListResponse,
     summary="Get list of preset tags",
     description="Get a paginated list of preset tags."
