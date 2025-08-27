@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     tts_device: Optional[str] = None  # None for auto-detection
     tts_thread_count: int = 1
     tts_supported_languages: list[str] = ["fi"]  # Supported languages for TTS
+    tts_provider = "local"  # or "azure" or "gcp" TTS provider: 'local', 'azure', or 'gcp'/'google'
 
     # API Settings
     docs_url: str = "/docs"
