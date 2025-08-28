@@ -2,6 +2,7 @@ import hashlib
 import io
 import os
 import queue
+import random
 import threading
 import wave
 from datetime import datetime
@@ -16,19 +17,57 @@ from app.models.enums import TaskStatus
 # Setup logger for this module
 logger = get_logger(__name__)
 
+# --- Finnish voice pool (Chirp3-HD + WaveNet-B) ---
+CHIRP3_HD_FI_VOICES = [
+    "fi-FI-Chirp3-HD-Achernar",
+    "fi-FI-Chirp3-HD-Achird",
+    "fi-FI-Chirp3-HD-Algenib",
+    "fi-FI-Chirp3-HD-Algieba",
+    "fi-FI-Chirp3-HD-Alnilam",
+    "fi-FI-Chirp3-HD-Aoede",
+    "fi-FI-Chirp3-HD-Autonoe",
+    "fi-FI-Chirp3-HD-Callirrhoe",
+    "fi-FI-Chirp3-HD-Charon",
+    "fi-FI-Chirp3-HD-Despina",
+    "fi-FI-Chirp3-HD-Enceladus",
+    "fi-FI-Chirp3-HD-Erinome",
+    "fi-FI-Chirp3-HD-Fenrir",
+    "fi-FI-Chirp3-HD-Gacrux",
+    "fi-FI-Chirp3-HD-Iapetus",
+    "fi-FI-Chirp3-HD-Kore",
+    "fi-FI-Chirp3-HD-Laomedeia",
+    "fi-FI-Chirp3-HD-Leda",
+    "fi-FI-Chirp3-HD-Orus",
+    "fi-FI-Chirp3-HD-Puck",
+    "fi-FI-Chirp3-HD-Pulcherrima",
+    "fi-FI-Chirp3-HD-Rasalgethi",
+    "fi-FI-Chirp3-HD-Sadachbia",
+    "fi-FI-Chirp3-HD-Sadaltager",
+    "fi-FI-Chirp3-HD-Schedar",
+    "fi-FI-Chirp3-HD-Sulafat",
+    "fi-FI-Chirp3-HD-Umbriel",
+    "fi-FI-Chirp3-HD-Vindemiatrix",
+    "fi-FI-Chirp3-HD-Zephyr",
+    "fi-FI-Chirp3-HD-Zubenelgenubi",
+]
+WAVENET_FI = ["fi-FI-Wavenet-B"]
+
+DEFAULT_FI_VOICE_POOL = CHIRP3_HD_FI_VOICES + WAVENET_FI
+
 
 class TTSEngine:
     """
-    Drop-in replacement for your current TTSEngine, but powered by
-    Google Cloud Text-to-Speech using WaveNet fi-FI-Wavenet-B.
-    - Same public methods
-    - Same request/task queues and status messages
-    - Outputs WAV (LINEAR16, mono) at 24 kHz by default
+    Google Cloud Text-to-Speech (Finnish).
+    - Supports Chirp3-HD (neural) and WaveNet (fi-FI-Wavenet-B).
+    - Matches your queue/worker/status architecture.
+    - Picks a RANDOM Finnish neural voice at submitting time and stores it with the request.
+    - Outputs WAV (LINEAR16, mono) at 24 kHz by default.
     """
 
     def __init__(
             self,
             voice_name: str = "fi-FI-Wavenet-B",
+            # default if you call synth directly, but normally we randomize at submitting
             language_code: str = "fi-FI",
             sample_rate_hz: int = 24000,
             speaking_rate: float = 1.0,
@@ -36,6 +75,8 @@ class TTSEngine:
             volume_gain_db: float = 0.0,
             use_ssml: bool = False,
             max_chars_per_request: int = 4500,  # stay safely under API limits
+            voice_pool=None,  # optional custom pool override
+            device=None,  # for API compatibility (not used for GCP)
     ):
         logger.info("TTS engine: Initializing Google Cloud Text-to-Speech client...")
 
@@ -44,8 +85,7 @@ class TTSEngine:
 
         # Google TTS client (auth via configured credentials)
         self.client = texttospeech.TextToSpeechClient()
-
-        # Voice & audio configuration
+        # Voice & audio configuration (defaults; selected per-request at submit)
         self.voice_name = voice_name
         self.language_code = language_code
         self.sample_rate_hz = sample_rate_hz
@@ -54,6 +94,12 @@ class TTSEngine:
         self.volume_gain_db = volume_gain_db
         self.use_ssml = use_ssml
         self.max_chars_per_request = max_chars_per_request
+        
+        # Device field for API compatibility (not used for GCP API)
+        self.device = device or "google-tts-api"
+
+        # Pool of Finnish neural voices we randomize from
+        self.voice_pool = list(voice_pool) if voice_pool else list(DEFAULT_FI_VOICE_POOL)
 
         # Queues & worker lifecycle
         self.request_queue = queue.Queue()
@@ -67,7 +113,8 @@ class TTSEngine:
 
         logger.info(
             "TTS engine: Google TTS ready "
-            f"(voice={self.voice_name}, lang={self.language_code}, sr={self.sample_rate_hz} Hz)"
+            f"(default_voice={self.voice_name}, pool_size={len(self.voice_pool)}, "
+            f"lang={self.language_code}, sr={self.sample_rate_hz} Hz)"
         )
 
     # ----------------------- Public API (unchanged) -----------------------
@@ -93,7 +140,7 @@ class TTSEngine:
         logger.info("TTS engine: Service stopped successfully!")
 
     def submit_request(self, text, custom_filename=None, language="fi"):
-        """Submit a text-to-speech conversion request"""
+        """Submit a text-to-speech conversion request (random voice chosen here)."""
         if not text or not str(text).strip():
             logger.error("Error: Empty text provided")
             return None
@@ -104,6 +151,9 @@ class TTSEngine:
                 f"Supported languages: {settings.tts_supported_languages}"
             )
             return None
+
+        # Choose a random Finnish neural voice at submit time (deterministic for this request)
+        selected_voice = random.choice(self.voice_pool)
 
         # Generate filename based on timestamp + hash
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -122,23 +172,27 @@ class TTSEngine:
             "text": text,
             "filename": filename,
             "language": language,
-            "status": "queued",
+            "voice_name": selected_voice,  # <-- stored on the request
+            "status": TaskStatus.QUEUED,
             "submitted_at": datetime.now(),
         }
 
         self.request_queue.put_nowait(request)
 
-        # Publish initial task message
+        # Publish initial task message (include chosen voice)
         self._publish_task_message(
             request_id,
             filename,
-            "queued",
+            TaskStatus.QUEUED,
             text=text,
             language=language,
+            voice=selected_voice,
+            backend="google-tts",
         )
 
         logger.info(
-            f"TTS engine: Request {request_id} submitted and queued. Output file: {filename}"
+            f"TTS engine: Request {request_id} submitted and queued."
+            f" Voice={selected_voice} Output file: {filename}"
         )
         return request_id
 
@@ -153,7 +207,7 @@ class TTSEngine:
     def get_device_info(self):
         """API 'device' info (mirrors your original signature)"""
         return {
-            "device": "google-tts-api",
+            "device": self.device,
             "device_type": "api",
             "cuda_available": False,
         }
@@ -167,19 +221,16 @@ class TTSEngine:
 
     def _configure_google_credentials(self):
         """Configure Google Cloud credentials from pydantic settings."""
-        if settings.google_application_credentials:
-            # Set the environment variable for Google Cloud client
+        if getattr(settings, "google_application_credentials", None):
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = settings.google_application_credentials
             logger.info(f"TTS engine: Using Google credentials from {settings.google_application_credentials}")
         else:
-            # Check if GOOGLE_APPLICATION_CREDENTIALS is already set in environment
             if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
                 logger.info("TTS engine: Using existing GOOGLE_APPLICATION_CREDENTIALS from environment")
             else:
                 logger.warning(
                     "TTS engine: No Google credentials configured. "
-                    "Set GOOGLE_APPLICATION_CREDENTIALS environment variable or "
-                    "google_application_credentials in settings."
+                    "Set GOOGLE_APPLICATION_CREDENTIALS or settings.google_application_credentials."
                 )
 
     def _publish_task_message(self, request_id, output_file_path, status, **metadata):
@@ -205,7 +256,10 @@ class TTSEngine:
 
     def _process_request(self, request):
         try:
-            logger.info(f"TTS engine: Processing request {request['id']} with Google TTS...")
+            voice_name = request.get("voice_name") or self.voice_name
+            logger.info(
+                f"TTS engine: Processing request {request['id']} with Google TTS (voice={voice_name})..."
+            )
             request["status"] = TaskStatus.PROCESSING
 
             self._publish_task_message(
@@ -216,7 +270,8 @@ class TTSEngine:
                 language=request["language"],
                 started_at=datetime.now().isoformat(),
                 backend="google-tts",
-                voice=self.voice_name,
+                voice=voice_name,
+                device=self.device,
                 sample_rate_hz=self.sample_rate_hz,
                 speaking_rate=self.speaking_rate,
                 pitch=self.pitch,
@@ -225,7 +280,7 @@ class TTSEngine:
 
             # Synthesize audio as WAV (LINEAR16 PCM) and write to file
             total_frames = self._synthesize_to_wav(
-                text=request["text"], wav_path=request["filename"]
+                text=request["text"], wav_path=request["filename"], voice_name=voice_name
             )
 
             request["status"] = TaskStatus.COMPLETED
@@ -244,7 +299,8 @@ class TTSEngine:
                 "sampling_rate": self.sample_rate_hz,
                 "frames": total_frames,
                 "backend": "google-tts",
-                "voice": self.voice_name,
+                "voice": voice_name,
+                "device": self.device,
             }
             self._publish_task_message(request["id"], request["filename"], TaskStatus.COMPLETED, **meta)
             self._publish_task_message(request["id"], request["filename"], TaskStatus.DONE, **meta)
@@ -265,6 +321,7 @@ class TTSEngine:
                 error=str(e),
                 failed_at=datetime.now().isoformat(),
                 backend="google-tts",
+                device=self.device,
             )
             logger.error(f"Request {request['id']} failed (Google API): {e}")
         except Exception as e:
@@ -279,19 +336,20 @@ class TTSEngine:
                 error=str(e),
                 failed_at=datetime.now().isoformat(),
                 backend="google-tts",
+                device=self.device,
             )
             logger.error(f"Request {request['id']} failed: {e}")
 
-    def _synthesize_to_wav(self, text: str, wav_path: str) -> int:
+    def _synthesize_to_wav(self, text: str, wav_path: str, voice_name: str) -> int:
         """
         Synthesize `text` (or SSML) to a single WAV file at self.sample_rate_hz.
         Handles chunking for long inputs and concatenates audio seamlessly.
         Returns total frames written.
         """
-        # Prepare voice and audio params
+        # Prepare voice and audio params (voice varies per request)
         voice = texttospeech.VoiceSelectionParams(
             language_code=self.language_code,
-            name=self.voice_name,
+            name=voice_name,
         )
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.LINEAR16,  # raw PCM
@@ -339,8 +397,7 @@ class TTSEngine:
         chunks, current = [], []
         length = 0
         for token in text.split():
-            # +1 for space when joined (except first)
-            add_len = len(token) + (1 if current else 0)
+            add_len = len(token) + (1 if current else 0)  # +1 for space when joined (except first)
             if length + add_len > max_chars:
                 chunks.append(" ".join(current))
                 current = [token]

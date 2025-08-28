@@ -40,6 +40,8 @@ class TTSEngineWrapper:
                     azure_config['volume_gain_db'] = settings.azure_volume_gain_db
                 if hasattr(settings, 'azure_use_ssml'):
                     azure_config['use_ssml'] = settings.azure_use_ssml
+                if hasattr(settings, 'azure_device'):
+                    azure_config['device'] = settings.azure_device
 
                 self._service = TTSEngine(**azure_config)
             elif provider == 'gcp' or provider == 'google':
@@ -60,6 +62,8 @@ class TTSEngineWrapper:
                     gcp_config['volume_gain_db'] = settings.gcp_volume_gain_db
                 if hasattr(settings, 'gcp_use_ssml'):
                     gcp_config['use_ssml'] = settings.gcp_use_ssml
+                if hasattr(settings, 'gcp_device'):
+                    gcp_config['device'] = settings.gcp_device
 
                 self._service = TTSEngine(**gcp_config)
             else:

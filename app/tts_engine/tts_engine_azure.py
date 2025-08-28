@@ -35,6 +35,7 @@ class TTSEngine:
             use_ssml: bool = False,  # set True to enable prosody controls
             # for short sentences you don't need chunking; left here for parity
             max_chars_per_request: int = 4500,  # Azure limit is 5000 chars
+            device=None,  # for API compatibility (not used for Azure)
     ):
         logger.info("TTS engine: Initializing Azure Speech client...")
 
@@ -59,6 +60,9 @@ class TTSEngine:
         self.volume_gain_db = volume_gain_db
         self.use_ssml = use_ssml
         self.max_chars_per_request = max_chars_per_request
+        
+        # Device field for API compatibility (not used for Azure API)
+        self.device = device or "azure-speech-api"
 
         # Supported Finnish neural voices — random selection per request
         self.voices = voices or [
@@ -168,7 +172,7 @@ class TTSEngine:
     def get_device_info(self):
         """API 'device' info (mirrors your original signature)"""
         return {
-            "device": "azure-speech-api",
+            "device": self.device,
             "device_type": "api",
             "cuda_available": False,
         }
@@ -222,6 +226,7 @@ class TTSEngine:
                 started_at=datetime.now().isoformat(),
                 backend="azure-tts",
                 voice=selected_voice,
+                device=self.device,
                 sample_rate_hz=self.sample_rate_hz,
                 speaking_rate=self.speaking_rate,
                 pitch=self.pitch,
@@ -252,6 +257,7 @@ class TTSEngine:
                 "frames": total_frames,
                 "backend": "azure-tts",
                 "voice": selected_voice,
+                "device": self.device,
             }
             self._publish_task_message(
                 request["id"], request["filename"], TaskStatus.COMPLETED, **meta
@@ -277,6 +283,7 @@ class TTSEngine:
                 error=str(e),
                 failed_at=datetime.now().isoformat(),
                 backend="azure-tts",
+                device=self.device,
             )
             logger.error(f"Request {request['id']} failed: {e}")
 
