@@ -1,5 +1,6 @@
 import hashlib
 import io
+import os
 import queue
 import threading
 import wave
@@ -38,7 +39,10 @@ class TTSEngine:
     ):
         logger.info("TTS engine: Initializing Google Cloud Text-to-Speech client...")
 
-        # Google TTS client (auth via GOOGLE_APPLICATION_CREDENTIALS / ADC)
+        # Configure Google Cloud credentials from pydantic settings
+        self._configure_google_credentials()
+
+        # Google TTS client (auth via configured credentials)
         self.client = texttospeech.TextToSpeechClient()
 
         # Voice & audio configuration
@@ -160,6 +164,23 @@ class TTSEngine:
         return False
 
     # ----------------------- Internal helpers -----------------------
+
+    def _configure_google_credentials(self):
+        """Configure Google Cloud credentials from pydantic settings."""
+        if settings.google_application_credentials:
+            # Set the environment variable for Google Cloud client
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = settings.google_application_credentials
+            logger.info(f"TTS engine: Using Google credentials from {settings.google_application_credentials}")
+        else:
+            # Check if GOOGLE_APPLICATION_CREDENTIALS is already set in environment
+            if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+                logger.info("TTS engine: Using existing GOOGLE_APPLICATION_CREDENTIALS from environment")
+            else:
+                logger.warning(
+                    "TTS engine: No Google credentials configured. "
+                    "Set GOOGLE_APPLICATION_CREDENTIALS environment variable or "
+                    "google_application_credentials in settings."
+                )
 
     def _publish_task_message(self, request_id, output_file_path, status, **metadata):
         task_message = {
@@ -330,23 +351,3 @@ class TTSEngine:
         if current:
             chunks.append(" ".join(current))
         return chunks
-
-
-if __name__ == '__main__':
-    from dotenv import load_dotenv
-    import os
-
-    load_dotenv()  # loads .env into environment variables
-
-    GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    print("Google creds file:", GOOGLE_APPLICATION_CREDENTIALS)
-
-    engine = TTSEngine()  # uses fi-FI-Wavenet-B
-    engine.start_service()
-
-    rid = engine.submit_request("Tämä on nopea testi. Toimiiko Google WaveNet oikein?", language="fi")
-    print("Request ID:", rid)
-
-    # Wait until all tasks are done before exit
-    engine.request_queue.join()
-    engine.stop_service()

@@ -33,14 +33,14 @@ class Settings(BaseSettings):
     tts_device: Optional[str] = None  # None for auto-detection
     tts_thread_count: int = 1
     tts_supported_languages: list[str] = ["fi"]  # Supported languages for TTS
-    tts_provider: str = "local"  # or "azure" or "gcp" TTS provider: 'local', 'azure', or 'gcp'/'google'
+    tts_provider: str = "gcp"  # or "azure" or "gcp" TTS provider: 'local', 'azure', or 'gcp'/'google'
 
     # Google Cloud Settings
-    google_application_credentials: Optional[str] = None
+    google_application_credentials: Optional[str] = "keys/google-credentials.json"
 
     # Azure Settings (optional)
     azure_speech_key: Optional[str] = None
-    azure_service_region: Optional[str] = None
+    azure_speech_region: Optional[str] = None
 
     # API Settings
     docs_url: str = "/docs"
