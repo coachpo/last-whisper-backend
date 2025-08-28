@@ -1,13 +1,9 @@
 """Service for managing preset tags."""
 
-from typing import List, Optional
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
-
+from app.core.exceptions import DatabaseException, ValidationException
 from app.models.database_manager import DatabaseManager
 from app.models.models import Tag
 from app.models.schemas import TagCreateRequest, TagResponse, TagListResponse
-from app.core.exceptions import DatabaseException, ValidationException
 
 
 class TagsService:
@@ -29,13 +25,13 @@ class TagsService:
                 tag = Tag(
                     name=tag_data.name
                 )
-                
+
                 session.add(tag)
                 session.commit()
                 session.refresh(tag)
-                
+
                 return TagResponse(**tag.to_dict())
-                
+
         except ValidationException:
             raise
         except Exception as e:
@@ -46,26 +42,22 @@ class TagsService:
         try:
             with self.db_manager.get_session() as session:
                 query = session.query(Tag)
-                
+
                 # Get total count
                 total = query.count()
-                
+
                 # Get paginated results
                 tags = query.order_by(Tag.name.asc()).offset(offset).limit(limit).all()
-                
+
                 tag_responses = [TagResponse(**tag.to_dict()) for tag in tags]
-                
+
                 return TagListResponse(
                     tags=tag_responses,
                     total=total
                 )
-                
+
         except Exception as e:
             raise DatabaseException(f"Failed to get tags: {str(e)}")
-
-
-
-
 
     async def delete_tag(self, tag_id: int) -> bool:
         """Delete a preset tag."""
@@ -77,12 +69,10 @@ class TagsService:
 
                 session.delete(tag)
                 session.commit()
-                
+
                 return True
-                
+
         except ValidationException:
             raise
         except Exception as e:
             raise DatabaseException(f"Failed to delete tag: {str(e)}")
-
-

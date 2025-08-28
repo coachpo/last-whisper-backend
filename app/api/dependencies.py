@@ -5,10 +5,9 @@ from app.models.database_manager import DatabaseManager
 from app.services.attempts_service import AttemptsService
 from app.services.items_service import ItemsService
 from app.services.stats_service import StatsService
-from app.services.task_service import TaskService
 from app.services.tags_service import TagsService
+from app.services.task_service import TaskService
 from app.tts_engine.tts_engine_manager import TTSEngineManager
-
 from app.tts_engine.tts_engine_wrapper import TTSEngineWrapper
 
 # Global instances

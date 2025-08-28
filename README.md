@@ -1,6 +1,8 @@
 # Last Whisper - Backend Service
 
-A production-grade FastAPI service for Text-to-Speech conversion with multiple TTS providers (Local, Azure, Google Cloud) and comprehensive dictation training capabilities. Features clean architecture, robust task management, and automatic scoring for dictation practice.
+A production-grade FastAPI service for Text-to-Speech conversion with multiple TTS providers (Local, Azure, Google
+Cloud) and comprehensive dictation training capabilities. Features clean architecture, robust task management, and
+automatic scoring for dictation practice.
 
 ## Features
 
@@ -73,6 +75,7 @@ last-whisper-backend/
 This API provides high-quality text-to-speech conversion with multiple provider options:
 
 ### Local TTS Engine
+
 - **Model**: Facebook's MMS-TTS-Fin (Multilingual TTS model)
 - **Output Format**: WAV audio files (24kHz, 16-bit)
 - **Language Support**: Finnish and multilingual capabilities
@@ -80,6 +83,7 @@ This API provides high-quality text-to-speech conversion with multiple provider 
 - **Performance**: Fast local inference with no external dependencies
 
 ### Azure Speech TTS
+
 - **Provider**: Microsoft Azure Cognitive Services Speech
 - **Voice Options**: Multiple Finnish neural voices
 - **Output Format**: WAV audio files (24kHz, 16-bit mono)
@@ -87,6 +91,7 @@ This API provides high-quality text-to-speech conversion with multiple provider 
 - **Scalability**: Cloud-based processing with high availability
 
 ### Google Cloud Text-to-Speech
+
 - **Provider**: Google Cloud Platform Text-to-Speech API
 - **Voice Options**: WaveNet voices (fi-FI-Wavenet-B)
 - **Output Format**: WAV audio files (24kHz, 16-bit mono)
@@ -94,6 +99,7 @@ This API provides high-quality text-to-speech conversion with multiple provider 
 - **Quality**: Premium WaveNet voices for natural speech
 
 ### Common Features
+
 - **Batch Processing**: Queue-based request handling for scalability
 - **Task Management**: Comprehensive task lifecycle tracking and deduplication
 - **Provider Switching**: Easy configuration-based provider selection
@@ -370,22 +376,26 @@ This design provides:
 ## Dependencies
 
 ### Core Framework
+
 - **FastAPI**: Modern web framework for building APIs
 - **SQLAlchemy**: Database ORM and management
 - **Pydantic**: Data validation and settings management
 - **Uvicorn**: ASGI server for production deployment
 
 ### TTS Engines
+
 - **Transformers**: Hugging Face transformers for local TTS models
 - **PyTorch**: Deep learning framework for local model inference
 - **Azure Cognitive Services Speech**: Azure TTS integration
 - **Google Cloud Text-to-Speech**: GCP TTS integration
 
 ### Dictation Features
+
 - **jiwer**: Word Error Rate calculation for scoring
 - **unidecode**: Unicode normalization for text processing
 
 ### Development Tools
+
 - **pytest**: Testing framework
 - **black**: Code formatting
 - **ruff**: Code linting

@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.api.dependencies import get_task_service, get_tts_engine_manager
-from app.core.config import settings
 from app.core.exceptions import TaskNotFoundException, TTSServiceException, ValidationException
 from app.models.schemas import ErrorResponse, TTSConvertRequest, TTSConvertResponse, TTSMultiConvertRequest, \
     TTSMultiConvertResponse, TTSTaskResponse
@@ -38,7 +37,8 @@ async def convert_text(
     """Submit text for TTS conversion."""
     try:
         # Submit task to TTS manager
-        task_id = tts_engine_mgr.submit_task(text=request.text, custom_filename=request.custom_filename, language=request.language)
+        task_id = tts_engine_mgr.submit_task(text=request.text, custom_filename=request.custom_filename,
+                                             language=request.language)
 
         if not task_id:
             raise TTSServiceException("Failed to submit TTS task")

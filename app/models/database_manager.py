@@ -42,8 +42,7 @@ class DatabaseManager:
         os.makedirs(settings.audio_dir, exist_ok=True)
 
         # Import models to ensure they're registered with Base
-        from . import models
-        
+
         # Create tables if they don't exist
         Base.metadata.create_all(bind=self.engine)
 

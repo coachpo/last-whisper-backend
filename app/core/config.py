@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # Azure Settings (optional)
     azure_speech_key: Optional[str] = None
     azure_service_region: Optional[str] = None
-    
+
     # API Settings
     docs_url: str = "/docs"
     redoc_url: str = "/redoc"

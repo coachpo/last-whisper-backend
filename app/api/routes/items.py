@@ -128,7 +128,7 @@ async def bulk_create_items(
 async def list_items(
         locale: Optional[str] = Query(None, description="Filter by locale"),
         tag: Optional[List[str]] = Query(None, description="Filter by tags (repeat for multiple)"),
-        difficulty: Optional[str] = Query(None, 
+        difficulty: Optional[str] = Query(None,
                                           description="Filter by difficulty (single value or 'min..max')"),
         practiced: Optional[bool] = Query(None, description="Filter by practice status"),
         sort: str = Query("created_at.desc", description="Sort order"),

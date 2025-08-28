@@ -1,14 +1,12 @@
 """SQLAlchemy database models."""
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-
-from app.core.config import settings
 
 # Import Base from database_manager to avoid circular imports
 from .database_manager import Base

@@ -11,7 +11,7 @@ def main():
     """Run the API server."""
     # Setup logging before starting the server
     setup_logging()
-    
+
     uvicorn.run(
         "app.main:app",
         host=settings.host,

@@ -1,7 +1,5 @@
 """API routes for preset tags management."""
 
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.dependencies import get_tags_service
@@ -61,7 +59,6 @@ async def get_tags(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
-
 
 
 @router.delete(

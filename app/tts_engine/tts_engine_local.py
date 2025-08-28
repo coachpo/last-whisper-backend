@@ -71,10 +71,11 @@ class TTSEngine:
         if not text.strip():
             logger.error("Error: Empty text provided")
             return None
-        
+
         # Validate language support
         if language not in settings.tts_supported_languages:
-            logger.error(f"Error: Language '{language}' is not supported. Supported languages: {settings.tts_supported_languages}")
+            logger.error(
+                f"Error: Language '{language}' is not supported. Supported languages: {settings.tts_supported_languages}")
             return None
 
         # Generate filename based on timestamp and text hash
