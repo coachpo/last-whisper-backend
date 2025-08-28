@@ -5,9 +5,10 @@ from datetime import datetime
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 
 from app.core.config import settings
+from app.models.enums import ItemTTSStatus
 from app.models.schemas import (
     ErrorResponse,
     ItemCreateRequest,
@@ -20,7 +21,6 @@ from app.models.schemas import (
     DifficultyUpdateRequest,
     DifficultyUpdateResponse,
 )
-from app.models.enums import ItemTTSStatus
 from app.services.items_service import ItemsService
 
 router = APIRouter(prefix="/v1/items", tags=["Items"])
@@ -378,10 +378,19 @@ async def get_item_audio(
                 detail="Audio file not found",
             )
 
-        return FileResponse(
-            path=audio_path,
+        # Read the audio file content
+        with open(audio_path, "rb") as audio_file:
+            audio_content = audio_file.read()
+        
+        # Return with explicit MIME type headers
+        return Response(
+            content=audio_content,
             media_type="audio/wav",
-            filename=audio_filename,
+            headers={
+                "Content-Type": "audio/wav",
+                "Content-Disposition": f"inline; filename={audio_filename}",
+                "Cache-Control": "public, max-age=3600",  # Cache for 1 hour
+            }
         )
 
     except HTTPException:
