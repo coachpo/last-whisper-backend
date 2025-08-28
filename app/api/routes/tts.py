@@ -11,6 +11,7 @@ from app.api.dependencies import get_task_service, get_tts_engine_manager
 from app.core.exceptions import TaskNotFoundException, TTSServiceException, ValidationException
 from app.models.schemas import ErrorResponse, TTSConvertRequest, TTSConvertResponse, TTSMultiConvertRequest, \
     TTSMultiConvertResponse, TTSTaskResponse
+from app.models.enums import TaskStatus
 from app.services.task_service import TaskService
 from app.tts_engine.tts_engine_manager import TTSEngineManager
 
@@ -135,7 +136,7 @@ async def get_conversion_status(
         # Calculate duration if file exists and has metadata
         duration = None
         if (
-                task.status in ["completed", "done"]
+                task.status in [TaskStatus.COMPLETED, TaskStatus.DONE]
                 and task.output_file_path
                 and os.path.exists(task.output_file_path)
         ):
@@ -193,7 +194,7 @@ async def list_conversions(
     """List TTS conversion tasks."""
     try:
         # Validate status parameter
-        if status and status not in ["queued", "processing", "completed", "failed", "done"]:
+        if status and status not in [TaskStatus.QUEUED, TaskStatus.PROCESSING, TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.DONE]:
             raise ValidationException(
                 "Invalid status. Must be one of: queued, processing, completed, failed, done"
             )
@@ -209,7 +210,7 @@ async def list_conversions(
             # Calculate duration if available
             duration = None
             if (
-                    task.status in ["completed", "done"]
+                    task.status in [TaskStatus.COMPLETED, TaskStatus.DONE]
                     and task.output_file_path
                     and os.path.exists(task.output_file_path)
             ):
@@ -266,7 +267,7 @@ async def download_audio_file(
         task = task_service.get_task_by_id(conversion_id)
 
         # Check if task is completed
-        if task.status not in ["completed", "done"]:
+        if task.status not in [TaskStatus.COMPLETED, TaskStatus.DONE]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Task is not completed. Current status: {task.status}",

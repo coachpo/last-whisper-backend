@@ -10,6 +10,7 @@ from sqlalchemy.sql import func
 
 # Import Base from database_manager to avoid circular imports
 from .database_manager import Base
+from .enums import TaskStatus, ItemTTSStatus
 
 
 class Task(Base):
@@ -21,7 +22,7 @@ class Task(Base):
     task_id = Column(String, unique=True, nullable=False, index=True)
     original_text = Column(Text, nullable=False)
     text_hash = Column(String, nullable=False, index=True)
-    status = Column(String, nullable=False, default="pending", index=True)
+    status = Column(String, nullable=False, default=TaskStatus.PENDING, index=True)
     output_file_path = Column(Text)
     custom_filename = Column(Text)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
@@ -65,7 +66,7 @@ class Item(Base):
     text = Column(Text, nullable=False)
     difficulty = Column(Integer, nullable=True, index=True)
     tags_json = Column(Text, nullable=True)  # JSON array of strings
-    tts_status = Column(String(20), nullable=False, default="pending", index=True)
+    tts_status = Column(String(20), nullable=False, default=ItemTTSStatus.PENDING, index=True)
     task_id = Column(String, ForeignKey("tasks.task_id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.now, index=True)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)

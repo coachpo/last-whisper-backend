@@ -10,6 +10,7 @@ from transformers import AutoTokenizer, VitsModel
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.models.enums import TaskStatus
 
 # Setup logger for this module
 logger = get_logger(__name__)
@@ -137,13 +138,13 @@ class TTSEngine:
         """Process a single TTS request"""
         try:
             logger.info(f"TTS engine: Processing request {request['id']} on {self.device}...")
-            request["status"] = "processing"
+            request["status"] = TaskStatus.PROCESSING
 
             # Publish processing status
             self._publish_task_message(
                 request["id"],
                 request["filename"],
-                "processing",
+                TaskStatus.PROCESSING,
                 text=request["text"],
                 language=request["language"],
                 started_at=datetime.now().isoformat(),
@@ -165,14 +166,14 @@ class TTSEngine:
                 request["filename"], rate=self.model.config.sampling_rate, data=audio_data
             )
 
-            request["status"] = "completed"
+            request["status"] = TaskStatus.COMPLETED
             request["completed_at"] = datetime.now()
 
             # Publish completion status
             self._publish_task_message(
                 request["id"],
                 request["filename"],
-                "completed",
+                TaskStatus.COMPLETED,
                 text=request["text"],
                 language=request["language"],
                 completed_at=request["completed_at"].isoformat(),
@@ -189,7 +190,7 @@ class TTSEngine:
             self._publish_task_message(
                 request["id"],
                 request["filename"],
-                "done",
+                TaskStatus.DONE,
                 text=request["text"],
                 language=request["language"],
                 completed_at=request["completed_at"].isoformat(),
@@ -206,14 +207,14 @@ class TTSEngine:
                 f"TTS engine: Request {request['id']} completed successfully! Audio saved as: {request['filename']}")
 
         except Exception as e:
-            request["status"] = "failed"
+            request["status"] = TaskStatus.FAILED
             request["error"] = str(e)
 
             # Publish failure status
             self._publish_task_message(
                 request["id"],
                 request["filename"],
-                "failed",
+                TaskStatus.FAILED,
                 text=request["text"],
                 language=request["language"],
                 error=str(e),

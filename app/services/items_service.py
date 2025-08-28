@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.database_manager import DatabaseManager
 from app.models.models import Item
+from app.models.enums import ItemTTSStatus
 
 # Setup logger for this module
 logger = get_logger(__name__)
@@ -52,7 +53,7 @@ class ItemsService:
                     with self.db_manager.get_session() as session:
                         item = session.query(Item).filter(Item.id == item_id).first()
                         if item:
-                            item.tts_status = "failed"
+                            item.tts_status = ItemTTSStatus.FAILED
                             session.commit()
                             logger.warning(f"Failed to submit TTS job for item {item_id}")
 
@@ -67,7 +68,7 @@ class ItemsService:
                 with self.db_manager.get_session() as session:
                     item = session.query(Item).filter(Item.id == item_id).first()
                     if item:
-                        item.tts_status = "failed"
+                        item.tts_status = ItemTTSStatus.FAILED
                         session.commit()
             except Exception as db_error:
                 logger.error(f"Failed to update TTS status to failed for item {item_id}: {db_error}")
@@ -91,7 +92,7 @@ class ItemsService:
                         with self.db_manager.get_session() as session:
                             item = session.query(Item).filter(Item.id == item_id).first()
                             if item:
-                                item.tts_status = "failed"
+                                item.tts_status = ItemTTSStatus.FAILED
                                 session.commit()
                                 logger.warning(f"Failed to submit TTS job for item {item_id}")
 
@@ -106,7 +107,7 @@ class ItemsService:
                             with self.db_manager.get_session() as session:
                                 item = session.query(Item).filter(Item.id == item_id).first()
                                 if item:
-                                    item.tts_status = "failed"
+                                    item.tts_status = ItemTTSStatus.FAILED
                                     session.commit()
                     except Exception as db_error:
                         logger.error(
@@ -134,7 +135,7 @@ class ItemsService:
                 text=text,
                 difficulty=difficulty,
                 tags_json=None,
-                tts_status="pending",
+                tts_status=ItemTTSStatus.PENDING,
             )
 
             if tags:
@@ -175,7 +176,7 @@ class ItemsService:
                         text=item_data["text"],
                         difficulty=item_data.get("difficulty"),
                         tags_json=None,
-                        tts_status="pending",
+                        tts_status=ItemTTSStatus.PENDING,
                     )
 
                     # Auto-calculate difficulty if not provided

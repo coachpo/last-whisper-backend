@@ -10,6 +10,7 @@ from azure.cognitiveservices import speech
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.models.enums import TaskStatus
 
 # Setup logger for this module
 logger = get_logger(__name__)
@@ -210,12 +211,12 @@ class TTSEngine:
                 f"TTS engine: Processing request {request['id']} with Azure TTS "
                 f"(voice={selected_voice})..."
             )
-            request["status"] = "processing"
+            request["status"] = TaskStatus.PROCESSING
 
             self._publish_task_message(
                 request["id"],
                 request["filename"],
-                "processing",
+                TaskStatus.PROCESSING,
                 text=request["text"],
                 language=request["language"],
                 started_at=datetime.now().isoformat(),
@@ -234,7 +235,7 @@ class TTSEngine:
                 voice_name=selected_voice,
             )
 
-            request["status"] = "completed"
+            request["status"] = TaskStatus.COMPLETED
             request["completed_at"] = datetime.now()
 
             # Publish completion + done
@@ -253,10 +254,10 @@ class TTSEngine:
                 "voice": selected_voice,
             }
             self._publish_task_message(
-                request["id"], request["filename"], "completed", **meta
+                request["id"], request["filename"], TaskStatus.COMPLETED, **meta
             )
             self._publish_task_message(
-                request["id"], request["filename"], "done", **meta
+                request["id"], request["filename"], TaskStatus.DONE, **meta
             )
 
             logger.info(
@@ -265,12 +266,12 @@ class TTSEngine:
             )
 
         except Exception as e:
-            request["status"] = "failed"
+            request["status"] = TaskStatus.FAILED
             request["error"] = str(e)
             self._publish_task_message(
                 request["id"],
                 request["filename"],
-                "failed",
+                TaskStatus.FAILED,
                 text=request["text"],
                 language=request["language"],
                 error=str(e),

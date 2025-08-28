@@ -20,6 +20,7 @@ from app.models.schemas import (
     DifficultyUpdateRequest,
     DifficultyUpdateResponse,
 )
+from app.models.enums import ItemTTSStatus
 from app.services.items_service import ItemsService
 
 router = APIRouter(prefix="/v1/items", tags=["Items"])
@@ -361,7 +362,7 @@ async def get_item_audio(
                 detail="Item not found",
             )
 
-        if item_data["tts_status"] != "ready":
+        if item_data["tts_status"] != ItemTTSStatus.READY:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Audio not ready. Current status: {item_data['tts_status']}",

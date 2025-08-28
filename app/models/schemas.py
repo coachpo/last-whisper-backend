@@ -5,6 +5,8 @@ from typing import Optional, List, Dict, Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from .enums import TaskStatus, ItemTTSStatus
+
 
 class TTSConvertRequest(BaseModel):
     """Request model for TTS conversion."""
@@ -39,7 +41,7 @@ class TTSConvertResponse(BaseModel):
 
     conversion_id: str = Field(..., description="Unique ID for the conversion task")
     text: str = Field(..., description="Echo of the submitted text")
-    status: str = Field(..., description="Current status of the conversion")
+    status: TaskStatus = Field(..., description="Current status of the conversion")
     submitted_at: datetime = Field(..., description="Timestamp when the task was submitted")
 
 
@@ -48,7 +50,7 @@ class TTSMultiConvertResponse(BaseModel):
 
     conversion_ids: list[str] = Field(..., description="List of unique IDs for the conversion tasks")
     texts: list[str] = Field(..., description="Echo of the submitted texts")
-    status: str = Field(..., description="Current status of the conversions")
+    status: TaskStatus = Field(..., description="Current status of the conversions")
     submitted_at: datetime = Field(..., description="Timestamp when the tasks were submitted")
 
 
@@ -57,7 +59,7 @@ class TTSTaskResponse(BaseModel):
 
     conversion_id: str = Field(..., description="Unique ID for the conversion task")
     text: str = Field(..., description="Original text submitted for conversion")
-    status: str = Field(..., description="Current status: queued, processing, completed, failed")
+    status: TaskStatus = Field(..., description="Current status: queued, processing, completed, failed")
     output_file_path: Optional[str] = Field(
         None, description="Path to the generated audio file (when completed)"
     )
@@ -178,7 +180,7 @@ class ItemResponse(BaseModel):
     text: str = Field(..., description="Text for dictation")
     difficulty: Optional[int] = Field(None, description="Difficulty level")
     tags: List[str] = Field(default_factory=list, description="Tags")
-    tts_status: str = Field(..., description="TTS status: pending, ready, failed")
+    tts_status: ItemTTSStatus = Field(..., description="TTS status: pending, ready, failed")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     practiced: bool = Field(..., description="Whether item has been practiced")

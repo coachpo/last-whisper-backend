@@ -10,6 +10,7 @@ from google.cloud import texttospeech
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.models.enums import TaskStatus
 
 # Setup logger for this module
 logger = get_logger(__name__)
@@ -184,12 +185,12 @@ class TTSEngine:
     def _process_request(self, request):
         try:
             logger.info(f"TTS engine: Processing request {request['id']} with Google TTS...")
-            request["status"] = "processing"
+            request["status"] = TaskStatus.PROCESSING
 
             self._publish_task_message(
                 request["id"],
                 request["filename"],
-                "processing",
+                TaskStatus.PROCESSING,
                 text=request["text"],
                 language=request["language"],
                 started_at=datetime.now().isoformat(),
@@ -206,7 +207,7 @@ class TTSEngine:
                 text=request["text"], wav_path=request["filename"]
             )
 
-            request["status"] = "completed"
+            request["status"] = TaskStatus.COMPLETED
             request["completed_at"] = datetime.now()
 
             # Publish completion + done
@@ -224,20 +225,20 @@ class TTSEngine:
                 "backend": "google-tts",
                 "voice": self.voice_name,
             }
-            self._publish_task_message(request["id"], request["filename"], "completed", **meta)
-            self._publish_task_message(request["id"], request["filename"], "done", **meta)
+            self._publish_task_message(request["id"], request["filename"], TaskStatus.COMPLETED, **meta)
+            self._publish_task_message(request["id"], request["filename"], TaskStatus.DONE, **meta)
 
             logger.info(
                 f"TTS engine: Request {request['id']} completed! Saved: {request['filename']}"
             )
 
         except (GoogleAPICallError, RetryError) as e:
-            request["status"] = "failed"
+            request["status"] = TaskStatus.FAILED
             request["error"] = f"Google API error: {e}"
             self._publish_task_message(
                 request["id"],
                 request["filename"],
-                "failed",
+                TaskStatus.FAILED,
                 text=request["text"],
                 language=request["language"],
                 error=str(e),
@@ -246,12 +247,12 @@ class TTSEngine:
             )
             logger.error(f"Request {request['id']} failed (Google API): {e}")
         except Exception as e:
-            request["status"] = "failed"
+            request["status"] = TaskStatus.FAILED
             request["error"] = str(e)
             self._publish_task_message(
                 request["id"],
                 request["filename"],
-                "failed",
+                TaskStatus.FAILED,
                 text=request["text"],
                 language=request["language"],
                 error=str(e),
