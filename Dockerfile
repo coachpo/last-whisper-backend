@@ -42,7 +42,7 @@ COPY app/ ./app/
 COPY run_api.py .
 
 # Create necessary directories and set permissions
-RUN mkdir -p audio keys && \
+RUN mkdir -p audio keys data && \
     chown -R appuser:appuser /app && \
     chown -R appuser:appuser /home/appuser
 

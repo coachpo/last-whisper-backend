@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     log_level: str = "info"
 
     # Database Settings
-    database_url: str = "sqlite:///dictation.db"
-    db_path: str = "dictation.db"
+    database_url: str = "sqlite:///data/dictation.db"
+    db_path: str = "data/dictation.db"
 
     # Audio Storage Settings
     audio_dir: str = "audio"
