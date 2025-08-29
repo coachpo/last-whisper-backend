@@ -52,7 +52,7 @@ RUN mkdir -p audio keys data /app/.cache/huggingface && \
 USER appuser
 
 # Expose port
-EXPOSE 8008
+EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
