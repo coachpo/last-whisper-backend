@@ -1,5 +1,5 @@
 # Multi-stage build for Last Whisper Backend
-FROM python:3.11-slim AS base
+FROM python:3.12-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -10,7 +10,8 @@ ENV PYTHONUNBUFFERED=1 \
     DISABLE_DOCS=true \
     RELOAD=false \
     TTS_PROVIDER=local \
-    LOG_LEVEL=info 
+    LOG_LEVEL=info \
+    HF_HOME=/app/.cache/huggingface 
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -20,8 +21,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Create non-root user with home directory
+RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 # Set work directory
 WORKDIR /app
@@ -39,9 +40,10 @@ RUN pip install --no-cache-dir gunicorn
 COPY app/ ./app/
 COPY run_api.py .
 
-# Create necessary directories
+# Create necessary directories and set permissions
 RUN mkdir -p audio keys && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    chown -R appuser:appuser /home/appuser
 
 # Switch to non-root user
 USER appuser
