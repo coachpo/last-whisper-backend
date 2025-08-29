@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     environment: str = "development"  # "development" or "production"
     disable_docs: bool = False  # Set to True to disable docs in production
     
+    # CORS Settings
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"  # Comma-separated list of allowed origins
+    cors_allow_credentials: bool = True
+    cors_allow_methods: str = "*"  # Comma-separated list or "*" for all methods
+    cors_allow_headers: str = "*"  # Comma-separated list or "*" for all headers
+    
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 

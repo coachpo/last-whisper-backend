@@ -84,12 +84,30 @@ app = FastAPI(
 )
 
 # Add CORS middleware
+def get_cors_origins():
+    """Parse CORS origins from comma-separated string."""
+    if settings.cors_origins == "*":
+        return ["*"]
+    return [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+
+def get_cors_methods():
+    """Parse CORS methods from comma-separated string."""
+    if settings.cors_allow_methods == "*":
+        return ["*"]
+    return [method.strip() for method in settings.cors_allow_methods.split(",") if method.strip()]
+
+def get_cors_headers():
+    """Parse CORS headers from comma-separated string."""
+    if settings.cors_allow_headers == "*":
+        return ["*"]
+    return [header.strip() for header in settings.cors_allow_headers.split(",") if header.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Frontend URL
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_origins=get_cors_origins(),
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=get_cors_methods(),
+    allow_headers=get_cors_headers(),
 )
 
 

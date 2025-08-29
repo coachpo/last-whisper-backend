@@ -11,7 +11,11 @@ ENV PYTHONUNBUFFERED=1 \
     RELOAD=false \
     TTS_PROVIDER=local \
     LOG_LEVEL=info \
-    HF_HOME=/app/.cache/huggingface 
+    HF_HOME=/app/.cache/huggingface \
+    CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000 \
+    CORS_ALLOW_CREDENTIALS=true \
+    CORS_ALLOW_METHODS=* \
+    CORS_ALLOW_HEADERS=* 
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
