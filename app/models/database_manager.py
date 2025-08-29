@@ -42,9 +42,30 @@ class DatabaseManager:
         os.makedirs(settings.audio_dir, exist_ok=True)
 
         # Import models to ensure they're registered with Base
+        from .models import Task, Item, Attempt, Tag
 
         # Create tables if they don't exist
-        Base.metadata.create_all(bind=self.engine)
+        self._create_tables_if_not_exist()
+
+    def _create_tables_if_not_exist(self):
+        """Create tables only if they don't exist."""
+        try:
+            # Check if tables exist by trying to query the metadata
+            with self.engine.connect() as conn:
+                # Try to get table names
+                result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+                existing_tables = [row[0] for row in result.fetchall()]
+                
+                # Only create tables if none exist
+                if not existing_tables:
+                    Base.metadata.create_all(bind=self.engine)
+                else:
+                    # Tables exist, just ensure they're up to date
+                    Base.metadata.create_all(bind=self.engine)
+        except Exception as e:
+            # If there's any error, fall back to the standard create_all
+            # which should be idempotent
+            Base.metadata.create_all(bind=self.engine)
 
     def get_session(self) -> Session:
         """Get a database session."""
