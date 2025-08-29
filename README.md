@@ -44,7 +44,8 @@ last-whisper-backend/
 │   ├── models/
 │   │   ├── schemas.py       # Pydantic models and schemas
 │   │   ├── models.py        # SQLAlchemy models
-│   │   └── database_manager.py # Database management
+│   │   ├── database_manager.py # Database management
+│   │   └── enums.py         # Enumeration definitions
 │   ├── services/
 │   │   ├── task_service.py      # Task management service
 │   │   ├── items_service.py     # Dictation items service
@@ -58,12 +59,10 @@ last-whisper-backend/
 │   │   ├── tts_engine_manager.py   # Task orchestration and monitoring
 │   │   └── tts_engine_wrapper.py   # TTS service wrapper and provider selection
 │   └── main.py              # FastAPI application entry point
-├── doc/                     # Documentation
-│   ├── ARCHITECTURE.md      # System architecture documentation
-│   └── DICTATION_API.md     # API documentation
+├── Dockerfile               # Backend container configuration
 ├── keys/                    # API keys and credentials
 │   └── google-credentials.json # Google Cloud service account keys
-├── audio/                   # Generated audio files
+├── audio/                   # Generated audio files (item_*.wav)
 ├── requirements.txt         # Python dependencies
 ├── run_api.py              # Server startup script
 ├── dictation.db            # SQLite database
