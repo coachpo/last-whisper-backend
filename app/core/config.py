@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     tts_provider: str = "gcp"  # or "azure" or "gcp" TTS provider: 'local', 'azure', or 'gcp'/'google'
 
     # Google Cloud Settings
-    google_application_credentials: Optional[str] = "keys/google-credentials.json"
+    google_application_credentials: Optional[str] = "keys/google-credentials.json"  # Dev: file path, Prod: set via GOOGLE_APPLICATION_CREDENTIALS env var
 
     # Azure Settings (optional)
     azure_speech_key: Optional[str] = None
@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     docs_url: str = "/docs"
     redoc_url: str = "/redoc"
     openapi_url: str = "/openapi.json"
+    
+    # Production Settings
+    environment: str = "development"  # "development" or "production"
+    disable_docs: bool = False  # Set to True to disable docs in production
+    
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 

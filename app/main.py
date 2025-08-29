@@ -77,9 +77,9 @@ app = FastAPI(
     title=settings.app_name,
     description=settings.app_description,
     version=settings.app_version,
-    docs_url=settings.docs_url,
-    redoc_url=settings.redoc_url,
-    openapi_url=settings.openapi_url,
+    docs_url=settings.docs_url if not settings.disable_docs else None,
+    redoc_url=settings.redoc_url if not settings.disable_docs else None,
+    openapi_url=settings.openapi_url if not settings.disable_docs else None,
     lifespan=lifespan,
 )
 
