@@ -42,9 +42,11 @@ COPY app/ ./app/
 COPY run_api.py .
 
 # Create necessary directories and set permissions
-RUN mkdir -p audio keys data && \
+RUN mkdir -p audio keys data /app/.cache/huggingface && \
     chown -R appuser:appuser /app && \
-    chown -R appuser:appuser /home/appuser
+    chown -R appuser:appuser /home/appuser && \
+    # Clean up any existing lock files
+    find /app/.cache/huggingface -name "*.lock" -delete 2>/dev/null || true
 
 # Switch to non-root user
 USER appuser
