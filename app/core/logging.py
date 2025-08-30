@@ -40,8 +40,6 @@ def setup_logging(log_level: str = None, log_file: Optional[str] = None) -> logg
     logging.getLogger("uvicorn.access").setLevel(logging.INFO)
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
     logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
-    logging.getLogger("transformers").setLevel(logging.WARNING)
-    logging.getLogger("torch").setLevel(logging.WARNING)
 
     # Don't interfere with uvicorn's access logging - let it use its own handlers
     # Only configure uvicorn error and general logs

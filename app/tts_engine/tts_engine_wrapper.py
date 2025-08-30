@@ -16,13 +16,10 @@ class TTSEngineWrapper:
     def initialize(self):
         """Initialize the TTS service."""
         try:
-            # Get TTS provider from settings, default to 'local'
-            provider = getattr(settings, 'tts_provider', 'local').lower()
+            # Get TTS provider from settings, default to 'gcp'
+            provider = getattr(settings, 'tts_provider', 'gcp').lower()
 
-            if provider == 'local':
-                from app.tts_engine.tts_engine_local import TTSEngine
-                self._service = TTSEngine(device=settings.tts_device)
-            elif provider == 'azure':
+            if provider == 'azure':
                 from app.tts_engine.tts_engine_azure import TTSEngine
                 # Azure-specific configuration
                 azure_config = {}
@@ -67,7 +64,7 @@ class TTSEngineWrapper:
 
                 self._service = TTSEngine(**gcp_config)
             else:
-                raise TTSServiceException(f"Unsupported TTS provider: {provider}")
+                raise TTSServiceException(f"Unsupported TTS provider: {provider}. Supported providers: 'azure', 'gcp'")
 
             self._service.start_service()
             self._is_initialized = True
@@ -124,11 +121,15 @@ class TTSEngineWrapper:
         return self._service.get_device_info()
 
     def switch_device(self, new_device):
-        """Switch device (only applicable for local TTS engine)."""
+        """Switch device (not applicable for cloud TTS engines)."""
         if not self._is_initialized or not self._service:
             raise TTSServiceException("TTS service not initialized")
 
-        return self._service.switch_device(new_device)
+        # Only GCP and Azure TTS engines support device switching for compatibility
+        if hasattr(self._service, 'switch_device'):
+            return self._service.switch_device(new_device)
+        else:
+            raise TTSServiceException("Device switching not supported for this TTS provider")
 
     @property
     def is_initialized(self) -> bool:

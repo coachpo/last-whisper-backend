@@ -1,130 +1,141 @@
-# Last Whisper - Backend Service
+# Last Whisper - Backend Service 🎯
 
-A production-grade FastAPI service for Text-to-Speech conversion with multiple TTS providers (Local, Azure, Google
-Cloud) and comprehensive dictation training capabilities. Features clean architecture, robust task management, and
-automatic scoring for dictation practice.
+A production-grade FastAPI service for advanced Text-to-Speech conversion with multiple TTS providers and comprehensive dictation training capabilities. Built with clean architecture, robust task management, and intelligent scoring systems.
 
-## Features
+## ✨ Core Features
 
-- **Multiple TTS Providers**: Support for Local (Facebook MMS-TTS-Fin), Azure Speech, and Google Cloud Text-to-Speech
-- **Clean Architecture**: Organized with proper separation of concerns and modular design
-- **FastAPI Framework**: Modern, fast web framework with automatic OpenAPI documentation
-- **SQLAlchemy 2.x**: Modern ORM with type hints and async support
+### 🎙️ Advanced TTS Engine
+- **Multiple Providers**: Azure Speech, Google Cloud Text-to-Speech, and Local TTS engines
+- **High-Quality Audio**: Neural voice synthesis with customizable parameters
+- **Batch Processing**: Efficient queue-based conversion for multiple texts
+- **Task Management**: Comprehensive lifecycle tracking with deduplication
+- **Provider Switching**: Easy configuration-based provider selection
+
+### 📚 Dictation Training System
+- **Interactive Practice**: Real-time dictation exercises with immediate feedback
+- **Automatic Scoring**: Word Error Rate (WER) calculation for accurate assessment
+- **Progress Analytics**: Comprehensive practice tracking and performance monitoring
+- **Tag Management**: Flexible categorization with preset and custom tags
+- **Difficulty Levels**: Customizable difficulty settings for progressive learning
+
+### 🏗️ Production-Ready Architecture
+- **Clean Architecture**: Proper separation of concerns with modular design
+- **FastAPI Framework**: Modern, fast web framework with automatic OpenAPI docs
+- **SQLAlchemy 2.x**: Advanced ORM with type hints and async support
 - **Comprehensive Testing**: Full test suite with pytest and mocking
-- **Service Layer**: Clean abstraction over TTS infrastructure with task management
-- **Configuration Management**: Centralized settings with environment variable support
-- **Error Handling**: Custom exceptions and proper HTTP status codes
-- **Task Queue Management**: Robust task processing with status tracking
-- **Multi-device Support**: Automatic GPU/CPU detection with manual override options (Local TTS)
-- **Dictation Practice Backend**: Complete workflow for creating, practicing, and scoring dictation exercises
-- **Automatic Scoring**: Word Error Rate (WER) calculation for practice attempts
-- **Statistics and Analytics**: Comprehensive practice tracking and progress monitoring
-- **Tag Management**: Preset tag system for item categorization and organization
-- **Provider Flexibility**: Easy switching between TTS providers via configuration
+- **Error Handling**: Custom exceptions with proper HTTP status codes
+- **Configuration Management**: Centralized settings with environment variables
+- **Cloud Integration**: Scalable cloud TTS services with high availability
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 last-whisper-backend/
-├── app/
-│   ├── api/
-│   │   ├── routes/          # API route definitions
-│   │   │   ├── health.py    # Health check endpoints
-│   │   │   ├── tts.py       # TTS conversion endpoints
-│   │   │   ├── items.py     # Dictation items management
-│   │   │   ├── attempts.py  # Practice attempts and scoring
-│   │   │   ├── stats.py     # Statistics and analytics
-│   │   │   └── tags.py      # Preset tag management
-│   │   └── dependencies.py  # FastAPI dependencies
-│   ├── core/
-│   │   ├── config.py        # Application configuration
-│   │   ├── exceptions.py    # Custom exceptions
-│   │   ├── logging.py       # Logging configuration
-│   │   └── uvicorn_logging.py # Uvicorn logging setup
-│   ├── models/
-│   │   ├── schemas.py       # Pydantic models and schemas
-│   │   ├── models.py        # SQLAlchemy models
-│   │   ├── database_manager.py # Database management
-│   │   └── enums.py         # Enumeration definitions
-│   ├── services/
-│   │   ├── task_service.py      # Task management service
-│   │   ├── items_service.py     # Dictation items service
-│   │   ├── attempts_service.py  # Practice attempts service
-│   │   ├── stats_service.py     # Statistics service
-│   │   └── tags_service.py      # Preset tag service
-│   ├── tts_engine/
-│   │   ├── tts_engine_local.py     # Local TTS engine (Facebook MMS-TTS-Fin)
-│   │   ├── tts_engine_azure.py     # Azure Speech TTS engine
-│   │   ├── tts_engine_gcp.py       # Google Cloud TTS engine
-│   │   ├── tts_engine_manager.py   # Task orchestration and monitoring
-│   │   └── tts_engine_wrapper.py   # TTS service wrapper and provider selection
-│   └── main.py              # FastAPI application entry point
-├── Dockerfile               # Backend container configuration
-├── keys/                    # API keys and credentials
-│   └── google-credentials.json # Google Cloud service account keys
-├── audio/                   # Generated audio files (item_*.wav)
-├── requirements.txt         # Python dependencies
-├── run_api.py              # Server startup script
-├── dictation.db            # SQLite database
-└── README.md               # This file
+├── app/                           # Main application package
+│   ├── api/                       # API layer
+│   │   ├── routes/                # Route definitions
+│   │   │   ├── health.py          # Health check endpoints
+│   │   │   ├── tts.py             # TTS conversion endpoints
+│   │   │   ├── items.py           # Dictation items management
+│   │   │   ├── attempts.py        # Practice attempts and scoring
+│   │   │   ├── stats.py           # Statistics and analytics
+│   │   │   └── tags.py            # Preset tag management
+│   │   └── dependencies.py        # FastAPI dependencies
+│   ├── core/                      # Core application components
+│   │   ├── config.py              # Application configuration
+│   │   ├── exceptions.py          # Custom exceptions
+│   │   ├── logging.py             # Logging configuration
+│   │   └── uvicorn_logging.py     # Uvicorn logging setup
+│   ├── models/                    # Data models and schemas
+│   │   ├── schemas.py             # Pydantic models and schemas
+│   │   ├── models.py              # SQLAlchemy models
+│   │   ├── database_manager.py    # Database management
+│   │   └── enums.py               # Enumeration definitions
+│   ├── services/                  # Business logic layer
+│   │   ├── task_service.py        # Task management service
+│   │   ├── items_service.py       # Dictation items service
+│   │   ├── attempts_service.py    # Practice attempts service
+│   │   ├── stats_service.py       # Statistics service
+│   │   └── tags_service.py        # Preset tag service
+│   ├── tts_engine/                # TTS engine implementations
+│   │   ├── tts_engine_azure.py    # Azure Speech TTS engine
+│   │   ├── tts_engine_gcp.py      # Google Cloud TTS engine
+│   │   ├── tts_engine_manager.py  # Task orchestration and monitoring
+│   │   └── tts_engine_wrapper.py  # TTS service wrapper and provider selection
+│   └── main.py                    # FastAPI application entry point
+├── Dockerfile                     # Backend container configuration
+├── keys/                          # API keys and credentials
+│   └── google-credentials.json    # Google Cloud service account keys
+├── audio/                         # Generated audio files (item_*.wav)
+├── requirements.txt               # Python dependencies with comments
+├── run_api.py                     # Server startup script
+├── data/                          # Database storage
+│   └── dictation.db               # SQLite database
+└── README.md                      # This documentation file
 ```
 
-## TTS Capabilities
+## 🎙️ TTS Capabilities
 
-This API provides high-quality text-to-speech conversion with multiple provider options:
+This API provides enterprise-grade text-to-speech conversion with multiple provider options:
 
-### Local TTS Engine
-
-- **Model**: Facebook's MMS-TTS-Fin (Multilingual TTS model)
-- **Output Format**: WAV audio files (24kHz, 16-bit)
-- **Language Support**: Finnish and multilingual capabilities
-- **Device Optimization**: Automatic GPU/CPU detection with manual override
-- **Performance**: Fast local inference with no external dependencies
-
-### Azure Speech TTS
-
+### 🔵 Azure Speech TTS
 - **Provider**: Microsoft Azure Cognitive Services Speech
-- **Voice Options**: Multiple Finnish neural voices
-- **Output Format**: WAV audio files (24kHz, 16-bit mono)
-- **Features**: SSML support, prosody controls, high-quality neural voices
-- **Scalability**: Cloud-based processing with high availability
+- **Voice Options**: Multiple Finnish neural voices with natural intonation
+- **Output Format**: High-quality WAV audio files (24kHz, 16-bit mono)
+- **Features**: SSML support, prosody controls, advanced neural voices
+- **Scalability**: Cloud-based processing with enterprise-grade availability
+- **Use Cases**: Production applications requiring reliable, high-quality speech synthesis
 
-### Google Cloud Text-to-Speech
-
+### 🟢 Google Cloud Text-to-Speech
 - **Provider**: Google Cloud Platform Text-to-Speech API
-- **Voice Options**: WaveNet voices (fi-FI-Wavenet-B)
-- **Output Format**: WAV audio files (24kHz, 16-bit mono)
-- **Features**: Advanced neural voice synthesis, SSML support
-- **Quality**: Premium WaveNet voices for natural speech
+- **Voice Options**: Premium WaveNet voices (fi-FI-Wavenet-B)
+- **Output Format**: High-fidelity WAV audio files (24kHz, 16-bit mono)
+- **Features**: Advanced neural voice synthesis, comprehensive SSML support
+- **Quality**: State-of-the-art WaveNet voices for natural, human-like speech
+- **Use Cases**: Applications requiring the highest quality speech synthesis
 
-### Common Features
+### ⚡ Common Features
+- **Batch Processing**: Efficient queue-based request handling for scalability
+- **Task Management**: Comprehensive task lifecycle tracking with deduplication
+- **Provider Switching**: Seamless configuration-based provider selection
+- **Error Handling**: Robust error handling with intelligent retry mechanisms
+- **Performance**: Optimized for high-throughput production environments
 
-- **Batch Processing**: Queue-based request handling for scalability
-- **Task Management**: Comprehensive task lifecycle tracking and deduplication
-- **Provider Switching**: Easy configuration-based provider selection
-- **Error Handling**: Robust error handling and retry mechanisms
+## 📚 Dictation Practice Features
 
-## Dictation Practice Features
+The backend provides a comprehensive dictation training workflow designed for language learning and pronunciation practice:
 
-The extended backend provides a complete dictation practice workflow:
+### 📝 Item Management
+- **CRUD Operations**: Create, read, update, delete dictation items with automatic TTS generation
+- **Content Organization**: Flexible text management with difficulty levels and categorization
+- **Automatic Audio**: Seamless TTS generation for all dictation items
+- **Bulk Operations**: Efficient handling of multiple items and batch processing
 
-- **Item Management**: Create, read, update, delete dictation items with automatic TTS generation
-- **Practice Tracking**: Submit attempts and get automatic scoring using Word Error Rate (WER)
-- **Statistics**: Comprehensive analytics and progress monitoring
+### 🎯 Practice & Scoring
+- **Real-time Practice**: Submit attempts and receive immediate feedback
+- **Automatic Scoring**: Advanced Word Error Rate (WER) calculation for accurate assessment
+- **Progress Tracking**: Comprehensive attempt history and performance monitoring
+- **Session-less Design**: No authentication required - perfect for educational environments
+
+### 📊 Analytics & Insights
+- **Comprehensive Statistics**: Detailed analytics and progress monitoring
+- **Performance Metrics**: Track improvement over time with visual progress indicators
+- **Practice Logs**: Complete history of practice sessions and attempts
+- **Item-specific Analytics**: Detailed statistics for individual dictation items
+
+### 🏷️ Organization System
 - **Tag Management**: Create and manage preset tags for item categorization
-- **Multiple TTS Providers**: Support for Local, Azure, and Google Cloud TTS
-- **Session-less**: No authentication or user sessions required
+- **Flexible Filtering**: Advanced search and filter capabilities
+- **Content Discovery**: Easy navigation through organized content libraries
 
-## API Endpoints
+## 🔌 API Endpoints
 
-### TTS Endpoints
+### 🎙️ TTS Endpoints
 
-#### POST /api/v1/tts/convert
+#### `POST /api/v1/tts/convert`
+Submit text for TTS conversion with automatic audio generation.
 
-Submit text for TTS conversion.
-
-**Request:**
-
+**Request Body:**
 ```json
 {
   "text": "Hello world",
@@ -133,7 +144,6 @@ Submit text for TTS conversion.
 ```
 
 **Response:**
-
 ```json
 {
   "conversion_id": "20231201_120000_abc123",
@@ -143,26 +153,21 @@ Submit text for TTS conversion.
 }
 ```
 
-#### GET /api/v1/tts/{id}
+#### `GET /api/v1/tts/{id}`
+Retrieve conversion status and metadata for a specific task.
 
-Get conversion status and metadata.
+#### `GET /api/v1/tts`
+List all conversions with optional status filtering and pagination.
 
-#### GET /api/v1/tts
+#### `POST /api/v1/tts/convert-multiple`
+Submit multiple texts for efficient batch TTS conversion.
 
-List conversions with optional status filtering.
+### 📚 Dictation Endpoints
 
-#### POST /api/v1/tts/convert-multiple
+#### `POST /v1/items`
+Create a new dictation item with automatic TTS generation.
 
-Submit multiple texts for batch TTS conversion.
-
-### Dictation Endpoints
-
-#### POST /v1/items
-
-Create a new dictation item.
-
-**Request:**
-
+**Request Body:**
 ```json
 {
   "locale": "en",
@@ -172,16 +177,18 @@ Create a new dictation item.
 }
 ```
 
-#### GET /v1/items
+#### `GET /v1/items`
+List items with advanced filtering options:
+- **Locale filtering**: Filter by language/locale
+- **Tag filtering**: Filter by one or more tags
+- **Difficulty filtering**: Filter by difficulty level
+- **Text search**: Search within item text content
+- **Practice status**: Filter by practiced/unpracticed items
 
-List items with filtering (locale, tags, difficulty, text search, practiced status).
+#### `POST /v1/attempts`
+Submit and automatically score a practice attempt.
 
-#### POST /v1/attempts
-
-Submit and score a practice attempt.
-
-**Request:**
-
+**Request Body:**
 ```json
 {
   "item_id": 1,
@@ -189,92 +196,95 @@ Submit and score a practice attempt.
 }
 ```
 
-#### GET /v1/stats/summary
+### 📊 Statistics Endpoints
 
-Get summary statistics for practice sessions.
+#### `GET /v1/stats/summary`
+Get comprehensive summary statistics for all practice sessions.
 
-#### GET /v1/stats/practice-log
+#### `GET /v1/stats/practice-log`
+Retrieve detailed practice log with per-item statistics and performance metrics.
 
-Get detailed practice log with per-item statistics.
+#### `GET /v1/stats/items/{item_id}`
+Get detailed statistics and analytics for a specific dictation item.
 
-#### GET /v1/stats/items/{item_id}
+#### `GET /v1/stats/progress`
+Retrieve progress over time data for practice sessions and performance trends.
 
-Get detailed statistics for a specific item.
+### 🏷️ Tag Management Endpoints
 
-#### GET /v1/stats/progress
+#### `POST /v1/tags/`
+Create a new preset tag for item categorization.
 
-Get progress over time for practice sessions.
+#### `GET /v1/tags/`
+Retrieve list of all available preset tags.
 
-### Tag Endpoints
+#### `DELETE /v1/tags/{tag_id}`
+Delete a preset tag (with safety checks for existing items).
 
-#### POST /v1/tags/
+### 🏥 Health & Monitoring Endpoints
 
-Create a new preset tag.
+#### `GET /health`
+Comprehensive health check with detailed service status and dependency monitoring.
 
-#### GET /v1/tags/
+## 🚀 Installation & Setup
 
-Get list of preset tags.
+### Prerequisites
+- **Python 3.11+** (recommended: Python 3.11 or 3.12)
+- **pip** (Python package manager)
+- **Git** (for cloning the repository)
 
-#### DELETE /v1/tags/{tag_id}
+### Quick Setup
 
-Delete a preset tag.
-
-### Health Endpoints
-
-#### GET /health
-
-Comprehensive health check with detailed service status.
-
-## Installation
-
-1. Clone the repository and navigate to the project directory:
-
+1. **Clone the repository:**
 ```bash
 git clone <repository-url>
 cd last-whisper-backend
 ```
 
-2. Create a virtual environment (recommended):
-
+2. **Create a virtual environment:**
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install dependencies:
-
+3. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Initialize database (optional):
-
+4. **Initialize database:**
 ```bash
-# The database will be created automatically on first run
+# The SQLite database will be created automatically on first run
+# No additional setup required!
 ```
 
-## Running the Application
+## 🏃‍♂️ Running the Application
 
-### Development Server
-
+### 🛠️ Development Server
+For development and testing:
 ```bash
 python run_api.py
 ```
 
-### Production Server
-
+### 🚀 Production Server
+For production deployment:
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at `http://localhost:8000` with interactive docs at `http://localhost:8000/docs`.
+### 📚 Access Points
+- **API Base URL**: `http://localhost:8000`
+- **Interactive Documentation**: `http://localhost:8000/docs`
+- **Alternative Documentation**: `http://localhost:8000/redoc`
+- **OpenAPI Schema**: `http://localhost:8000/openapi.json`
 
-## Configuration
+## ⚙️ Configuration
 
-Configuration is managed through environment variables or `.env` file:
+Configuration is managed through environment variables or `.env` file for maximum flexibility:
 
+### 🔧 Core Application Settings
 ```bash
-# API Settings
+# Application Identity
 APP_NAME="Last Whisper"
 APP_VERSION="1.0.0"
 HOST="0.0.0.0"
@@ -282,19 +292,19 @@ PORT=8000
 RELOAD=true
 LOG_LEVEL="info"
 
-# Database
-DATABASE_URL="sqlite:///dictation.db"
+# Database Configuration
+DATABASE_URL="sqlite:///data/dictation.db"
+```
 
-# TTS Provider Selection
-TTS_PROVIDER="local"  # Options: "local", "azure", "gcp"
-
-# Local TTS Settings (when TTS_PROVIDER="local")
-TTS_DEVICE="cpu"  # or "cuda" for GPU, None for auto-detection
+### 🎙️ TTS Provider Configuration
+```bash
+# Provider Selection
+TTS_PROVIDER="gcp"  # Options: "azure", "gcp"
 TTS_THREAD_COUNT=1
 TTS_SUPPORTED_LANGUAGES=["fi"]
 
-# Azure TTS Settings (when TTS_PROVIDER="azure")
-AZURE_SPEECH_KEY="your_azure_key"
+# Azure Speech TTS Settings (when TTS_PROVIDER="azure")
+AZURE_SPEECH_KEY="your_azure_speech_key"
 AZURE_SERVICE_REGION="your_azure_region"
 AZURE_LANGUAGE_CODE="fi-FI"
 AZURE_SAMPLE_RATE_HZ=24000
@@ -304,7 +314,10 @@ AZURE_SAMPLE_RATE_HZ=24000
 GCP_VOICE_NAME="fi-FI-Wavenet-B"
 GCP_LANGUAGE_CODE="fi-FI"
 GCP_SAMPLE_RATE_HZ=24000
+```
 
+### 📁 Storage & Media Configuration
+```bash
 # Audio Storage
 AUDIO_DIR="audio"
 BASE_URL="http://localhost:8000"
@@ -315,103 +328,141 @@ REDOC_URL="/redoc"
 OPENAPI_URL="/openapi.json"
 ```
 
-## Testing
+## 🧪 Testing
 
-Run the full test suite:
-
+### Running Tests
 ```bash
+# Run the complete test suite
 pytest
-```
 
-Run specific test modules:
+# Run tests with verbose output
+pytest -v
 
-```bash
+# Run specific test modules
 pytest tests/test_api/ -v
 pytest tests/test_services/ -v
+
+# Run tests with coverage report
+pytest --cov=app --cov-report=html
 ```
 
-## Code Quality
+### Test Structure
+- **API Tests**: Endpoint testing with request/response validation
+- **Service Tests**: Business logic testing with mocking
+- **Integration Tests**: End-to-end workflow testing
+- **Unit Tests**: Individual component testing
 
-Format code:
+## 🔍 Code Quality
 
+### Code Formatting
 ```bash
+# Format code with Black
 black .
+
+# Check formatting without making changes
+black --check .
 ```
 
-Lint code:
-
+### Code Linting
 ```bash
+# Run Ruff linter
 ruff check .
+
+# Auto-fix linting issues
+ruff check . --fix
+
+# Run with specific rules
+ruff check . --select E,W,F
 ```
 
-## Architecture
+### Development Workflow
+1. **Write tests** for new functionality
+2. **Format code** with Black
+3. **Lint code** with Ruff
+4. **Run tests** to ensure everything works
+5. **Commit changes** with descriptive messages
 
-The application follows clean architecture principles:
+## 🏗️ Architecture
 
-- **API Layer**: FastAPI routes with request/response models
+The application follows clean architecture principles with clear separation of concerns:
+
+### 📋 Architecture Layers
+- **API Layer**: FastAPI routes with request/response models and validation
 - **Service Layer**: Business logic and external service integration
-- **Data Layer**: Database operations and models
-- **Core**: Configuration, exceptions, and utilities
+- **Data Layer**: Database operations, models, and data persistence
+- **Core Layer**: Configuration, exceptions, logging, and utilities
 
-### Key Components
+### 🔧 Key Components
 
-- **TTSEngine**: Core TTS engine with Hugging Face model integration
-- **TTSEngineManager**: Task orchestration and monitoring
-- **TTSEngineWrapper**: Service lifecycle management
-- **ItemsService**: Dictation item management with TTS integration
-- **AttemptsService**: Practice attempt scoring and tracking
-- **StatsService**: Analytics and reporting
-- **TagsService**: Preset tag management and categorization
-- **TaskService**: TTS task database operations
+#### TTS Engine System
+- **TTSEngine**: Core TTS engine with provider abstraction
+- **TTSEngineManager**: Task orchestration, monitoring, and queue management
+- **TTSEngineWrapper**: Service lifecycle management and provider selection
+- **Provider Implementations**: Azure and Google Cloud TTS integrations
 
-This design provides:
+#### Business Services
+- **ItemsService**: Dictation item management with automatic TTS integration
+- **AttemptsService**: Practice attempt scoring and performance tracking
+- **StatsService**: Analytics, reporting, and progress monitoring
+- **TagsService**: Preset tag management and content categorization
+- **TaskService**: TTS task database operations and status tracking
 
-- **Testability**: Easy to mock and test individual components
-- **Maintainability**: Clear separation of concerns
-- **Scalability**: Modular design allows easy extension
-- **Reliability**: Comprehensive error handling and logging
-- **Performance**: GPU acceleration support and efficient queue processing
+### 🎯 Design Benefits
+- **Testability**: Easy to mock and test individual components in isolation
+- **Maintainability**: Clear separation of concerns and modular design
+- **Scalability**: Modular architecture allows easy extension and scaling
+- **Reliability**: Comprehensive error handling, logging, and monitoring
+- **Performance**: Optimized queue processing and efficient resource management
 
-## Dependencies
+## 📦 Dependencies
 
-### Core Framework
+### 🔧 Core Framework
+- **FastAPI**: Modern, fast web framework for building APIs with automatic OpenAPI documentation
+- **SQLAlchemy**: Advanced database ORM with async support and type hints
+- **Pydantic**: Data validation and settings management with type safety
+- **Uvicorn**: High-performance ASGI server for production deployment
+- **Alembic**: Database migration management and schema versioning
 
-- **FastAPI**: Modern web framework for building APIs
-- **SQLAlchemy**: Database ORM and management
-- **Pydantic**: Data validation and settings management
-- **Uvicorn**: ASGI server for production deployment
+### 🎙️ TTS Engines
+- **Azure Cognitive Services Speech**: Enterprise-grade Azure TTS integration
+- **Google Cloud Text-to-Speech**: Premium Google Cloud TTS integration
 
-### TTS Engines
+### 📚 Dictation Features
+- **jiwer**: Advanced Word Error Rate calculation for accurate scoring
+- **unidecode**: Unicode normalization for consistent text processing
 
-- **Transformers**: Hugging Face transformers for local TTS models
-- **PyTorch**: Deep learning framework for local model inference
-- **Azure Cognitive Services Speech**: Azure TTS integration
-- **Google Cloud Text-to-Speech**: GCP TTS integration
+### 🛠️ Development Tools
+- **pytest**: Comprehensive testing framework with fixtures and mocking
+- **black**: Opinionated code formatting for consistent style
+- **ruff**: Fast Python linter with auto-fixing capabilities
 
-### Dictation Features
+## 🤝 Contributing
 
-- **jiwer**: Word Error Rate calculation for scoring
-- **unidecode**: Unicode normalization for text processing
+We welcome contributions! Here's how you can help:
 
-### Development Tools
+1. **Fork the repository** and create a feature branch
+2. **Make your changes** following our coding standards
+3. **Add tests** for new functionality
+4. **Ensure all tests pass** and code is properly formatted
+5. **Submit a pull request** with a clear description of your changes
 
-- **pytest**: Testing framework
-- **black**: Code formatting
-- **ruff**: Code linting
+### Development Guidelines
+- Follow the existing code style and architecture patterns
+- Add comprehensive tests for new features
+- Update documentation for any API changes
+- Ensure backward compatibility when possible
 
-## Contributing
+## 📄 License
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## License
+## 🆘 Support & Community
 
-[Add your license information here]
+- 🐛 **Bug Reports**: Open an issue with detailed reproduction steps
+- 💡 **Feature Requests**: Share your ideas and use cases
+- 📖 **Documentation**: Check our comprehensive docs for detailed guides
+- 💬 **Discussions**: Join our community discussions for questions and ideas
 
-## Support
+---
 
-For issues and questions, please open an issue in the repository.
+**Ready to build amazing TTS applications?** 🚀 [Get started now](#-installation--setup) with Last Whisper Backend!

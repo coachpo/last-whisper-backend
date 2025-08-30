@@ -1,18 +1,44 @@
-accelerate~=1.10.1
+# Database migration and schema management
 alembic~=1.16.5
+
+# Code formatting and style enforcement
 black~=25.1.0
+
+# Modern Python web framework for building APIs
 fastapi~=0.116.1
+
+# Google Cloud Text-to-Speech API client library
 google-cloud-texttospeech~=2.27.0
+
+# Modern HTTP client for Python with async support
 httpx~=0.28.1
+
+# Word Error Rate (WER) calculation for dictation scoring
 jiwer~=4.0.0
+
+# Data validation and settings management with type hints
 pydantic~=2.11.7
+
+# Pydantic extension for settings management from environment variables
 pydantic-settings~=2.10.1
+
+# Testing framework for Python applications
 pytest~=8.4.1
+
+# Fast Python linter and code formatter
 ruff~=0.12.11
-scipy~=1.16.1
+
+# Modern Python SQL toolkit and Object-Relational Mapping (ORM)
 sqlalchemy~=2.0.43
-torch~=2.8.0
-transformers~=4.55.4
+
+# Unicode normalization for text processing and comparison
 unidecode~=1.4.0
+
+# ASGI server for running FastAPI applications in production
 uvicorn[standard]~=0.35.0
+
+# Azure Cognitive Services Speech SDK for TTS functionality
 azure-cognitiveservices-speech~=1.45.0
+
+# Python WSGI HTTP Server for UNIX (production deployment)
+gunicorn~=23.0.0

@@ -3,18 +3,9 @@ FROM python:3.12-slim AS base
 
 # Set default environment variables
 ENV ENVIRONMENT=production \
-    TTS_PROVIDER=local \
+    TTS_PROVIDER=gcp \
     LOG_LEVEL=info \
-    CORS_ORIGINS=http://localhost:8008 \
-    HF_HOME=/app/.cache/huggingface
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    git \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    CORS_ORIGINS=http://localhost:8008
 
 # Create non-root user with home directory
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
@@ -28,19 +19,14 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Gunicorn for production WSGI server
-RUN pip install --no-cache-dir gunicorn
-
 # Copy application code
 COPY app/ ./app/
 COPY run_api.py .
 
 # Create necessary directories and set permissions
-RUN mkdir -p audio keys data /app/.cache/huggingface && \
+RUN mkdir -p audio keys data && \
     chown -R appuser:appuser /app && \
-    chown -R appuser:appuser /home/appuser && \
-    # Clean up any existing lock files
-    find /app/.cache/huggingface -name "*.lock" -delete 2>/dev/null || true
+    chown -R appuser:appuser /home/appuser
 
 # Switch to non-root user
 USER appuser

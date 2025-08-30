@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     app_name: str = "Last Whisper"
     app_version: str = "1.0.0"
     app_description: str = (
-        "Last Whisper's backend service - Dictation training with local TTS, scoring, and session-less workflow"
+        "Last Whisper's backend service - Dictation training with cloud TTS, scoring, and session-less workflow"
     )
 
     # Server Settings
@@ -30,10 +30,8 @@ class Settings(BaseSettings):
     base_url: str = "http://localhost:8000"  # For building audio URLs
 
     # TTS Service Settings
-    tts_device: Optional[str] = None  # None for auto-detection
-    tts_thread_count: int = 1
     tts_supported_languages: list[str] = ["fi"]  # Supported languages for TTS
-    tts_provider: str = "gcp"  # or "azure" or "gcp" TTS provider: 'local', 'azure', or 'gcp'/'google'
+    tts_provider: str = "gcp"  # TTS provider: 'azure' or 'gcp'/'google'
 
     # Google Cloud Settings
     google_application_credentials: Optional[str] = "keys/google-credentials.json"  # Dev: file path, Prod: set via GOOGLE_APPLICATION_CREDENTIALS env var
