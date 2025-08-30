@@ -46,11 +46,11 @@ class Settings(BaseSettings):
     docs_url: str = "/docs"
     redoc_url: str = "/redoc"
     openapi_url: str = "/openapi.json"
-    
+
     # Production Settings
     environment: str = "development"  # "development" or "production"
     disable_docs: bool = False  # Set to True to disable docs in production
-    
+
     # CORS Settings
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"  # Comma-separated list of allowed origins
     cors_allow_credentials: bool = True

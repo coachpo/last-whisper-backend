@@ -1,18 +1,12 @@
 # Multi-stage build for Last Whisper Backend
 FROM python:3.12-slim AS base
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    ENVIRONMENT=production \
-    DISABLE_DOCS=true \
-    RELOAD=false \
+# Set default environment variables
+ENV ENVIRONMENT=production \
     TTS_PROVIDER=local \
     LOG_LEVEL=info \
-    HF_HOME=/app/.cache/huggingface \
-    CORS_ORIGINS=http://192.168.31.177:3000
+    CORS_ORIGINS=http://localhost:8008 \
+    HF_HOME=/app/.cache/huggingface
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
