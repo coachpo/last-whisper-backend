@@ -301,7 +301,7 @@ DATABASE_URL="sqlite:///data/dictation.db"
 # Provider Selection
 TTS_PROVIDER="gcp"  # Options: "azure", "gcp"
 TTS_THREAD_COUNT=1
-TTS_SUPPORTED_LANGUAGES=["fi"]
+TTS_SUPPORTED_LANGUAGES="fi,en,de"  # Comma-separated list (recommended for Docker), or JSON: '["fi"]'
 
 # Azure Speech TTS Settings (when TTS_PROVIDER="azure")
 AZURE_SPEECH_KEY="your_azure_speech_key"
