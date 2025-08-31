@@ -20,7 +20,7 @@ ENV ENVIRONMENT=production \
     OPENAPI_URL="/openapi.json"
 
 # Create non-root user with home directory
-RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
+RUN addgroup -S appuser && adduser -S -G appuser appuser
 
 # Set work directory
 WORKDIR /app
@@ -33,12 +33,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app/ ./app/
-COPY run_api.py .
 
 # Create necessary directories and set permissions
 RUN mkdir -p audio keys data && \
-    chown -R appuser:appuser /app && \
-    chown -R appuser:appuser /home/appuser
+    chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser
