@@ -56,22 +56,6 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
-    @field_validator('tts_supported_languages', mode='before')
-    @classmethod
-    def parse_tts_supported_languages(cls, v):
-        """Parse tts_supported_languages from string to list."""
-        if isinstance(v, str):
-            # Check if it looks like JSON (starts with [ and ends with ])
-            if v.strip().startswith('[') and v.strip().endswith(']'):
-                try:
-                    # Try to parse as JSON
-                    return json.loads(v)
-                except json.JSONDecodeError:
-                    pass
-            # Default to comma-separated parsing (for Docker env vars)
-            return [lang.strip() for lang in v.split(',') if lang.strip()]
-        return v
-
 
 # Global settings instance
 settings = Settings()
