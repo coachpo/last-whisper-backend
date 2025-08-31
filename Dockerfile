@@ -28,6 +28,16 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
+# Install required system packages for Alpine
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    build-base \
+    alsa-lib-dev \
+    portaudio-dev
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
