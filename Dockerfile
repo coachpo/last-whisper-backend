@@ -1,5 +1,5 @@
-# Multi-stage build for Last Whisper Backend
-FROM python:3.12-alpine AS base
+# Use official Python image as base
+FROM python:3.12-slim AS base
 
 # Set default environment variables
 ENV ENVIRONMENT=production \
@@ -27,16 +27,6 @@ WORKDIR /app
 
 # Copy requirements first for better caching
 COPY requirements.txt .
-
-# Install required system packages for Alpine
-RUN apk add --no-cache \
-    gcc \
-    musl-dev \
-    libffi-dev \
-    openssl-dev \
-    build-base \
-    alsa-lib-dev \
-    portaudio-dev
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
