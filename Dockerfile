@@ -20,7 +20,7 @@ ENV ENVIRONMENT=production \
     OPENAPI_URL="/openapi.json"
 
 # Create non-root user
-RUN addgroup -S appuser && adduser -S -G appuser appuser
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Set work directory
 WORKDIR /app
