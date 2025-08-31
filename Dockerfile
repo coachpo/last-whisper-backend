@@ -1,11 +1,23 @@
 # Multi-stage build for Last Whisper Backend
-FROM python:3.12-slim AS base
+FROM python:3.12-alpine AS base
 
 # Set default environment variables
 ENV ENVIRONMENT=production \
     TTS_PROVIDER=gcp \
     LOG_LEVEL=info \
-    CORS_ORIGINS=http://localhost:8008
+    HOST=0.0.0.0 \
+    PORT=8000 \
+    APP_NAME="Last Whisper Backend" \
+    APP_VERSION="1.0.0" \
+    DATABASE_URL=sqlite:///data/dictation.db \
+    AUDIO_DIR=audio \
+    TTS_SUPPORTED_LANGUAGES=fi \
+    CORS_ORIGINS=http://localhost:3000,http://127.0.1:3000 \
+    CORS_ALLOW_METHODS="*" \
+    CORS_ALLOW_HEADERS="*" \
+    DOCS_URL="/docs" \
+    REDOC_URL="/redoc" \
+    OPENAPI_URL="/openapi.json"
 
 # Create non-root user with home directory
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser

@@ -77,11 +77,12 @@ app = FastAPI(
     title=settings.app_name,
     description=settings.app_description,
     version=settings.app_version,
-    docs_url=settings.docs_url if not settings.disable_docs else None,
-    redoc_url=settings.redoc_url if not settings.disable_docs else None,
-    openapi_url=settings.openapi_url if not settings.disable_docs else None,
+    docs_url=settings.docs_url if settings.is_development else None,
+    redoc_url=settings.redoc_url if settings.is_development else None,
+    openapi_url=settings.openapi_url if settings.is_development else None,
     lifespan=lifespan,
 )
+
 
 # Add CORS middleware
 def get_cors_origins():
@@ -90,11 +91,13 @@ def get_cors_origins():
         return ["*"]
     return [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
 
+
 def get_cors_methods():
     """Parse CORS methods from comma-separated string."""
     if settings.cors_allow_methods == "*":
         return ["*"]
     return [method.strip() for method in settings.cors_allow_methods.split(",") if method.strip()]
+
 
 def get_cors_headers():
     """Parse CORS headers from comma-separated string."""
@@ -102,10 +105,11 @@ def get_cors_headers():
         return ["*"]
     return [header.strip() for header in settings.cors_allow_headers.split(",") if header.strip()]
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
-    allow_credentials=settings.cors_allow_credentials,
+    allow_credentials=True,
     allow_methods=get_cors_methods(),
     allow_headers=get_cors_headers(),
 )

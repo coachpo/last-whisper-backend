@@ -18,8 +18,8 @@ def main():
         port=settings.port,
         reload=settings.reload,
         log_level=settings.log_level,
-        access_log=True,  # Enable access logs with custom formatting
-        log_config=LOGGING_CONFIG,  # Use our custom logging config
+        access_log=True,
+        log_config=LOGGING_CONFIG,
     )
 
 
