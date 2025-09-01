@@ -135,23 +135,8 @@ The backend provides a comprehensive dictation training workflow designed for la
 #### `POST /api/v1/tts/convert`
 Submit text for TTS conversion with automatic audio generation.
 
-**Request Body:**
-```json
-{
-  "text": "Hello world",
-  "custom_filename": "optional_filename"
-}
-```
-
-**Response:**
-```json
-{
-  "conversion_id": "20231201_120000_abc123",
-  "text": "Hello world",
-  "status": "queued",
-  "submitted_at": "2023-12-01T12:00:00"
-}
-```
+**Request Body:** JSON object with text content and optional custom filename
+**Response:** JSON object with conversion ID, status, and submission timestamp
 
 #### `GET /api/v1/tts/{id}`
 Retrieve conversion status and metadata for a specific task.
@@ -167,15 +152,7 @@ Submit multiple texts for efficient batch TTS conversion.
 #### `POST /v1/items`
 Create a new dictation item with automatic TTS generation.
 
-**Request Body:**
-```json
-{
-  "locale": "en",
-  "text": "The quick brown fox jumps over the lazy dog",
-  "difficulty": 3,
-  "tags": ["animals", "classic"]
-}
-```
+**Request Body:** JSON object with locale, text content, difficulty level, and tags array
 
 #### `GET /v1/items`
 List items with advanced filtering options:
@@ -188,13 +165,7 @@ List items with advanced filtering options:
 #### `POST /v1/attempts`
 Submit and automatically score a practice attempt.
 
-**Request Body:**
-```json
-{
-  "item_id": 1,
-  "text": "The quick brown fox jumps over lazy dog"
-}
-```
+**Request Body:** JSON object with item ID and practice text
 
 ### 📊 Statistics Endpoints
 
@@ -235,42 +206,18 @@ Comprehensive health check with detailed service status and dependency monitorin
 
 ### Quick Setup
 
-1. **Clone the repository:**
-```bash
-git clone <repository-url>
-cd last-whisper-backend
-```
-
-2. **Create a virtual environment:**
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-```
-
-4. **Initialize database:**
-```bash
-# The SQLite database will be created automatically on first run
-# No additional setup required!
-```
+1. **Clone the repository** and navigate to the backend directory
+2. **Create a Python virtual environment** for dependency isolation
+3. **Install dependencies** from requirements.txt
+4. **Initialize database** - SQLite database is created automatically on first run
 
 ## 🏃‍♂️ Running the Application
 
 ### 🛠️ Development Server
-For development and testing:
-```bash
-python run_api.py
-```
+For development and testing, use the provided run script.
 
 ### 🚀 Production Server
-For production deployment:
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+For production deployment, use Uvicorn ASGI server with specified host and port configuration.
 
 ### 📚 Access Points
 - **API Base URL**: `http://localhost:8000`
@@ -283,68 +230,51 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 Configuration is managed through environment variables or `.env` file for maximum flexibility:
 
 ### 🔧 Core Application Settings
-```bash
-# Application Identity
-APP_NAME="Last Whisper"
-APP_VERSION="1.0.0"
-HOST="0.0.0.0"
-PORT=8000
-RELOAD=true
-LOG_LEVEL="info"
 
-# Database Configuration
-DATABASE_URL="sqlite:///data/dictation.db"
-```
+**Application Identity Configuration:**
+- Application name and version settings
+- Host and port configuration for server binding
+- Reload settings for development mode
+- Log level configuration for debugging
+
+**Database Configuration:**
+- SQLite database URL for data persistence
 
 ### 🎙️ TTS Provider Configuration
-```bash
-# Provider Selection
-TTS_PROVIDER="gcp"  # Options: "azure", "gcp"
-TTS_THREAD_COUNT=1
-TTS_SUPPORTED_LANGUAGES="fi,en,de"  # Comma-separated list (recommended for Docker), or JSON: '["fi"]'
 
-# Azure Speech TTS Settings (when TTS_PROVIDER="azure")
-AZURE_SPEECH_KEY="your_azure_speech_key"
-AZURE_SERVICE_REGION="your_azure_region"
-AZURE_LANGUAGE_CODE="fi-FI"
-AZURE_SAMPLE_RATE_HZ=24000
+**Provider Selection:**
+- TTS provider choice (Azure or Google Cloud)
+- Thread count for concurrent processing
+- Supported languages configuration
 
-# Google Cloud TTS Settings (when TTS_PROVIDER="gcp")
-# Set GOOGLE_APPLICATION_CREDENTIALS environment variable
-GCP_VOICE_NAME="fi-FI-Wavenet-B"
-GCP_LANGUAGE_CODE="fi-FI"
-GCP_SAMPLE_RATE_HZ=24000
-```
+**Azure Speech TTS Settings:**
+- Azure Speech service key and region
+- Language code and sample rate configuration
+
+**Google Cloud TTS Settings:**
+- Google Cloud credentials configuration
+- Voice name and language settings
+- Sample rate configuration
 
 ### 📁 Storage & Media Configuration
-```bash
-# Audio Storage
-AUDIO_DIR="audio"
-BASE_URL="http://localhost:8000"
 
-# API Documentation
-DOCS_URL="/docs"
-REDOC_URL="/redoc"
-OPENAPI_URL="/openapi.json"
-```
+**Audio Storage:**
+- Audio directory configuration
+- Base URL for API endpoints
+
+**API Documentation:**
+- Documentation endpoint URLs
+- OpenAPI schema configuration
 
 ## 🧪 Testing
 
 ### Running Tests
-```bash
-# Run the complete test suite
-pytest
 
-# Run tests with verbose output
-pytest -v
-
-# Run specific test modules
-pytest tests/test_api/ -v
-pytest tests/test_services/ -v
-
-# Run tests with coverage report
-pytest --cov=app --cov-report=html
-```
+**Test Execution Options:**
+- Run the complete test suite with pytest
+- Execute tests with verbose output for detailed information
+- Run specific test modules (API tests, service tests)
+- Generate coverage reports for code quality assessment
 
 ### Test Structure
 - **API Tests**: Endpoint testing with request/response validation
@@ -355,25 +285,17 @@ pytest --cov=app --cov-report=html
 ## 🔍 Code Quality
 
 ### Code Formatting
-```bash
-# Format code with Black
-black .
 
-# Check formatting without making changes
-black --check .
-```
+**Black Code Formatter:**
+- Format code with Black for consistent style
+- Check formatting without making changes
 
 ### Code Linting
-```bash
-# Run Ruff linter
-ruff check .
 
-# Auto-fix linting issues
-ruff check . --fix
-
-# Run with specific rules
-ruff check . --select E,W,F
-```
+**Ruff Linter:**
+- Run comprehensive linting checks
+- Auto-fix common linting issues
+- Run with specific rule sets for targeted checks
 
 ### Development Workflow
 1. **Write tests** for new functionality
