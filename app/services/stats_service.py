@@ -35,26 +35,37 @@ class StatsService:
 
             if attempts_count == 0:
                 return {
-                    "attempts": 0,
-                    "audios_practiced": 0,
-                    "avg_percentage": 0.0,
-                    "avg_wer": 0.0,
+                    "total_attempts": 0,
+                    "unique_items_practiced": 0,
+                    "average_score": 0.0,
+                    "best_score": 0,
+                    "worst_score": 0,
+                    "total_practice_time_minutes": 0,
                 }
 
             # Get unique audio items practiced
-            audios_practiced = query.with_entities(distinct(Attempt.item_id)).count()
+            unique_items_practiced = query.with_entities(
+                distinct(Attempt.item_id)
+            ).count()
 
-            # Get average percentage and WER
+            # Get comprehensive stats including min/max
             stats = query.with_entities(
                 func.avg(Attempt.percentage).label("avg_percentage"),
+                func.max(Attempt.percentage).label("max_percentage"),
+                func.min(Attempt.percentage).label("min_percentage"),
                 func.avg(Attempt.wer).label("avg_wer"),
             ).first()
 
+            # Calculate total practice time (rough estimate: 30 seconds per attempt)
+            total_practice_time_minutes = round(attempts_count * 0.5, 1)
+
             return {
-                "attempts": attempts_count,
-                "audios_practiced": audios_practiced,
-                "avg_percentage": round(float(stats.avg_percentage or 0), 2),
-                "avg_wer": round(float(stats.avg_wer or 0), 4),
+                "total_attempts": attempts_count,
+                "unique_items_practiced": unique_items_practiced,
+                "average_score": round(float(stats.avg_percentage or 0), 2),
+                "best_score": stats.max_percentage or 0,
+                "worst_score": stats.min_percentage or 0,
+                "total_practice_time_minutes": total_practice_time_minutes,
             }
 
     def get_practice_log(
@@ -81,16 +92,22 @@ class StatsService:
                 session.query(
                     Item.id.label("item_id"),
                     Item.text,
-                    func.count(attempts_subq.c.id).label("attempts_count"),
+                    Item.locale,
+                    Item.difficulty,
+                    Item.tags_json,
+                    func.count(attempts_subq.c.id).label("attempt_count"),
                     func.min(attempts_subq.c.created_at).label("first_attempt_at"),
-                    func.max(attempts_subq.c.created_at).label("last_attempt_at"),
-                    func.avg(attempts_subq.c.percentage).label("avg_percentage"),
-                    func.max(attempts_subq.c.percentage).label("best_percentage"),
+                    func.max(attempts_subq.c.created_at).label("last_practiced_at"),
+                    func.avg(attempts_subq.c.percentage).label("average_score"),
+                    func.max(attempts_subq.c.percentage).label("best_score"),
+                    func.min(attempts_subq.c.percentage).label("worst_score"),
                     func.avg(attempts_subq.c.wer).label("avg_wer"),
                 )
                 .outerjoin(attempts_subq, Item.id == attempts_subq.c.item_id)
                 .filter(attempts_subq.c.id.isnot(None))  # Only items with attempts
-                .group_by(Item.id, Item.text)
+                .group_by(
+                    Item.id, Item.text, Item.locale, Item.difficulty, Item.tags_json
+                )
                 .order_by(
                     func.max(attempts_subq.c.created_at).desc()
                 )  # Most recently practiced first
@@ -106,23 +123,37 @@ class StatsService:
             # Format results
             practice_log = []
             for result in results:
+                # Parse tags from JSON
+                tags = []
+                if result.tags_json:
+                    try:
+                        import json
+
+                        tags = json.loads(result.tags_json)
+                    except (json.JSONDecodeError, TypeError):
+                        tags = []
+
                 practice_log.append(
                     {
                         "item_id": result.item_id,
                         "text": result.text,
-                        "attempts_count": result.attempts_count,
+                        "locale": result.locale,
+                        "difficulty": result.difficulty,
+                        "tags": tags,
+                        "attempt_count": result.attempt_count,
                         "first_attempt_at": (
                             result.first_attempt_at.isoformat()
                             if result.first_attempt_at
                             else None
                         ),
-                        "last_attempt_at": (
-                            result.last_attempt_at.isoformat()
-                            if result.last_attempt_at
+                        "last_practiced_at": (
+                            result.last_practiced_at.isoformat()
+                            if result.last_practiced_at
                             else None
                         ),
-                        "avg_percentage": round(float(result.avg_percentage or 0), 2),
-                        "best_percentage": result.best_percentage or 0,
+                        "average_score": round(float(result.average_score or 0), 2),
+                        "best_score": result.best_score or 0,
+                        "worst_score": result.worst_score or 0,
                         "avg_wer": round(float(result.avg_wer or 0), 4),
                     }
                 )

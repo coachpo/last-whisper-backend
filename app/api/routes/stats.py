@@ -52,10 +52,12 @@ async def get_summary_stats(
         stats = stats_service.get_summary_stats(since=since, until=until)
 
         return StatsSummaryResponse(
-            attempts=stats["attempts"],
-            audios_practiced=stats["audios_practiced"],
-            avg_percentage=stats["avg_percentage"],
-            avg_wer=stats["avg_wer"],
+            total_attempts=stats["total_attempts"],
+            unique_items_practiced=stats["unique_items_practiced"],
+            average_score=stats["average_score"],
+            best_score=stats["best_score"],
+            worst_score=stats["worst_score"],
+            total_practice_time_minutes=stats["total_practice_time_minutes"],
         )
 
     except HTTPException:

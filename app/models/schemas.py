@@ -296,10 +296,16 @@ class AttemptListResponse(BaseModel):
 class StatsSummaryResponse(BaseModel):
     """Response model for summary statistics."""
 
-    attempts: int = Field(..., description="Total number of attempts")
-    audios_practiced: int = Field(..., description="Number of unique audios practiced")
-    avg_percentage: float = Field(..., description="Average score percentage")
-    avg_wer: float = Field(..., description="Average Word Error Rate")
+    total_attempts: int = Field(..., description="Total number of attempts")
+    unique_items_practiced: int = Field(
+        ..., description="Number of unique items practiced"
+    )
+    average_score: float = Field(..., description="Average score percentage")
+    best_score: int = Field(..., description="Best score percentage")
+    worst_score: int = Field(..., description="Worst score percentage")
+    total_practice_time_minutes: float = Field(
+        ..., description="Total practice time in minutes"
+    )
 
 
 class PracticeLogEntry(BaseModel):
@@ -307,15 +313,19 @@ class PracticeLogEntry(BaseModel):
 
     item_id: int = Field(..., description="Item ID")
     text: str = Field(..., description="Item text")
-    attempts_count: int = Field(..., description="Number of attempts")
+    locale: str = Field(..., description="Language locale")
+    difficulty: int = Field(..., description="Difficulty level")
+    tags: List[str] = Field(default_factory=list, description="Tags")
+    attempt_count: int = Field(..., description="Number of attempts")
     first_attempt_at: Optional[datetime] = Field(
         None, description="First attempt timestamp"
     )
-    last_attempt_at: Optional[datetime] = Field(
-        None, description="Last attempt timestamp"
+    last_practiced_at: Optional[datetime] = Field(
+        None, description="Last practice timestamp"
     )
-    avg_percentage: float = Field(..., description="Average score percentage")
-    best_percentage: int = Field(..., description="Best score percentage")
+    average_score: float = Field(..., description="Average score percentage")
+    best_score: int = Field(..., description="Best score percentage")
+    worst_score: int = Field(..., description="Worst score percentage")
     avg_wer: float = Field(..., description="Average Word Error Rate")
 
 
