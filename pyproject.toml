@@ -28,7 +28,7 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
-    "License :: Public Domain",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -80,11 +80,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/last-whisper"
-Documentation = "https://github.com/your-org/last-whisper/blob/main/docs/README.md"
-Repository = "https://github.com/your-org/last-whisper.git"
-Issues = "https://github.com/your-org/last-whisper/issues"
-Changelog = "https://github.com/your-org/last-whisper/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/coachpo/last-whisper"
+Documentation = "https://github.com/coachpo/last-whisper/blob/main/docs/README.md"
+Repository = "https://github.com/coachpo/last-whisper.git"
+Issues = "https://github.com/coachpo/last-whisper/issues"
+Changelog = "https://github.com/coachpo/last-whisper/blob/main/CHANGELOG.md"
 
 [project.scripts]
 last-whisper-api = "run_api:main"
