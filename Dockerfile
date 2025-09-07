@@ -26,10 +26,10 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
 
 # Copy pyproject.toml first for better caching
-COPY pyproject.toml .
+COPY pyproject.toml ./
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir .
 
 # Copy application code
 COPY app/ ./app/

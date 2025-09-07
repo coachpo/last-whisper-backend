@@ -6,8 +6,7 @@ build-backend = "hatchling.build"
 name = "last-whisper-backend"
 version = "1.0.0"
 description = "Last Whisper's backend service - Dictation training with cloud TTS, scoring, and session-less workflow"
-readme = "README.md"
-license = {file = "LICENSE"}
+license = {text = "MIT"}
 authors = [
     {name = "Last Whisper Team"},
 ]
@@ -40,18 +39,12 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    # Database migration and schema management
-    "alembic~=1.16.5",
     # Modern Python web framework for building APIs
     "fastapi~=0.116.1",
     # Google Cloud Text-to-Speech API client library
     "google-cloud-texttospeech~=2.27.0",
-    # Modern HTTP client for Python with async support
-    "httpx~=0.28.1",
     # Word Error Rate (WER) calculation for dictation scoring
     "jiwer~=4.0.0",
-    # Data validation and settings management with type hints
-    "pydantic~=2.11.7",
     # Pydantic extension for settings management from environment variables
     "pydantic-settings~=2.10.1",
     # Modern Python SQL toolkit and Object-Relational Mapping (ORM)

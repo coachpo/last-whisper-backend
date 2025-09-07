@@ -139,4 +139,5 @@ class Tag(Base):
 # Define indexes for better query performance
 Index('idx_items_locale_difficulty', Item.locale, Item.difficulty)
 Index('idx_items_created_at_desc', Item.created_at.desc())
+Index('idx_items_created_at_asc', Item.created_at.asc())
 Index('idx_attempts_item_created', Attempt.item_id, Attempt.created_at)
