@@ -1,13 +1,13 @@
 # Last Whisper - Backend Service 🎯
 
-A production-grade FastAPI service for advanced Text-to-Speech conversion with multiple TTS providers and comprehensive dictation training capabilities. Built with clean architecture, robust task management, and intelligent scoring systems.
+A production-grade FastAPI service for comprehensive dictation training with automatic TTS audio generation. Built with clean architecture, robust task management, and intelligent scoring systems.
 
 ## ✨ Core Features
 
-### 🎙️ Advanced TTS Engine
+### 🎙️ Internal TTS Engine
 - **Multiple Providers**: Azure Speech and Google Cloud Text-to-Speech
 - **High-Quality Audio**: Neural voice synthesis with customizable parameters
-- **Batch Processing**: Efficient queue-based conversion for multiple texts
+- **Automatic Processing**: Background TTS generation for dictation items
 - **Task Management**: Comprehensive lifecycle tracking with deduplication
 - **Provider Switching**: Easy configuration-based provider selection
 
@@ -35,7 +35,6 @@ last-whisper-backend/
 │   ├── api/                       # API layer
 │   │   ├── routes/                # Route definitions
 │   │   │   ├── health.py          # Health check endpoints
-│   │   │   ├── tts.py             # TTS conversion endpoints
 │   │   │   ├── items.py           # Dictation items management
 │   │   │   ├── attempts.py        # Practice attempts and scoring
 │   │   │   ├── stats.py           # Statistics and analytics
@@ -74,32 +73,30 @@ last-whisper-backend/
 └── README.md                      # This documentation file
 ```
 
-## 🎙️ TTS Capabilities
+## 🎙️ TTS Engine (Internal)
 
-This API provides enterprise-grade text-to-speech conversion with multiple provider options:
+The backend includes a robust TTS engine that automatically generates audio files for dictation items:
 
 ### 🔵 Azure Speech TTS
 - **Provider**: Microsoft Azure Cognitive Services Speech
 - **Voice Options**: Multiple Finnish neural voices with natural intonation
 - **Output Format**: High-quality WAV audio files (24kHz, 16-bit mono)
 - **Features**: SSML support, prosody controls, advanced neural voices
-- **Scalability**: Cloud-based processing with enterprise-grade availability
-- **Use Cases**: Production applications requiring reliable, high-quality speech synthesis
+- **Use Cases**: Automatic audio generation for dictation practice items
 
 ### 🟢 Google Cloud Text-to-Speech
 - **Provider**: Google Cloud Platform Text-to-Speech API
 - **Voice Options**: Premium WaveNet voices (fi-FI-Wavenet-B)
 - **Output Format**: High-fidelity WAV audio files (24kHz, 16-bit mono)
 - **Features**: Advanced neural voice synthesis, comprehensive SSML support
-- **Quality**: State-of-the-art WaveNet voices for natural, human-like speech
-- **Use Cases**: Applications requiring the highest quality speech synthesis
+- **Use Cases**: High-quality audio generation for dictation practice items
 
-### ⚡ Common Features
-- **Batch Processing**: Efficient queue-based request handling for scalability
+### ⚡ Internal Features
+- **Automatic Processing**: TTS generation happens automatically when dictation items are created
 - **Task Management**: Comprehensive task lifecycle tracking with deduplication
 - **Provider Switching**: Seamless configuration-based provider selection
 - **Error Handling**: Robust error handling with intelligent retry mechanisms
-- **Performance**: Optimized for high-throughput production environments
+- **Background Processing**: Non-blocking audio generation for optimal performance
 
 ## 📚 Dictation Practice Features
 
@@ -129,23 +126,6 @@ The backend provides a comprehensive dictation training workflow designed for la
 - **Content Discovery**: Easy navigation through organized content libraries
 
 ## 🔌 API Endpoints
-
-### 🎙️ TTS Endpoints
-
-#### `POST /api/v1/tts/convert`
-Submit text for TTS conversion with automatic audio generation.
-
-**Request Body:** JSON object with text content and optional custom filename
-**Response:** JSON object with conversion ID, status, and submission timestamp
-
-#### `GET /api/v1/tts/{id}`
-Retrieve conversion status and metadata for a specific task.
-
-#### `GET /api/v1/tts`
-List all conversions with optional status filtering and pagination.
-
-#### `POST /api/v1/tts/convert-multiple`
-Submit multiple texts for efficient batch TTS conversion.
 
 ### 📚 Dictation Endpoints
 

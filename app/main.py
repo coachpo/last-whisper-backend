@@ -11,7 +11,7 @@ from app.api.dependencies import (
     get_database_manager,
     get_tts_engine,
 )
-from app.api.routes import health, tts, items, attempts, stats, tags
+from app.api.routes import health, items, attempts, stats, tags
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
 from app.core.logging import setup_logging, get_logger
@@ -152,7 +152,6 @@ async def general_exception_handler(request, exc):
 
 # Include routers
 app.include_router(health.router)
-app.include_router(tts.router)
 app.include_router(items.router)
 app.include_router(attempts.router)
 app.include_router(stats.router)
