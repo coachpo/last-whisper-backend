@@ -62,8 +62,10 @@ def get_tts_engine_manager() -> TTSEngineManager:
     global _task_manager
     if _task_manager is None:
         tts_service = get_tts_engine()
-        _task_manager = TTSEngineManager(settings.database_url,
-                                         tts_service._service if tts_service.is_initialized else None)
+        _task_manager = TTSEngineManager(
+            settings.database_url,
+            tts_service._service if tts_service.is_initialized else None,
+        )
     return _task_manager
 
 

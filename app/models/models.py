@@ -66,13 +66,24 @@ class Item(Base):
     text = Column(Text, nullable=False)
     difficulty = Column(Integer, nullable=True, index=True)
     tags_json = Column(Text, nullable=True)  # JSON array of strings
-    tts_status = Column(String(20), nullable=False, default=ItemTTSStatus.PENDING, index=True)
-    task_id = Column(String, ForeignKey("tasks.task_id", ondelete="SET NULL"), nullable=True, index=True)
+    tts_status = Column(
+        String(20), nullable=False, default=ItemTTSStatus.PENDING, index=True
+    )
+    task_id = Column(
+        String,
+        ForeignKey("tasks.task_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(DateTime, nullable=False, default=datetime.now, index=True)
-    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )
 
     # Relationships
-    attempts = relationship("Attempt", back_populates="item", cascade="all, delete-orphan")
+    attempts = relationship(
+        "Attempt", back_populates="item", cascade="all, delete-orphan"
+    )
     task = relationship("Task", back_populates="items")
 
     @property
@@ -102,7 +113,9 @@ class Attempt(Base):
     __tablename__ = "attempts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    item_id = Column(Integer, ForeignKey("items.id", ondelete="CASCADE"), nullable=False, index=True)
+    item_id = Column(
+        Integer, ForeignKey("items.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     text = Column(Text, nullable=False)
     percentage = Column(Integer, nullable=False)  # 0-100
     wer = Column(Float, nullable=False)  # 0.0-1.0
@@ -121,8 +134,15 @@ class Tag(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), unique=True, index=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     def __repr__(self):
         return f"<Tag(id={self.id}, name='{self.name}')>"
@@ -137,7 +157,7 @@ class Tag(Base):
 
 
 # Define indexes for better query performance
-Index('idx_items_locale_difficulty', Item.locale, Item.difficulty)
-Index('idx_items_created_at_desc', Item.created_at.desc())
-Index('idx_items_created_at_asc', Item.created_at.asc())
-Index('idx_attempts_item_created', Attempt.item_id, Attempt.created_at)
+Index("idx_items_locale_difficulty", Item.locale, Item.difficulty)
+Index("idx_items_created_at_desc", Item.created_at.desc())
+Index("idx_items_created_at_asc", Item.created_at.asc())
+Index("idx_attempts_item_created", Attempt.item_id, Attempt.created_at)

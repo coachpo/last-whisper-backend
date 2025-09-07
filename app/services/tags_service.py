@@ -17,14 +17,16 @@ class TagsService:
         try:
             with self.db_manager.get_session() as session:
                 # Check if tag name already exists
-                existing_tag = session.query(Tag).filter(Tag.name == tag_data.name).first()
+                existing_tag = (
+                    session.query(Tag).filter(Tag.name == tag_data.name).first()
+                )
                 if existing_tag:
-                    raise ValidationException(f"Tag with name '{tag_data.name}' already exists")
+                    raise ValidationException(
+                        f"Tag with name '{tag_data.name}' already exists"
+                    )
 
                 # Create new tag
-                tag = Tag(
-                    name=tag_data.name
-                )
+                tag = Tag(name=tag_data.name)
 
                 session.add(tag)
                 session.commit()
@@ -51,10 +53,7 @@ class TagsService:
 
                 tag_responses = [TagResponse(**tag.to_dict()) for tag in tags]
 
-                return TagListResponse(
-                    tags=tag_responses,
-                    total=total
-                )
+                return TagListResponse(tags=tag_responses, total=total)
 
         except Exception as e:
             raise DatabaseException(f"Failed to get tags: {str(e)}")

@@ -21,6 +21,7 @@ def get_attempts_service() -> AttemptsService:
     """Get attempts service instance."""
     # This will be implemented in dependencies.py
     from app.api.dependencies import get_attempts_service as _get_attempts_service
+
     return _get_attempts_service()
 
 
@@ -37,8 +38,8 @@ def get_attempts_service() -> AttemptsService:
     },
 )
 async def create_attempt(
-        request: AttemptCreateRequest,
-        attempts_service: AttemptsService = Depends(get_attempts_service),
+    request: AttemptCreateRequest,
+    attempts_service: AttemptsService = Depends(get_attempts_service),
 ):
     """Create and score a new dictation attempt."""
     try:
@@ -84,12 +85,16 @@ async def create_attempt(
     },
 )
 async def list_attempts(
-        item_id: Optional[int] = Query(None, description="Filter by item ID"),
-        since: Optional[datetime] = Query(None, description="Filter attempts since this timestamp"),
-        until: Optional[datetime] = Query(None, description="Filter attempts until this timestamp"),
-        page: int = Query(1, ge=1, description="Page number"),
-        per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-        attempts_service: AttemptsService = Depends(get_attempts_service),
+    item_id: Optional[int] = Query(None, description="Filter by item ID"),
+    since: Optional[datetime] = Query(
+        None, description="Filter attempts since this timestamp"
+    ),
+    until: Optional[datetime] = Query(
+        None, description="Filter attempts until this timestamp"
+    ),
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(20, ge=1, le=100, description="Items per page"),
+    attempts_service: AttemptsService = Depends(get_attempts_service),
 ):
     """List dictation attempts with filtering."""
     try:
@@ -132,8 +137,8 @@ async def list_attempts(
     },
 )
 async def get_attempt(
-        attempt_id: int,
-        attempts_service: AttemptsService = Depends(get_attempts_service),
+    attempt_id: int,
+    attempts_service: AttemptsService = Depends(get_attempts_service),
 ):
     """Get a specific dictation attempt."""
     try:

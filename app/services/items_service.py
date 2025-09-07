@@ -46,7 +46,9 @@ class ItemsService:
         """Submit TTS job in background thread."""
         try:
             if self.task_manager:
-                task_id = self.task_manager.submit_task_for_item(item_id, text, custom_filename)
+                task_id = self.task_manager.submit_task_for_item(
+                    item_id, text, custom_filename
+                )
 
                 if not task_id:
                     # Mark TTS as failed if we couldn't submit
@@ -55,14 +57,20 @@ class ItemsService:
                         if item:
                             item.tts_status = ItemTTSStatus.FAILED
                             session.commit()
-                            logger.warning(f"Failed to submit TTS job for item {item_id}")
+                            logger.warning(
+                                f"Failed to submit TTS job for item {item_id}"
+                            )
 
-                logger.info(f"TTS job submitted in background for item {item_id}: {task_id}")
+                logger.info(
+                    f"TTS job submitted in background for item {item_id}: {task_id}"
+                )
             else:
                 logger.warning(f"No task manager available for item {item_id}")
 
         except Exception as e:
-            logger.error(f"Error submitting TTS job in background for item {item_id}: {e}")
+            logger.error(
+                f"Error submitting TTS job in background for item {item_id}: {e}"
+            )
             # Mark TTS as failed
             try:
                 with self.db_manager.get_session() as session:
@@ -71,7 +79,9 @@ class ItemsService:
                         item.tts_status = ItemTTSStatus.FAILED
                         session.commit()
             except Exception as db_error:
-                logger.error(f"Failed to update TTS status to failed for item {item_id}: {db_error}")
+                logger.error(
+                    f"Failed to update TTS status to failed for item {item_id}: {db_error}"
+                )
 
     def _submit_bulk_tts_jobs_background(self, items_data: List[Dict[str, Any]]):
         """Submit TTS jobs for multiple items in a single background thread."""
@@ -85,43 +95,58 @@ class ItemsService:
                     item_id = item_data["id"]
                     text = item_data["text"]
                     custom_filename = f"item_{item_id}"
-                    task_id = self.task_manager.submit_task_for_item(item_id, text, custom_filename)
+                    task_id = self.task_manager.submit_task_for_item(
+                        item_id, text, custom_filename
+                    )
 
                     if not task_id:
                         # Mark TTS as failed if we couldn't submit
                         with self.db_manager.get_session() as session:
-                            item = session.query(Item).filter(Item.id == item_id).first()
+                            item = (
+                                session.query(Item).filter(Item.id == item_id).first()
+                            )
                             if item:
                                 item.tts_status = ItemTTSStatus.FAILED
                                 session.commit()
-                                logger.warning(f"Failed to submit TTS job for item {item_id}")
+                                logger.warning(
+                                    f"Failed to submit TTS job for item {item_id}"
+                                )
 
-                    logger.info(f"TTS job submitted in background for item {item_id}: {task_id}")
+                    logger.info(
+                        f"TTS job submitted in background for item {item_id}: {task_id}"
+                    )
 
                 except Exception as e:
-                    logger.error(f"Error submitting TTS job for item {item_data.get('id', 'unknown')}: {e}")
+                    logger.error(
+                        f"Error submitting TTS job for item {item_data.get('id', 'unknown')}: {e}"
+                    )
                     # Mark TTS as failed
                     try:
                         item_id = item_data.get("id")
                         if item_id:
                             with self.db_manager.get_session() as session:
-                                item = session.query(Item).filter(Item.id == item_id).first()
+                                item = (
+                                    session.query(Item)
+                                    .filter(Item.id == item_id)
+                                    .first()
+                                )
                                 if item:
                                     item.tts_status = ItemTTSStatus.FAILED
                                     session.commit()
                     except Exception as db_error:
                         logger.error(
-                            f"Failed to update TTS status to failed for item {item_data.get('id', 'unknown')}: {db_error}")
+                            f"Failed to update TTS status to failed for item {item_data.get('id', 'unknown')}: {db_error}"
+                        )
 
         except Exception as e:
             logger.error(f"Error in bulk TTS job submission: {e}")
 
     def create_item(
-            self,
-            locale: str,
-            text: str,
-            difficulty: Optional[int] = None,
-            tags: Optional[List[str]] = None,
+        self,
+        locale: str,
+        text: str,
+        difficulty: Optional[int] = None,
+        tags: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Create a new dictation item and enqueue TTS job in background."""
         # Auto-calculate difficulty if not provided
@@ -151,7 +176,7 @@ class ItemsService:
                 background_thread = threading.Thread(
                     target=self._submit_tts_job_background,
                     args=(item.id, text, custom_filename),
-                    daemon=True
+                    daemon=True,
                 )
                 background_thread.start()
                 logger.info(f"Started background TTS job for item {item.id}")
@@ -159,10 +184,7 @@ class ItemsService:
             # Return clean data structure to avoid session binding issues
             return self._item_to_dict(item)
 
-    def bulk_create_items(
-            self,
-            items_data: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def bulk_create_items(self, items_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Create multiple dictation items and enqueue TTS jobs in background."""
         created_items = []
         failed_items = []
@@ -181,7 +203,9 @@ class ItemsService:
 
                     # Auto-calculate difficulty if not provided
                     if item.difficulty is None:
-                        item.difficulty = self._calculate_difficulty_from_text(item_data["text"])
+                        item.difficulty = self._calculate_difficulty_from_text(
+                            item_data["text"]
+                        )
 
                     if item_data.get("tags"):
                         item.tags = item_data["tags"]
@@ -194,10 +218,7 @@ class ItemsService:
 
                 except Exception as e:
                     logger.error(f"Failed to create item: {e}")
-                    failed_items.append({
-                        "data": item_data,
-                        "error": str(e)
-                    })
+                    failed_items.append({"data": item_data, "error": str(e)})
 
             # Commit all successful creations
             session.commit()
@@ -206,29 +227,24 @@ class ItemsService:
             if self.task_manager and created_items:
                 # Prepare data for background thread (avoid session binding issues)
                 background_items_data = [
-                    {
-                        "id": item.id,
-                        "text": item.text,
-                        "locale": item.locale
-                    }
+                    {"id": item.id, "text": item.text, "locale": item.locale}
                     for item in created_items
                 ]
 
                 background_thread = threading.Thread(
                     target=self._submit_bulk_tts_jobs_background,
                     args=(background_items_data,),
-                    daemon=True
+                    daemon=True,
                 )
                 background_thread.start()
-                logger.info(f"Started background TTS job processing for {len(created_items)} items")
+                logger.info(
+                    f"Started background TTS job processing for {len(created_items)} items"
+                )
 
             # Convert items to clean data structures to avoid session binding issues
             created_items_data = [self._item_to_dict(item) for item in created_items]
 
-            return {
-                "created_items": created_items_data,
-                "failed_items": failed_items
-            }
+            return {"created_items": created_items_data, "failed_items": failed_items}
 
     def get_item(self, item_id: int) -> Optional[Dict[str, Any]]:
         """Get an item by ID."""
@@ -255,7 +271,9 @@ class ItemsService:
                 try:
                     os.remove(file_path)
                 except Exception as e:
-                    logger.warning(f"Failed to delete audio file for item {item_id}: {e}")
+                    logger.warning(
+                        f"Failed to delete audio file for item {item_id}: {e}"
+                    )
 
             # Delete the item (cascades to attempts and updates task)
             session.delete(item)
@@ -263,14 +281,14 @@ class ItemsService:
             return True
 
     def list_items(
-            self,
-            locale: Optional[str] = None,
-            tags: Optional[List[str]] = None,
-            difficulty: Optional[str] = None,  # Single value or "min..max"
-            practiced: Optional[bool] = None,
-            sort: str = "created_at.desc",
-            page: int = 1,
-            per_page: int = 20,
+        self,
+        locale: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        difficulty: Optional[str] = None,  # Single value or "min..max"
+        practiced: Optional[bool] = None,
+        sort: str = "created_at.desc",
+        page: int = 1,
+        per_page: int = 20,
     ) -> Dict[str, Any]:
         """List items with filtering and pagination."""
         with self.db_manager.get_session() as session:
@@ -293,8 +311,7 @@ class ItemsService:
                         min_diff, max_diff = map(int, difficulty.split(".."))
                         query = query.filter(
                             and_(
-                                Item.difficulty >= min_diff,
-                                Item.difficulty <= max_diff
+                                Item.difficulty >= min_diff, Item.difficulty <= max_diff
                             )
                         )
                     except ValueError:
@@ -344,11 +361,7 @@ class ItemsService:
                 "total_pages": (total + per_page - 1) // per_page,
             }
 
-    def update_item_tts_status(
-            self,
-            item_id: int,
-            status: str
-    ) -> bool:
+    def update_item_tts_status(self, item_id: int, status: str) -> bool:
         """Update the TTS status for an item."""
         with self.db_manager.get_session() as session:
             item = session.query(Item).filter(Item.id == item_id).first()
@@ -362,9 +375,7 @@ class ItemsService:
             return True
 
     def update_item_tags(
-            self,
-            item_id: int,
-            tags: List[str]
+        self, item_id: int, tags: List[str]
     ) -> Optional[Dict[str, Any]]:
         """Update tags for an item by replacing all existing tags with new ones."""
         with self.db_manager.get_session() as session:
@@ -385,13 +396,11 @@ class ItemsService:
                 "previous_tags": previous_tags,
                 "current_tags": tags,
                 "updated_at": item.updated_at,
-                "message": f"Replaced all tags with: {', '.join(tags) if tags else 'none'}"
+                "message": f"Replaced all tags with: {', '.join(tags) if tags else 'none'}",
             }
 
     def update_item_difficulty(
-            self,
-            item_id: int,
-            difficulty: int
+        self, item_id: int, difficulty: int
     ) -> Optional[Dict[str, Any]]:
         """Update the difficulty level for an item."""
         with self.db_manager.get_session() as session:
@@ -410,14 +419,16 @@ class ItemsService:
             if previous_difficulty is None:
                 message = f"Set difficulty to {difficulty}"
             else:
-                message = f"Updated difficulty from {previous_difficulty} to {difficulty}"
+                message = (
+                    f"Updated difficulty from {previous_difficulty} to {difficulty}"
+                )
 
             return {
                 "item_id": item.id,
                 "previous_difficulty": previous_difficulty,
                 "current_difficulty": difficulty,
                 "updated_at": item.updated_at,
-                "message": message
+                "message": message,
             }
 
     def get_items_tts_status(self, item_ids: List[int]) -> Dict[str, Any]:
@@ -429,10 +440,16 @@ class ItemsService:
             for item in items:
                 status_info[item.id] = {
                     "id": item.id,
-                    "text": item.text[:100] + "..." if len(item.text) > 100 else item.text,
+                    "text": (
+                        item.text[:100] + "..." if len(item.text) > 100 else item.text
+                    ),
                     "tts_status": item.tts_status,
-                    "created_at": item.created_at.isoformat() if item.created_at else None,
-                    "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+                    "created_at": (
+                        item.created_at.isoformat() if item.created_at else None
+                    ),
+                    "updated_at": (
+                        item.updated_at.isoformat() if item.updated_at else None
+                    ),
                 }
 
             return status_info

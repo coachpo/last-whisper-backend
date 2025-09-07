@@ -29,7 +29,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 
 # Install Python dependencies
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir .[prod]
 
 # Copy application code
 COPY app/ ./app/

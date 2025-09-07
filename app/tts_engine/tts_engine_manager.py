@@ -34,11 +34,15 @@ class TTSEngineManager:
         with self.db_manager.get_session() as session:
             return (
                 session.query(Task)
-                .filter(and_(Task.text_hash == text_hash, Task.status != TaskStatus.FAILED))
+                .filter(
+                    and_(Task.text_hash == text_hash, Task.status != TaskStatus.FAILED)
+                )
                 .first()
             )
 
-    def submit_task(self, text: str, custom_filename: Optional[str] = None, language: str = "fi") -> Optional[str]:
+    def submit_task(
+        self, text: str, custom_filename: Optional[str] = None, language: str = "fi"
+    ) -> Optional[str]:
         """Submit a new TTS task and store it in database"""
         if not text.strip():
             logger.error("Error: Empty text provided")
@@ -51,7 +55,8 @@ class TTSEngineManager:
         # Validate language support
         if language not in settings.tts_supported_languages:
             logger.error(
-                f"Error: Language '{language}' is not supported. Supported languages: {settings.tts_supported_languages}")
+                f"Error: Language '{language}' is not supported. Supported languages: {settings.tts_supported_languages}"
+            )
             return None
 
         text_hash = self._calculate_text_hash(text)
@@ -63,7 +68,9 @@ class TTSEngineManager:
             task_id = existing_task.task_id
 
             if status in [TaskStatus.COMPLETED, TaskStatus.DONE]:
-                logger.info(f"TTS task with same text already completed (ID: {task_id})")
+                logger.info(
+                    f"TTS task with same text already completed (ID: {task_id})"
+                )
                 return task_id
             elif status in [TaskStatus.QUEUED, TaskStatus.PROCESSING]:
                 logger.info(f"TTS task with same text already {status} (ID: {task_id})")
@@ -94,14 +101,20 @@ class TTSEngineManager:
     def _task_exists(self, task_id: str) -> bool:
         """Check if task already exists in database"""
         with self.db_manager.get_session() as session:
-            return session.query(Task).filter(Task.task_id == task_id).first() is not None
+            return (
+                session.query(Task).filter(Task.task_id == task_id).first() is not None
+            )
 
     def _get_completed_task_by_hash(self, text_hash: str) -> Optional[Task]:
         """Get completed task by text hash for deduplication"""
         with self.db_manager.get_session() as session:
             return (
                 session.query(Task)
-                .filter(and_(Task.text_hash == text_hash, Task.status == TaskStatus.COMPLETED))
+                .filter(
+                    and_(
+                        Task.text_hash == text_hash, Task.status == TaskStatus.COMPLETED
+                    )
+                )
                 .first()
             )
 
@@ -118,10 +131,18 @@ class TTSEngineManager:
                     "status": task.status,
                     "output_file_path": task.output_file_path,
                     "custom_filename": task.custom_filename,
-                    "created_at": task.created_at.isoformat() if task.created_at else None,
-                    "submitted_at": task.submitted_at.isoformat() if task.submitted_at else None,
-                    "started_at": task.started_at.isoformat() if task.started_at else None,
-                    "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+                    "created_at": (
+                        task.created_at.isoformat() if task.created_at else None
+                    ),
+                    "submitted_at": (
+                        task.submitted_at.isoformat() if task.submitted_at else None
+                    ),
+                    "started_at": (
+                        task.started_at.isoformat() if task.started_at else None
+                    ),
+                    "completed_at": (
+                        task.completed_at.isoformat() if task.completed_at else None
+                    ),
                     "failed_at": task.failed_at.isoformat() if task.failed_at else None,
                     "error_message": task.error_message,
                     "file_size": task.file_size,
@@ -150,10 +171,18 @@ class TTSEngineManager:
                     "status": task.status,
                     "output_file_path": task.output_file_path,
                     "custom_filename": task.custom_filename,
-                    "created_at": task.created_at.isoformat() if task.created_at else None,
-                    "submitted_at": task.submitted_at.isoformat() if task.submitted_at else None,
-                    "started_at": task.started_at.isoformat() if task.started_at else None,
-                    "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+                    "created_at": (
+                        task.created_at.isoformat() if task.created_at else None
+                    ),
+                    "submitted_at": (
+                        task.submitted_at.isoformat() if task.submitted_at else None
+                    ),
+                    "started_at": (
+                        task.started_at.isoformat() if task.started_at else None
+                    ),
+                    "completed_at": (
+                        task.completed_at.isoformat() if task.completed_at else None
+                    ),
                     "failed_at": task.failed_at.isoformat() if task.failed_at else None,
                     "error_message": task.error_message,
                     "file_size": task.file_size,
@@ -179,10 +208,18 @@ class TTSEngineManager:
                     "status": task.status,
                     "output_file_path": task.output_file_path,
                     "custom_filename": task.custom_filename,
-                    "created_at": task.created_at.isoformat() if task.created_at else None,
-                    "submitted_at": task.submitted_at.isoformat() if task.submitted_at else None,
-                    "started_at": task.started_at.isoformat() if task.started_at else None,
-                    "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+                    "created_at": (
+                        task.created_at.isoformat() if task.created_at else None
+                    ),
+                    "submitted_at": (
+                        task.submitted_at.isoformat() if task.submitted_at else None
+                    ),
+                    "started_at": (
+                        task.started_at.isoformat() if task.started_at else None
+                    ),
+                    "completed_at": (
+                        task.completed_at.isoformat() if task.completed_at else None
+                    ),
                     "failed_at": task.failed_at.isoformat() if task.failed_at else None,
                     "error_message": task.error_message,
                     "file_size": task.file_size,
@@ -198,7 +235,9 @@ class TTSEngineManager:
         """Start monitoring TTS service task queue"""
         if not self.is_running and self.tts_service:
             self.is_running = True
-            self.monitor_thread = threading.Thread(target=self._monitor_task_message_queue, daemon=True)
+            self.monitor_thread = threading.Thread(
+                target=self._monitor_task_message_queue, daemon=True
+            )
             self.monitor_thread.start()
             logger.info("TTS engine manager task monitoring started!")
 
@@ -277,7 +316,9 @@ class TTSEngineManager:
             session.commit()
 
             # Handle item updates if task is linked to an item
-            self._update_item_from_task_status(task, status, output_file_path, metadata, session)
+            self._update_item_from_task_status(
+                task, status, output_file_path, metadata, session
+            )
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get task statistics"""
@@ -285,7 +326,9 @@ class TTSEngineManager:
             # Get status counts
             status_counts = {}
             status_results = (
-                session.query(Task.status, func.count(Task.id)).group_by(Task.status).all()
+                session.query(Task.status, func.count(Task.id))
+                .group_by(Task.status)
+                .all()
             )
             for status, count in status_results:
                 status_counts[status] = count
@@ -296,7 +339,11 @@ class TTSEngineManager:
             # Get average file size for completed tasks
             avg_file_size = (
                 session.query(func.avg(Task.file_size))
-                .filter(and_(Task.status == TaskStatus.COMPLETED, Task.file_size.isnot(None)))
+                .filter(
+                    and_(
+                        Task.status == TaskStatus.COMPLETED, Task.file_size.isnot(None)
+                    )
+                )
                 .scalar()
             )
 
@@ -313,7 +360,9 @@ class TTSEngineManager:
                 "status_counts": status_counts,
                 "average_file_size": float(avg_file_size) if avg_file_size else 0.0,
                 "duplicate_texts": len(duplicate_results),
-                "duplicate_details": [(hash_val, count) for hash_val, count in duplicate_results],
+                "duplicate_details": [
+                    (hash_val, count) for hash_val, count in duplicate_results
+                ],
             }
 
     def cleanup_failed_tasks(self, days: int = 7) -> int:
@@ -323,7 +372,9 @@ class TTSEngineManager:
         with self.db_manager.get_session() as session:
             deleted_count = (
                 session.query(Task)
-                .filter(and_(Task.status == TaskStatus.FAILED, Task.failed_at < cutoff_date))
+                .filter(
+                    and_(Task.status == TaskStatus.FAILED, Task.failed_at < cutoff_date)
+                )
                 .delete()
             )
             session.commit()
@@ -331,8 +382,14 @@ class TTSEngineManager:
         logger.info(f"TTS engine manager cleaned up {deleted_count} old failed tasks")
         return deleted_count
 
-    def _update_item_from_task_status(self, task: Task, status: str, output_file_path: Optional[str],
-                                      metadata: Dict[str, Any], session):
+    def _update_item_from_task_status(
+        self,
+        task: Task,
+        status: str,
+        output_file_path: Optional[str],
+        metadata: Dict[str, Any],
+        session,
+    ):
         """Update item status and related data when task status changes."""
         # Get all items linked to this task
         items = session.query(Item).filter(Item.task_id == task.task_id).all()
@@ -357,26 +414,38 @@ class TTSEngineManager:
                         # Copy or move the file only if it's not already in the correct location
                         if output_file_path != audio_path:
                             import shutil
+
                             shutil.copy2(output_file_path, audio_path)
 
-                        logger.info(f"TTS engine manager: Audio file ready for item {item.id}: {audio_filename}")
+                        logger.info(
+                            f"TTS engine manager: Audio file ready for item {item.id}: {audio_filename}"
+                        )
 
                     except Exception as e:
-                        logger.error(f"Error handling audio file for item {item.id}: {e}")
+                        logger.error(
+                            f"Error handling audio file for item {item.id}: {e}"
+                        )
                         item.tts_status = ItemTTSStatus.FAILED
 
             elif status == TaskStatus.FAILED:
                 # TTS failed
                 item.tts_status = ItemTTSStatus.FAILED
-                logger.error(f"TTS failed for item {item.id}: {metadata.get('error', 'Unknown error')}")
+                logger.error(
+                    f"TTS failed for item {item.id}: {metadata.get('error', 'Unknown error')}"
+                )
 
             # Update timestamp
             item.updated_at = datetime.now()
 
         session.commit()
 
-    def submit_task_for_item(self, item_id: int, text: str, custom_filename: Optional[str] = None,
-                             language: str = "fi") -> Optional[str]:
+    def submit_task_for_item(
+        self,
+        item_id: int,
+        text: str,
+        custom_filename: Optional[str] = None,
+        language: str = "fi",
+    ) -> Optional[str]:
         """Submit a TTS task specifically for an item."""
         # Submit the task using parent method
         task_id = self.submit_task(text, custom_filename, language)
@@ -388,14 +457,24 @@ class TTSEngineManager:
                 if item:
                     item.task_id = task_id
                     session.commit()
-                    logger.info(f"TTS engine manager linked item {item_id} to task {task_id}")
+                    logger.info(
+                        f"TTS engine manager linked item {item_id} to task {task_id}"
+                    )
 
                     # If the task is already completed, update the item status immediately
                     task = session.query(Task).filter(Task.task_id == task_id).first()
                     if task and task.status in [TaskStatus.COMPLETED, TaskStatus.DONE]:
-                        self._update_item_from_task_status(task, task.status, task.output_file_path,
-                                                           json.loads(task.task_metadata) if task.task_metadata else {},
-                                                           session)
+                        self._update_item_from_task_status(
+                            task,
+                            task.status,
+                            task.output_file_path,
+                            (
+                                json.loads(task.task_metadata)
+                                if task.task_metadata
+                                else {}
+                            ),
+                            session,
+                        )
 
         return task_id
 
@@ -426,7 +505,9 @@ class TTSEngineManager:
             custom_filename = f"item_{item.id}"
             return self.submit_task_for_item(item.id, item.text, custom_filename, "fi")
 
-    def get_items_by_tts_status(self, status: str = ItemTTSStatus.PENDING) -> list[Dict[str, Any]]:
+    def get_items_by_tts_status(
+        self, status: str = ItemTTSStatus.PENDING
+    ) -> list[Dict[str, Any]]:
         """Get items by TTS status."""
         with self.db_manager.get_session() as session:
             items = session.query(Item).filter(Item.tts_status == status).all()
@@ -434,11 +515,17 @@ class TTSEngineManager:
             return [
                 {
                     "id": item.id,
-                    "text": item.text[:100] + "..." if len(item.text) > 100 else item.text,
+                    "text": (
+                        item.text[:100] + "..." if len(item.text) > 100 else item.text
+                    ),
                     "locale": item.locale,
                     "tts_status": item.tts_status,
-                    "created_at": item.created_at.isoformat() if item.created_at else None,
-                    "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+                    "created_at": (
+                        item.created_at.isoformat() if item.created_at else None
+                    ),
+                    "updated_at": (
+                        item.updated_at.isoformat() if item.updated_at else None
+                    ),
                 }
                 for item in items
             ]
@@ -456,7 +543,7 @@ class TTSEngineManager:
                 .filter(
                     Item.task_id.is_(None),
                     Task.status == TaskStatus.COMPLETED,
-                    Task.completed_at < cutoff_date
+                    Task.completed_at < cutoff_date,
                 )
                 .all()
             )
@@ -468,7 +555,9 @@ class TTSEngineManager:
 
             session.commit()
 
-            logger.info(f"TTS engine manager cleaned up {deleted_count} orphaned completed tasks")
+            logger.info(
+                f"TTS engine manager cleaned up {deleted_count} orphaned completed tasks"
+            )
             return deleted_count
 
     def get_tts_worker_health(self) -> Dict[str, Any]:
@@ -478,9 +567,13 @@ class TTSEngineManager:
         # Get queue status if available
         queue_size = 0
         try:
-            if self.tts_service and hasattr(self.tts_service, 'get_task_message_queue'):
+            if self.tts_service and hasattr(self.tts_service, "get_task_message_queue"):
                 task_message_queue = self.tts_service.get_task_message_queue()
-                queue_size = task_message_queue.qsize() if hasattr(task_message_queue, 'qsize') else 0
+                queue_size = (
+                    task_message_queue.qsize()
+                    if hasattr(task_message_queue, "qsize")
+                    else 0
+                )
         except Exception:
             pass
 
@@ -488,7 +581,11 @@ class TTSEngineManager:
         pending_items = 0
         try:
             with self.db_manager.get_session() as session:
-                pending_items = session.query(Item).filter(Item.tts_status == ItemTTSStatus.PENDING).count()
+                pending_items = (
+                    session.query(Item)
+                    .filter(Item.tts_status == ItemTTSStatus.PENDING)
+                    .count()
+                )
         except Exception:
             pass
 
@@ -499,7 +596,9 @@ class TTSEngineManager:
             "tts_service_available": self.tts_service is not None,
         }
 
-    def submit_multiple_tasks(self, texts: list[str], language: str = "fi") -> list[str]:
+    def submit_multiple_tasks(
+        self, texts: list[str], language: str = "fi"
+    ) -> list[str]:
         """Submit multiple tasks for processing."""
         task_ids = []
         for text in texts:
@@ -508,29 +607,6 @@ class TTSEngineManager:
                 task_ids.append(task_id)
         return task_ids
 
-    def get_task_status(self, task_id: str) -> Optional[dict]:
-        """Get task status."""
-        with self.db_manager.get_session() as session:
-            task = session.query(Task).filter(Task.task_id == task_id).first()
-            if not task:
-                return None
-
-            return {
-                "task_id": task.task_id,
-                "status": task.status,
-                "original_text": task.original_text,
-                "output_file_path": task.output_file_path,
-                "custom_filename": task.custom_filename,
-                "created_at": task.created_at.isoformat() if task.created_at else None,
-                "submitted_at": task.submitted_at.isoformat() if task.submitted_at else None,
-                "started_at": task.started_at.isoformat() if task.started_at else None,
-                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-                "failed_at": task.failed_at.isoformat() if task.failed_at else None,
-                "file_size": task.file_size,
-                "sampling_rate": task.sampling_rate,
-                "device": task.device,
-                "error_message": task.error_message,
-            }
 
     @property
     def is_initialized(self) -> bool:

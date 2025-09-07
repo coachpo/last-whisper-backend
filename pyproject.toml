@@ -55,8 +55,6 @@ dependencies = [
     "uvicorn[standard]~=0.35.0",
     # Azure Cognitive Services Speech SDK for TTS functionality
     "azure-cognitiveservices-speech~=1.45.0",
-    # Python WSGI HTTP Server for UNIX (production deployment)
-    "gunicorn~=23.0.0",
 ]
 
 [project.optional-dependencies]
@@ -70,6 +68,11 @@ dev = [
     # Additional testing utilities
     "pytest-asyncio~=0.24.0",
     "pytest-cov~=6.0.0",
+]
+
+prod = [
+    # Python WSGI HTTP Server for UNIX (production deployment)
+    "gunicorn~=23.0.0",
 ]
 
 [project.urls]

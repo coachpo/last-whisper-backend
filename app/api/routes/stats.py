@@ -21,6 +21,7 @@ def get_stats_service() -> StatsService:
     """Get stats service instance."""
     # This will be implemented in dependencies.py
     from app.api.dependencies import get_stats_service as _get_stats_service
+
     return _get_stats_service()
 
 
@@ -35,9 +36,9 @@ def get_stats_service() -> StatsService:
     },
 )
 async def get_summary_stats(
-        since: Optional[datetime] = Query(None, description="Start of time window"),
-        until: Optional[datetime] = Query(None, description="End of time window"),
-        stats_service: StatsService = Depends(get_stats_service),
+    since: Optional[datetime] = Query(None, description="Start of time window"),
+    until: Optional[datetime] = Query(None, description="End of time window"),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     """Get summary statistics."""
     try:
@@ -77,11 +78,11 @@ async def get_summary_stats(
     },
 )
 async def get_practice_log(
-        since: Optional[datetime] = Query(None, description="Start of time window"),
-        until: Optional[datetime] = Query(None, description="End of time window"),
-        page: int = Query(1, ge=1, description="Page number"),
-        per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-        stats_service: StatsService = Depends(get_stats_service),
+    since: Optional[datetime] = Query(None, description="Start of time window"),
+    until: Optional[datetime] = Query(None, description="End of time window"),
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(20, ge=1, le=100, description="Items per page"),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     """Get practice log with per-audio statistics."""
     try:
@@ -131,8 +132,8 @@ async def get_practice_log(
     },
 )
 async def get_item_stats(
-        item_id: int,
-        stats_service: StatsService = Depends(get_stats_service),
+    item_id: int,
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     """Get detailed statistics for a specific item."""
     try:
@@ -164,9 +165,11 @@ async def get_item_stats(
     },
 )
 async def get_progress_over_time(
-        item_id: Optional[int] = Query(None, description="Item ID (leave empty for all items)"),
-        days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
-        stats_service: StatsService = Depends(get_stats_service),
+    item_id: Optional[int] = Query(
+        None, description="Item ID (leave empty for all items)"
+    ),
+    days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     """Get progress over time."""
     try:

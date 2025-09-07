@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 try:
-    from jiwer import wer, cer
+    from jiwer import wer
 
     HAS_JIWER = True
 except ImportError:
@@ -30,9 +30,9 @@ class AttemptsService:
         self.db_manager = db_manager
 
     def create_attempt(
-            self,
-            item_id: int,
-            user_text: str,
+        self,
+        item_id: int,
+        user_text: str,
     ) -> Optional[Attempt]:
         """Create a new attempt with automatic scoring."""
         with self.db_manager.get_session() as session:
@@ -66,12 +66,12 @@ class AttemptsService:
             return session.query(Attempt).filter(Attempt.id == attempt_id).first()
 
     def list_attempts(
-            self,
-            item_id: Optional[int] = None,
-            since: Optional[datetime] = None,
-            until: Optional[datetime] = None,
-            page: int = 1,
-            per_page: int = 20,
+        self,
+        item_id: Optional[int] = None,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
+        page: int = 1,
+        per_page: int = 20,
     ) -> Dict[str, Any]:
         """List attempts with filtering and pagination."""
         with self.db_manager.get_session() as session:
@@ -107,7 +107,9 @@ class AttemptsService:
                 "total_pages": (total + per_page - 1) // per_page,
             }
 
-    def _calculate_score(self, reference_text: str, hypothesis_text: str) -> Dict[str, Any]:
+    def _calculate_score(
+        self, reference_text: str, hypothesis_text: str
+    ) -> Dict[str, Any]:
         """Calculate WER and percentage score between reference and hypothesis."""
         # Normalize both texts
         ref_normalized = self._normalize_text(reference_text)
@@ -138,7 +140,9 @@ class AttemptsService:
                 words_correct = max(0, int(words_ref * (1 - wer_score)))
             except Exception:
                 # Fallback to manual calculation
-                wer_score, words_correct = self._calculate_wer_manual(ref_words, hyp_words)
+                wer_score, words_correct = self._calculate_wer_manual(
+                    ref_words, hyp_words
+                )
         else:
             # Manual WER calculation
             wer_score, words_correct = self._calculate_wer_manual(ref_words, hyp_words)
@@ -162,15 +166,15 @@ class AttemptsService:
         text = text.lower()
 
         # Normalize Unicode (decompose accented characters)
-        text = unicodedata.normalize('NFD', text)
+        text = unicodedata.normalize("NFD", text)
 
         # Remove diacritics if unidecode is available
         if HAS_UNIDECODE:
             text = unidecode(text)
 
         # Remove punctuation (but keep apostrophes) and extra whitespace
-        text = re.sub(r'[^\w\s\']', ' ', text)
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"[^\w\s\']", " ", text)
+        text = re.sub(r"\s+", " ", text)
         text = text.strip()
 
         return text
@@ -182,9 +186,13 @@ class AttemptsService:
 
         # Simple whitespace tokenization after normalization
         words = text.split()
-        return [word.lower() for word in words if word]  # Remove empty strings and convert to lowercase
+        return [
+            word.lower() for word in words if word
+        ]  # Remove empty strings and convert to lowercase
 
-    def _calculate_wer_manual(self, ref_words: List[str], hyp_words: List[str]) -> tuple[float, int]:
+    def _calculate_wer_manual(
+        self, ref_words: List[str], hyp_words: List[str]
+    ) -> tuple[float, int]:
         """Manual WER calculation using edit distance."""
         if not ref_words:
             return (1.0 if hyp_words else 0.0), 0
@@ -208,7 +216,7 @@ class AttemptsService:
                     dp[i][j] = 1 + min(
                         dp[i - 1][j],  # Deletion
                         dp[i][j - 1],  # Insertion
-                        dp[i - 1][j - 1]  # Substitution
+                        dp[i - 1][j - 1],  # Substitution
                     )
 
         # Calculate WER and words correct
@@ -228,5 +236,7 @@ class AttemptsService:
             "wer": attempt.wer,
             "words_ref": attempt.words_ref,
             "words_correct": attempt.words_correct,
-            "created_at": attempt.created_at.isoformat() if attempt.created_at else None,
+            "created_at": (
+                attempt.created_at.isoformat() if attempt.created_at else None
+            ),
         }

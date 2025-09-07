@@ -31,6 +31,7 @@ def get_items_service() -> ItemsService:
     """Get items service instance."""
     # This will be implemented in dependencies.py
     from app.api.dependencies import get_items_service as _get_items_service
+
     return _get_items_service()
 
 
@@ -41,13 +42,15 @@ def get_items_service() -> ItemsService:
     summary="Create dictation item",
     description="Create a new dictation item. The item is immediately created in the database with 'pending' TTS status, and TTS processing happens in the background. The API response is returned immediately without waiting for TTS completion. Difficulty will be auto-calculated based on text length if not provided.",
     responses={
-        202: {"description": "Item created successfully. TTS processing started in background."},
+        202: {
+            "description": "Item created successfully. TTS processing started in background."
+        },
         422: {"model": ErrorResponse, "description": "Validation error"},
     },
 )
 async def create_item(
-        request: ItemCreateRequest,
-        items_service: ItemsService = Depends(get_items_service),
+    request: ItemCreateRequest,
+    items_service: ItemsService = Depends(get_items_service),
 ):
     """Create a new dictation item."""
     try:
@@ -74,25 +77,29 @@ async def create_item(
     summary="Create multiple dictation items",
     description="Create multiple new dictation items. All items are immediately created in the database with 'pending' TTS status, and TTS processing for all items happens in the background. The API response is returned immediately without waiting for TTS completion. Difficulty will be auto-calculated based on text length if not provided.",
     responses={
-        202: {"description": "Items created successfully. TTS processing started in background for all items."},
+        202: {
+            "description": "Items created successfully. TTS processing started in background for all items."
+        },
         422: {"model": ErrorResponse, "description": "Validation error"},
     },
 )
 async def bulk_create_items(
-        request: BulkItemCreateRequest,
-        items_service: ItemsService = Depends(get_items_service),
+    request: BulkItemCreateRequest,
+    items_service: ItemsService = Depends(get_items_service),
 ):
     """Create multiple new dictation items."""
     try:
         # Prepare items data for the service
         items_data = []
         for item_request in request.items:
-            items_data.append({
-                "locale": item_request.locale,
-                "text": item_request.text,
-                "difficulty": item_request.difficulty,
-                "tags": item_request.tags or []
-            })
+            items_data.append(
+                {
+                    "locale": item_request.locale,
+                    "text": item_request.text,
+                    "difficulty": item_request.difficulty,
+                    "tags": item_request.tags or [],
+                }
+            )
 
         result = items_service.bulk_create_items(items_data)
 
@@ -127,20 +134,28 @@ async def bulk_create_items(
     },
 )
 async def list_items(
-        locale: Optional[str] = Query(None, description="Filter by locale"),
-        tag: Optional[List[str]] = Query(None, description="Filter by tags (repeat for multiple)"),
-        difficulty: Optional[str] = Query(None,
-                                          description="Filter by difficulty (single value or 'min..max')"),
-        practiced: Optional[bool] = Query(None, description="Filter by practice status"),
-        sort: str = Query("created_at.desc", description="Sort order"),
-        page: int = Query(1, ge=1, description="Page number"),
-        per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-        items_service: ItemsService = Depends(get_items_service),
+    locale: Optional[str] = Query(None, description="Filter by locale"),
+    tag: Optional[List[str]] = Query(
+        None, description="Filter by tags (repeat for multiple)"
+    ),
+    difficulty: Optional[str] = Query(
+        None, description="Filter by difficulty (single value or 'min..max')"
+    ),
+    practiced: Optional[bool] = Query(None, description="Filter by practice status"),
+    sort: str = Query("created_at.desc", description="Sort order"),
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(20, ge=1, le=100, description="Items per page"),
+    items_service: ItemsService = Depends(get_items_service),
 ):
     """List dictation items with filtering."""
     try:
         # Validate sort parameter
-        valid_sorts = ["created_at.asc", "created_at.desc", "difficulty.asc", "difficulty.desc"]
+        valid_sorts = [
+            "created_at.asc",
+            "created_at.desc",
+            "difficulty.asc",
+            "difficulty.desc",
+        ]
         if sort not in valid_sorts:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -190,8 +205,8 @@ async def list_items(
     },
 )
 async def get_item(
-        item_id: int,
-        items_service: ItemsService = Depends(get_items_service),
+    item_id: int,
+    items_service: ItemsService = Depends(get_items_service),
 ):
     """Get a specific dictation item."""
     try:
@@ -224,8 +239,8 @@ async def get_item(
     },
 )
 async def delete_item(
-        item_id: int,
-        items_service: ItemsService = Depends(get_items_service),
+    item_id: int,
+    items_service: ItemsService = Depends(get_items_service),
 ):
     """Delete a dictation item."""
     try:
@@ -257,16 +272,13 @@ async def delete_item(
     },
 )
 async def update_item_tags(
-        item_id: int,
-        request: TagUpdateRequest,
-        items_service: ItemsService = Depends(get_items_service),
+    item_id: int,
+    request: TagUpdateRequest,
+    items_service: ItemsService = Depends(get_items_service),
 ):
     """Update tags for a dictation item."""
     try:
-        result = items_service.update_item_tags(
-            item_id=item_id,
-            tags=request.tags
-        )
+        result = items_service.update_item_tags(item_id=item_id, tags=request.tags)
 
         if not result:
             raise HTTPException(
@@ -304,15 +316,14 @@ async def update_item_tags(
     },
 )
 async def update_item_difficulty(
-        item_id: int,
-        request: DifficultyUpdateRequest,
-        items_service: ItemsService = Depends(get_items_service),
+    item_id: int,
+    request: DifficultyUpdateRequest,
+    items_service: ItemsService = Depends(get_items_service),
 ):
     """Update the difficulty level for a dictation item."""
     try:
         result = items_service.update_item_difficulty(
-            item_id=item_id,
-            difficulty=request.difficulty
+            item_id=item_id, difficulty=request.difficulty
         )
 
         if not result:
@@ -350,8 +361,8 @@ async def update_item_difficulty(
     },
 )
 async def get_item_audio(
-        item_id: int,
-        items_service: ItemsService = Depends(get_items_service),
+    item_id: int,
+    items_service: ItemsService = Depends(get_items_service),
 ):
     """Stream the audio file for a dictation item."""
     try:
@@ -381,7 +392,7 @@ async def get_item_audio(
         # Read the audio file content
         with open(audio_path, "rb") as audio_file:
             audio_content = audio_file.read()
-        
+
         # Return with explicit MIME type headers
         return Response(
             content=audio_content,
@@ -390,7 +401,7 @@ async def get_item_audio(
                 "Content-Type": "audio/wav",
                 "Content-Disposition": f"inline; filename={audio_filename}",
                 "Cache-Control": "public, max-age=3600",  # Cache for 1 hour
-            }
+            },
         )
 
     except HTTPException:

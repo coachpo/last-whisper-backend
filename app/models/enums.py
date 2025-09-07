@@ -5,7 +5,7 @@ from enum import Enum
 
 class TaskStatus(str, Enum):
     """Enum for Task model status field."""
-    
+
     PENDING = "pending"
     QUEUED = "queued"
     PROCESSING = "processing"
@@ -16,7 +16,7 @@ class TaskStatus(str, Enum):
 
 class ItemTTSStatus(str, Enum):
     """Enum for Item model tts_status field."""
-    
+
     PENDING = "pending"
     READY = "ready"
     FAILED = "failed"

@@ -11,22 +11,37 @@ from .enums import TaskStatus, ItemTTSStatus
 class TTSConvertRequest(BaseModel):
     """Request model for TTS conversion."""
 
-    text: str = Field(..., min_length=1, max_length=10000, description="Text to convert to speech")
+    text: str = Field(
+        ..., min_length=1, max_length=10000, description="Text to convert to speech"
+    )
     custom_filename: Optional[str] = Field(
         None, max_length=255, description="Optional custom filename (without extension)"
     )
-    language: str = Field(default="fi", min_length=2, max_length=10,
-                          description="Language code for TTS (default: 'fi')")
+    language: str = Field(
+        default="fi",
+        min_length=2,
+        max_length=10,
+        description="Language code for TTS (default: 'fi')",
+    )
 
 
 class TTSMultiConvertRequest(BaseModel):
     """Request model for multiple text TTS conversion."""
 
-    texts: list[str] = Field(..., min_length=1, max_length=100, description="List of texts to convert to speech")
-    language: str = Field(default="fi", min_length=2, max_length=10,
-                          description="Language code for TTS (default: 'fi')")
+    texts: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="List of texts to convert to speech",
+    )
+    language: str = Field(
+        default="fi",
+        min_length=2,
+        max_length=10,
+        description="Language code for TTS (default: 'fi')",
+    )
 
-    @field_validator('texts')
+    @field_validator("texts")
     @classmethod
     def validate_texts_not_empty(cls, v):
         """Validate that individual text items are not empty."""
@@ -42,16 +57,22 @@ class TTSConvertResponse(BaseModel):
     conversion_id: str = Field(..., description="Unique ID for the conversion task")
     text: str = Field(..., description="Echo of the submitted text")
     status: TaskStatus = Field(..., description="Current status of the conversion")
-    submitted_at: datetime = Field(..., description="Timestamp when the task was submitted")
+    submitted_at: datetime = Field(
+        ..., description="Timestamp when the task was submitted"
+    )
 
 
 class TTSMultiConvertResponse(BaseModel):
     """Response model for multiple text TTS conversion submission."""
 
-    conversion_ids: list[str] = Field(..., description="List of unique IDs for the conversion tasks")
+    conversion_ids: list[str] = Field(
+        ..., description="List of unique IDs for the conversion tasks"
+    )
     texts: list[str] = Field(..., description="Echo of the submitted texts")
     status: TaskStatus = Field(..., description="Current status of the conversions")
-    submitted_at: datetime = Field(..., description="Timestamp when the tasks were submitted")
+    submitted_at: datetime = Field(
+        ..., description="Timestamp when the tasks were submitted"
+    )
 
 
 class TTSTaskResponse(BaseModel):
@@ -59,16 +80,24 @@ class TTSTaskResponse(BaseModel):
 
     conversion_id: str = Field(..., description="Unique ID for the conversion task")
     text: str = Field(..., description="Original text submitted for conversion")
-    status: TaskStatus = Field(..., description="Current status: queued, processing, completed, failed")
+    status: TaskStatus = Field(
+        ..., description="Current status: queued, processing, completed, failed"
+    )
     output_file_path: Optional[str] = Field(
         None, description="Path to the generated audio file (when completed)"
     )
-    custom_filename: Optional[str] = Field(None, description="Custom filename specified in request")
+    custom_filename: Optional[str] = Field(
+        None, description="Custom filename specified in request"
+    )
 
     # Timestamps
-    submitted_at: Optional[datetime] = Field(None, description="When the task was submitted")
+    submitted_at: Optional[datetime] = Field(
+        None, description="When the task was submitted"
+    )
     started_at: Optional[datetime] = Field(None, description="When processing started")
-    completed_at: Optional[datetime] = Field(None, description="When processing completed")
+    completed_at: Optional[datetime] = Field(
+        None, description="When processing completed"
+    )
     failed_at: Optional[datetime] = Field(None, description="When the task failed")
 
     # Audio metadata (when completed)
@@ -99,16 +128,28 @@ class HealthResponse(BaseModel):
 
 # New schemas for dictation API
 
+
 class ItemCreateRequest(BaseModel):
     """Request model for creating a new dictation item."""
 
-    locale: str = Field(..., min_length=2, max_length=10, description="Language locale (e.g., 'en', 'fi')")
-    text: str = Field(..., min_length=1, max_length=10000, description="Text for dictation practice")
-    difficulty: Optional[int] = Field(None, ge=1, le=10,
-                                      description="Difficulty level (1-10). If not provided, will be auto-calculated based on text length.")
+    locale: str = Field(
+        ...,
+        min_length=2,
+        max_length=10,
+        description="Language locale (e.g., 'en', 'fi')",
+    )
+    text: str = Field(
+        ..., min_length=1, max_length=10000, description="Text for dictation practice"
+    )
+    difficulty: Optional[int] = Field(
+        None,
+        ge=1,
+        le=10,
+        description="Difficulty level (1-10). If not provided, will be auto-calculated based on text length.",
+    )
     tags: Optional[List[str]] = Field(None, description="Tags for categorization")
 
-    @field_validator('tags')
+    @field_validator("tags")
     @classmethod
     def validate_tags(cls, v):
         """Validate tags."""
@@ -126,9 +167,11 @@ class ItemCreateRequest(BaseModel):
 class BulkItemCreateRequest(BaseModel):
     """Request model for creating multiple dictation items."""
 
-    items: List[ItemCreateRequest] = Field(..., min_length=1, max_length=100, description="List of items to create")
+    items: List[ItemCreateRequest] = Field(
+        ..., min_length=1, max_length=100, description="List of items to create"
+    )
 
-    @field_validator('items')
+    @field_validator("items")
     @classmethod
     def validate_items_not_empty(cls, v):
         """Validate that individual item requests are not empty."""
@@ -142,7 +185,9 @@ class BulkItemCreateRequest(BaseModel):
 class TagUpdateRequest(BaseModel):
     """Request model for updating item tags."""
 
-    tags: List[str] = Field(default_factory=list, description="New tags to replace all existing tags")
+    tags: List[str] = Field(
+        default_factory=list, description="New tags to replace all existing tags"
+    )
 
 
 class TagUpdateResponse(BaseModel):
@@ -166,7 +211,9 @@ class DifficultyUpdateResponse(BaseModel):
     """Response model for difficulty update operation."""
 
     item_id: int = Field(..., description="Item ID")
-    previous_difficulty: Optional[int] = Field(None, description="Difficulty before update")
+    previous_difficulty: Optional[int] = Field(
+        None, description="Difficulty before update"
+    )
     current_difficulty: int = Field(..., description="Difficulty after update")
     updated_at: datetime = Field(..., description="Update timestamp")
     message: str = Field(..., description="Description of the operation performed")
@@ -180,7 +227,9 @@ class ItemResponse(BaseModel):
     text: str = Field(..., description="Text for dictation")
     difficulty: Optional[int] = Field(None, description="Difficulty level")
     tags: List[str] = Field(default_factory=list, description="Tags")
-    tts_status: ItemTTSStatus = Field(..., description="TTS status: pending, ready, failed")
+    tts_status: ItemTTSStatus = Field(
+        ..., description="TTS status: pending, ready, failed"
+    )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     practiced: bool = Field(..., description="Whether item has been practiced")
@@ -191,10 +240,15 @@ class BulkItemCreateResponse(BaseModel):
 
     created_items: List[ItemResponse] = Field(..., description="List of created items")
     total_created: int = Field(..., description="Total number of items created")
-    failed_items: List[Dict[str, Any]] = Field(default_factory=list,
-                                               description="List of failed items with error details")
-    total_failed: int = Field(..., description="Total number of items that failed to create")
-    submitted_at: datetime = Field(..., description="Timestamp when the bulk creation was submitted")
+    failed_items: List[Dict[str, Any]] = Field(
+        default_factory=list, description="List of failed items with error details"
+    )
+    total_failed: int = Field(
+        ..., description="Total number of items that failed to create"
+    )
+    submitted_at: datetime = Field(
+        ..., description="Timestamp when the bulk creation was submitted"
+    )
 
 
 class ItemListResponse(BaseModel):
@@ -211,7 +265,9 @@ class AttemptCreateRequest(BaseModel):
     """Request model for creating an attempt."""
 
     item_id: int = Field(..., description="Item ID")
-    text: str = Field(..., min_length=0, max_length=10000, description="User's dictation attempt")
+    text: str = Field(
+        ..., min_length=0, max_length=10000, description="User's dictation attempt"
+    )
 
 
 class AttemptResponse(BaseModel):
@@ -252,8 +308,12 @@ class PracticeLogEntry(BaseModel):
     item_id: int = Field(..., description="Item ID")
     text: str = Field(..., description="Item text")
     attempts_count: int = Field(..., description="Number of attempts")
-    first_attempt_at: Optional[datetime] = Field(None, description="First attempt timestamp")
-    last_attempt_at: Optional[datetime] = Field(None, description="Last attempt timestamp")
+    first_attempt_at: Optional[datetime] = Field(
+        None, description="First attempt timestamp"
+    )
+    last_attempt_at: Optional[datetime] = Field(
+        None, description="Last attempt timestamp"
+    )
     avg_percentage: float = Field(..., description="Average score percentage")
     best_percentage: int = Field(..., description="Best score percentage")
     avg_wer: float = Field(..., description="Average Word Error Rate")
@@ -262,7 +322,9 @@ class PracticeLogEntry(BaseModel):
 class PracticeLogResponse(BaseModel):
     """Response model for practice log."""
 
-    practice_log: List[PracticeLogEntry] = Field(..., description="Practice log entries")
+    practice_log: List[PracticeLogEntry] = Field(
+        ..., description="Practice log entries"
+    )
     total: int = Field(..., description="Total number of entries")
     page: int = Field(..., description="Current page number")
     per_page: int = Field(..., description="Items per page")
@@ -278,12 +340,13 @@ class HealthCheckResponse(BaseModel):
 
 # Tag schemas for preset tags
 
+
 class TagCreateRequest(BaseModel):
     """Request model for creating a new preset tag."""
 
     name: str = Field(..., min_length=1, max_length=50, description="Tag name")
 
-    @field_validator('name')
+    @field_validator("name")
     @classmethod
     def validate_name(cls, v):
         """Validate tag name."""

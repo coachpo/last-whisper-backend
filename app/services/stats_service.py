@@ -16,9 +16,9 @@ class StatsService:
         self.db_manager = db_manager
 
     def get_summary_stats(
-            self,
-            since: Optional[datetime] = None,
-            until: Optional[datetime] = None,
+        self,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """Get summary statistics for the specified time window."""
         with self.db_manager.get_session() as session:
@@ -42,19 +42,13 @@ class StatsService:
                 }
 
             # Get unique audio items practiced
-            audios_practiced = (
-                query.with_entities(distinct(Attempt.item_id))
-                .count()
-            )
+            audios_practiced = query.with_entities(distinct(Attempt.item_id)).count()
 
             # Get average percentage and WER
-            stats = (
-                query.with_entities(
-                    func.avg(Attempt.percentage).label("avg_percentage"),
-                    func.avg(Attempt.wer).label("avg_wer"),
-                )
-                .first()
-            )
+            stats = query.with_entities(
+                func.avg(Attempt.percentage).label("avg_percentage"),
+                func.avg(Attempt.wer).label("avg_wer"),
+            ).first()
 
             return {
                 "attempts": attempts_count,
@@ -64,11 +58,11 @@ class StatsService:
             }
 
     def get_practice_log(
-            self,
-            since: Optional[datetime] = None,
-            until: Optional[datetime] = None,
-            page: int = 1,
-            per_page: int = 20,
+        self,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
+        page: int = 1,
+        per_page: int = 20,
     ) -> Dict[str, Any]:
         """Get per-audio practice log with aggregated statistics."""
         with self.db_manager.get_session() as session:
@@ -97,7 +91,9 @@ class StatsService:
                 .outerjoin(attempts_subq, Item.id == attempts_subq.c.item_id)
                 .filter(attempts_subq.c.id.isnot(None))  # Only items with attempts
                 .group_by(Item.id, Item.text)
-                .order_by(func.max(attempts_subq.c.created_at).desc())  # Most recently practiced first
+                .order_by(
+                    func.max(attempts_subq.c.created_at).desc()
+                )  # Most recently practiced first
             )
 
             # Get total count before pagination
@@ -110,16 +106,26 @@ class StatsService:
             # Format results
             practice_log = []
             for result in results:
-                practice_log.append({
-                    "item_id": result.item_id,
-                    "text": result.text,
-                    "attempts_count": result.attempts_count,
-                    "first_attempt_at": result.first_attempt_at.isoformat() if result.first_attempt_at else None,
-                    "last_attempt_at": result.last_attempt_at.isoformat() if result.last_attempt_at else None,
-                    "avg_percentage": round(float(result.avg_percentage or 0), 2),
-                    "best_percentage": result.best_percentage or 0,
-                    "avg_wer": round(float(result.avg_wer or 0), 4),
-                })
+                practice_log.append(
+                    {
+                        "item_id": result.item_id,
+                        "text": result.text,
+                        "attempts_count": result.attempts_count,
+                        "first_attempt_at": (
+                            result.first_attempt_at.isoformat()
+                            if result.first_attempt_at
+                            else None
+                        ),
+                        "last_attempt_at": (
+                            result.last_attempt_at.isoformat()
+                            if result.last_attempt_at
+                            else None
+                        ),
+                        "avg_percentage": round(float(result.avg_percentage or 0), 2),
+                        "best_percentage": result.best_percentage or 0,
+                        "avg_wer": round(float(result.avg_wer or 0), 4),
+                    }
+                )
 
             return {
                 "practice_log": practice_log,
@@ -157,26 +163,29 @@ class StatsService:
                 }
 
             # Get aggregated stats
-            stats = (
-                attempts_query.with_entities(
-                    func.min(Attempt.created_at).label("first_attempt_at"),
-                    func.max(Attempt.created_at).label("last_attempt_at"),
-                    func.avg(Attempt.percentage).label("avg_percentage"),
-                    func.max(Attempt.percentage).label("best_percentage"),
-                    func.min(Attempt.percentage).label("worst_percentage"),
-                    func.avg(Attempt.wer).label("avg_wer"),
-                    func.min(Attempt.wer).label("best_wer"),
-                    func.max(Attempt.wer).label("worst_wer"),
-                )
-                .first()
-            )
+            stats = attempts_query.with_entities(
+                func.min(Attempt.created_at).label("first_attempt_at"),
+                func.max(Attempt.created_at).label("last_attempt_at"),
+                func.avg(Attempt.percentage).label("avg_percentage"),
+                func.max(Attempt.percentage).label("best_percentage"),
+                func.min(Attempt.percentage).label("worst_percentage"),
+                func.avg(Attempt.wer).label("avg_wer"),
+                func.min(Attempt.wer).label("best_wer"),
+                func.max(Attempt.wer).label("worst_wer"),
+            ).first()
 
             return {
                 "item_id": item_id,
                 "text": item.text,
                 "attempts_count": attempts_count,
-                "first_attempt_at": stats.first_attempt_at.isoformat() if stats.first_attempt_at else None,
-                "last_attempt_at": stats.last_attempt_at.isoformat() if stats.last_attempt_at else None,
+                "first_attempt_at": (
+                    stats.first_attempt_at.isoformat()
+                    if stats.first_attempt_at
+                    else None
+                ),
+                "last_attempt_at": (
+                    stats.last_attempt_at.isoformat() if stats.last_attempt_at else None
+                ),
                 "avg_percentage": round(float(stats.avg_percentage or 0), 2),
                 "best_percentage": stats.best_percentage or 0,
                 "worst_percentage": stats.worst_percentage or 0,
@@ -186,9 +195,9 @@ class StatsService:
             }
 
     def get_progress_over_time(
-            self,
-            item_id: Optional[int] = None,
-            days: int = 30,
+        self,
+        item_id: Optional[int] = None,
+        days: int = 30,
     ) -> List[Dict[str, Any]]:
         """Get progress over time (daily aggregations)."""
         with self.db_manager.get_session() as session:
@@ -202,9 +211,7 @@ class StatsService:
                 func.count(Attempt.id).label("attempts"),
                 func.avg(Attempt.percentage).label("avg_percentage"),
                 func.avg(Attempt.wer).label("avg_wer"),
-            ).filter(
-                func.date(Attempt.created_at) >= start_date
-            )
+            ).filter(func.date(Attempt.created_at) >= start_date)
 
             if item_id:
                 query = query.filter(Attempt.item_id == item_id)
@@ -219,11 +226,13 @@ class StatsService:
             # Format results
             progress = []
             for result in results:
-                progress.append({
-                    "date": str(result.date),
-                    "attempts": result.attempts,
-                    "avg_percentage": round(float(result.avg_percentage or 0), 2),
-                    "avg_wer": round(float(result.avg_wer or 0), 4),
-                })
+                progress.append(
+                    {
+                        "date": str(result.date),
+                        "attempts": result.attempts,
+                        "avg_percentage": round(float(result.avg_percentage or 0), 2),
+                        "avg_wer": round(float(result.avg_wer or 0), 4),
+                    }
+                )
 
             return progress
