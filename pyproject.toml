@@ -1,0 +1,107 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "last-whisper-backend"
+version = "1.0.0"
+description = "Last Whisper's backend service - Dictation training with cloud TTS, scoring, and session-less workflow"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Last Whisper Team"},
+]
+maintainers = [
+    {name = "Last Whisper Team"},
+]
+keywords = [
+    "tts",
+    "text-to-speech",
+    "dictation",
+    "fastapi",
+    "azure",
+    "google-cloud",
+    "speech-synthesis",
+    "language-learning",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "License :: Public Domain",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Framework :: FastAPI",
+]
+requires-python = ">=3.11"
+dependencies = [
+    # Database migration and schema management
+    "alembic~=1.16.5",
+    # Modern Python web framework for building APIs
+    "fastapi~=0.116.1",
+    # Google Cloud Text-to-Speech API client library
+    "google-cloud-texttospeech~=2.27.0",
+    # Modern HTTP client for Python with async support
+    "httpx~=0.28.1",
+    # Word Error Rate (WER) calculation for dictation scoring
+    "jiwer~=4.0.0",
+    # Data validation and settings management with type hints
+    "pydantic~=2.11.7",
+    # Pydantic extension for settings management from environment variables
+    "pydantic-settings~=2.10.1",
+    # Modern Python SQL toolkit and Object-Relational Mapping (ORM)
+    "sqlalchemy~=2.0.43",
+    # Unicode normalization for text processing and comparison
+    "unidecode~=1.4.0",
+    # ASGI server for running FastAPI applications in production
+    "uvicorn[standard]~=0.35.0",
+    # Azure Cognitive Services Speech SDK for TTS functionality
+    "azure-cognitiveservices-speech~=1.45.0",
+    # Python WSGI HTTP Server for UNIX (production deployment)
+    "gunicorn~=23.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Code formatting and style enforcement
+    "black~=25.1.0",
+    # Fast Python linter and code formatter
+    "ruff~=0.12.11",
+    # Testing framework for Python applications
+    "pytest~=8.4.1",
+    # Additional testing utilities
+    "pytest-asyncio~=0.24.0",
+    "pytest-cov~=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/last-whisper"
+Documentation = "https://github.com/your-org/last-whisper/blob/main/docs/README.md"
+Repository = "https://github.com/your-org/last-whisper.git"
+Issues = "https://github.com/your-org/last-whisper/issues"
+Changelog = "https://github.com/your-org/last-whisper/blob/main/CHANGELOG.md"
+
+[project.scripts]
+last-whisper-api = "run_api:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+
+[tool.coverage.run]
+source = ["app"]

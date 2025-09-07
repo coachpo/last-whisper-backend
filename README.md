@@ -5,7 +5,7 @@ A production-grade FastAPI service for advanced Text-to-Speech conversion with m
 ## ✨ Core Features
 
 ### 🎙️ Advanced TTS Engine
-- **Multiple Providers**: Azure Speech, Google Cloud Text-to-Speech, and Local TTS engines
+- **Multiple Providers**: Azure Speech and Google Cloud Text-to-Speech
 - **High-Quality Audio**: Neural voice synthesis with customizable parameters
 - **Batch Processing**: Efficient queue-based conversion for multiple texts
 - **Task Management**: Comprehensive lifecycle tracking with deduplication
@@ -67,7 +67,7 @@ last-whisper-backend/
 ├── keys/                          # API keys and credentials
 │   └── google-credentials.json    # Google Cloud service account keys
 ├── audio/                         # Generated audio files (item_*.wav)
-├── requirements.txt               # Python dependencies with comments
+├── pyproject.toml                 # Python project configuration and dependencies
 ├── run_api.py                     # Server startup script
 ├── data/                          # Database storage
 │   └── dictation.db               # SQLite database
@@ -207,8 +207,15 @@ Comprehensive health check with detailed service status and dependency monitorin
 ### Quick Setup
 
 1. **Clone the repository** and navigate to the backend directory
-2. **Create a Python virtual environment** for dependency isolation
-3. **Install dependencies** from requirements.txt
+2. **Create a Python virtual environment** for dependency isolation:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+3. **Install dependencies** using pip with pyproject.toml:
+   ```bash
+   pip install -e ".[dev]"
+   ```
 4. **Initialize database** - SQLite database is created automatically on first run
 
 ## 🏃‍♂️ Running the Application
@@ -287,22 +294,30 @@ Configuration is managed through environment variables or `.env` file for maximu
 ### Code Formatting
 
 **Black Code Formatter:**
-- Format code with Black for consistent style
-- Check formatting without making changes
+- Format code with Black for consistent style: `black .`
+- Check formatting without making changes: `black --check .`
 
 ### Code Linting
 
 **Ruff Linter:**
-- Run comprehensive linting checks
-- Auto-fix common linting issues
+- Run comprehensive linting checks: `ruff check .`
+- Auto-fix common linting issues: `ruff check --fix .`
 - Run with specific rule sets for targeted checks
 
 ### Development Workflow
 1. **Write tests** for new functionality
-2. **Format code** with Black
-3. **Lint code** with Ruff
-4. **Run tests** to ensure everything works
+2. **Format code** with Black: `black .`
+3. **Lint code** with Ruff: `ruff check .`
+4. **Run tests** to ensure everything works: `pytest`
 5. **Commit changes** with descriptive messages
+
+### Using pyproject.toml
+
+The project uses `pyproject.toml` for configuration, which provides:
+- **Unified configuration** for all tools (Black, Ruff, pytest)
+- **Modern Python packaging** with PEP 621 compliance
+- **Development dependencies** managed through optional dependencies
+- **Build system** configuration for packaging and distribution
 
 ## 🏗️ Architecture
 
@@ -388,3 +403,4 @@ This project is licensed under the WTFPL - see the [LICENSE](LICENSE) file for d
 ---
 
 **Ready to build amazing TTS applications?** 🚀 [Get started now](#-installation--setup) with Last Whisper Backend!
+
