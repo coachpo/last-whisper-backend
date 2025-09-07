@@ -8,12 +8,6 @@ from .models import Task, Item, Attempt, Tag
 
 # Import Pydantic schemas
 from .schemas import (
-    # TTS schemas
-    TTSConvertRequest,
-    TTSMultiConvertRequest,
-    TTSConvertResponse,
-    TTSMultiConvertResponse,
-    TTSTaskResponse,
     # Item schemas
     ItemCreateRequest,
     BulkItemCreateRequest,
@@ -52,12 +46,6 @@ __all__ = [
     # Database manager
     "DatabaseManager",
     "Base",
-    # TTS schemas
-    "TTSConvertRequest",
-    "TTSMultiConvertRequest",
-    "TTSConvertResponse",
-    "TTSMultiConvertResponse",
-    "TTSTaskResponse",
     # Item schemas
     "ItemCreateRequest",
     "BulkItemCreateRequest",
