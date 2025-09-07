@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from .enums import TaskStatus, ItemTTSStatus
+from .enums import ItemTTSStatus
 
 
 class ErrorResponse(BaseModel):
