@@ -28,8 +28,9 @@ WORKDIR /app
 # Copy pyproject.toml first for better caching
 COPY pyproject.toml ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir .[prod]
+# Install Python dependencies with cache mount
+RUN --mount=type=cache,id=python-deps,target=/root/.cache/pip \
+    pip install --no-cache-dir .[prod]
 
 # Copy application code
 COPY app/ ./app/
