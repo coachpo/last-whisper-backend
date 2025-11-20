@@ -142,10 +142,12 @@ async def tts_api_exception_handler(request, exc: TTSAPIException):
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
     """Handle general exceptions."""
+    logger.exception("Unhandled exception", exc_info=exc)
+    detail = str(exc) if settings.is_development else None
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
-            error="Internal server error", detail=str(exc)
+            error="Internal server error", detail=detail
         ).model_dump(),
     )
 

@@ -1,22 +1,23 @@
 """Application configuration settings."""
 
-from typing import Optional
+from typing import ClassVar, Optional
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings."""
 
+    _app_name_base: ClassVar[str] = "Last Whisper Backend"
+
     # Determine if we are in development mode
     environment: str = "development"  # "development" or "production"
-    is_development: bool = environment in ["development", "dev", "local"]
-    is_production: bool = not is_development
+    is_development: bool = True
+    is_production: bool = False
 
     # API Settings
-    app_name: str = "Last Whisper Backend" + (
-        " (Development)" if is_development else ""
-    )
+    app_name: str = _app_name_base
     app_version: str = "1.0.0"
     app_description: str = (
         "Last Whisper's backend service - Dictation training with cloud TTS, scoring, and session-less workflow"
@@ -25,7 +26,7 @@ class Settings(BaseSettings):
     # Server Settings
     host: str = "0.0.0.0"
     port: int = 8000
-    reload: bool = is_development
+    reload: Optional[bool] = None
     log_level: str = "info"
 
     # Database Settings
@@ -37,6 +38,7 @@ class Settings(BaseSettings):
     # TTS Service Settings
     tts_supported_languages: list[str] = ["fi"]  # Supported languages for TTS
     tts_provider: str = "gcp"  # TTS provider: 'azure' or 'gcp'/'google'
+    tts_submission_workers: int = 4
 
     # Google Cloud Settings
     google_application_credentials: Optional[str] = "keys/google-credentials.json"
@@ -58,6 +60,21 @@ class Settings(BaseSettings):
     cors_allow_headers: str = "*"  # Comma-separated list or "*" for all headers
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
+
+    @model_validator(mode="after")
+    def _set_environment_flags(self):
+        env = (self.environment or "").strip().lower()
+        self.is_development = env in {"development", "dev", "local"}
+        self.is_production = not self.is_development
+        if self.reload is None:
+            self.reload = self.is_development
+
+        # Only auto-append the development suffix when using the default base name
+        if self.app_name in {self._app_name_base, f"{self._app_name_base} (Development)"}:
+            suffix = " (Development)" if self.is_development else ""
+            self.app_name = f"{self._app_name_base}{suffix}"
+
+        return self
 
 
 # Global settings instance

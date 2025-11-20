@@ -1,6 +1,7 @@
 """API routes for preset tags management."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.concurrency import run_in_threadpool
 
 from app.api.dependencies import get_tags_service
 from app.core.exceptions import DatabaseException, ValidationException
@@ -22,7 +23,7 @@ async def create_tag(
 ):
     """Create a new preset tag."""
     try:
-        return await tags_service.create_tag(tag_data)
+        return await run_in_threadpool(tags_service.create_tag, tag_data)
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except DatabaseException as e:
@@ -46,7 +47,7 @@ async def get_tags(
 ):
     """Get list of preset tags."""
     try:
-        return await tags_service.get_tags(limit=limit, offset=offset)
+        return await run_in_threadpool(tags_service.get_tags, limit, offset)
     except DatabaseException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
@@ -64,7 +65,7 @@ async def delete_tag(
 ):
     """Delete a preset tag."""
     try:
-        await tags_service.delete_tag(tag_id)
+        await run_in_threadpool(tags_service.delete_tag, tag_id)
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except DatabaseException as e:

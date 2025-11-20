@@ -503,7 +503,10 @@ class TTSEngineManager:
 
             # Submit new TTS task
             custom_filename = f"item_{item.id}"
-            return self.submit_task_for_item(item.id, item.text, custom_filename, "fi")
+            language = item.locale or settings.tts_supported_languages[0]
+            return self.submit_task_for_item(
+                item.id, item.text, custom_filename, language
+            )
 
     def get_items_by_tts_status(
         self, status: str = ItemTTSStatus.PENDING

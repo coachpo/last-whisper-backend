@@ -1,9 +1,10 @@
 """Items service for managing dictation items."""
 
 import os
-import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from threading import Lock
+from typing import Optional, Dict, Any, List, ClassVar
 
 from sqlalchemy import and_
 
@@ -20,9 +21,22 @@ logger = get_logger(__name__)
 class ItemsService:
     """Service for managing dictation items."""
 
+    _tts_executor: ClassVar[Optional[ThreadPoolExecutor]] = None
+    _executor_lock: ClassVar[Lock] = Lock()
+
     def __init__(self, db_manager: DatabaseManager, task_manager=None):
         self.db_manager = db_manager
         self.task_manager = task_manager
+
+    @classmethod
+    def _get_executor(cls) -> ThreadPoolExecutor:
+        with cls._executor_lock:
+            if cls._tts_executor is None:
+                cls._tts_executor = ThreadPoolExecutor(
+                    max_workers=settings.tts_submission_workers,
+                    thread_name_prefix="tts-submitter",
+                )
+            return cls._tts_executor
 
     def _calculate_difficulty_from_text(self, text: str) -> int:
         """Calculate difficulty level based on text length rules."""
@@ -42,104 +56,58 @@ class ItemsService:
         else:  # words >= 16 or letters >= 141
             return 5
 
-    def _submit_tts_job_background(self, item_id: int, text: str, custom_filename: str):
-        """Submit TTS job in background thread."""
+    def _submit_tts_job(
+        self, item_id: int, text: str, locale: Optional[str], custom_filename: str
+    ):
+        """Submit a TTS job through the manager and update status on failure."""
+        if not self.task_manager:
+            logger.warning(f"No task manager available for item {item_id}")
+            return
+
+        language = locale or settings.tts_supported_languages[0]
+
         try:
-            if self.task_manager:
-                task_id = self.task_manager.submit_task_for_item(
-                    item_id, text, custom_filename
-                )
-
-                if not task_id:
-                    # Mark TTS as failed if we couldn't submit
-                    with self.db_manager.get_session() as session:
-                        item = session.query(Item).filter(Item.id == item_id).first()
-                        if item:
-                            item.tts_status = ItemTTSStatus.FAILED
-                            session.commit()
-                            logger.warning(
-                                f"Failed to submit TTS job for item {item_id}"
-                            )
-
-                logger.info(
-                    f"TTS job submitted in background for item {item_id}: {task_id}"
-                )
-            else:
-                logger.warning(f"No task manager available for item {item_id}")
-
-        except Exception as e:
-            logger.error(
-                f"Error submitting TTS job in background for item {item_id}: {e}"
+            task_id = self.task_manager.submit_task_for_item(
+                item_id, text, custom_filename, language
             )
-            # Mark TTS as failed
-            try:
-                with self.db_manager.get_session() as session:
-                    item = session.query(Item).filter(Item.id == item_id).first()
-                    if item:
-                        item.tts_status = ItemTTSStatus.FAILED
-                        session.commit()
-            except Exception as db_error:
-                logger.error(
-                    f"Failed to update TTS status to failed for item {item_id}: {db_error}"
-                )
 
-    def _submit_bulk_tts_jobs_background(self, items_data: List[Dict[str, Any]]):
-        """Submit TTS jobs for multiple items in a single background thread."""
-        try:
-            if not self.task_manager:
-                logger.warning("No task manager available for bulk TTS job submission")
+            if not task_id:
+                self._mark_tts_failed(item_id)
+                logger.warning(f"Failed to submit TTS job for item {item_id}")
                 return
 
-            for item_data in items_data:
-                try:
-                    item_id = item_data["id"]
-                    text = item_data["text"]
-                    custom_filename = f"item_{item_id}"
-                    task_id = self.task_manager.submit_task_for_item(
-                        item_id, text, custom_filename
-                    )
+            logger.info(
+                f"TTS job submitted for item {item_id} with language '{language}': {task_id}"
+            )
 
-                    if not task_id:
-                        # Mark TTS as failed if we couldn't submit
-                        with self.db_manager.get_session() as session:
-                            item = (
-                                session.query(Item).filter(Item.id == item_id).first()
-                            )
-                            if item:
-                                item.tts_status = ItemTTSStatus.FAILED
-                                session.commit()
-                                logger.warning(
-                                    f"Failed to submit TTS job for item {item_id}"
-                                )
+        except Exception as exc:
+            logger.error(f"Error submitting TTS job for item {item_id}: {exc}")
+            self._mark_tts_failed(item_id)
 
-                    logger.info(
-                        f"TTS job submitted in background for item {item_id}: {task_id}"
-                    )
+    def _mark_tts_failed(self, item_id: int):
+        try:
+            with self.db_manager.get_session() as session:
+                item = session.query(Item).filter(Item.id == item_id).first()
+                if item:
+                    item.tts_status = ItemTTSStatus.FAILED
+                    session.commit()
+        except Exception as db_error:
+            logger.error(
+                f"Failed to update TTS status to failed for item {item_id}: {db_error}"
+            )
 
-                except Exception as e:
-                    logger.error(
-                        f"Error submitting TTS job for item {item_data.get('id', 'unknown')}: {e}"
-                    )
-                    # Mark TTS as failed
-                    try:
-                        item_id = item_data.get("id")
-                        if item_id:
-                            with self.db_manager.get_session() as session:
-                                item = (
-                                    session.query(Item)
-                                    .filter(Item.id == item_id)
-                                    .first()
-                                )
-                                if item:
-                                    item.tts_status = ItemTTSStatus.FAILED
-                                    session.commit()
-                    except Exception as db_error:
-                        logger.error(
-                            f"Failed to update TTS status to failed for item {item_data.get('id', 'unknown')}: {db_error}"
-                        )
+    def _schedule_tts_job(
+        self, item_id: int, text: str, locale: Optional[str], custom_filename: str
+    ):
+        if not self.task_manager:
+            logger.warning(f"No task manager available for item {item_id}")
+            return
 
-        except Exception as e:
-            logger.error(f"Error in bulk TTS job submission: {e}")
+        executor = self._get_executor()
+        logger.info(
+            f"Queueing TTS submission for item {item_id} (locale={locale or 'default'})"
+        )
+        executor.submit(self._submit_tts_job, item_id, text, locale, custom_filename)
 
     def create_item(
         self,
@@ -170,16 +138,10 @@ class ItemsService:
             session.commit()
             session.refresh(item)
 
-            # Submit TTS job in background thread
+            # Submit TTS job asynchronously via shared executor
             if self.task_manager:
                 custom_filename = f"item_{item.id}"
-                background_thread = threading.Thread(
-                    target=self._submit_tts_job_background,
-                    args=(item.id, text, custom_filename),
-                    daemon=True,
-                )
-                background_thread.start()
-                logger.info(f"Started background TTS job for item {item.id}")
+                self._schedule_tts_job(item.id, text, locale, custom_filename)
 
             # Return clean data structure to avoid session binding issues
             return self._item_to_dict(item)
@@ -223,23 +185,12 @@ class ItemsService:
             # Commit all successful creations
             session.commit()
 
-            # Submit TTS jobs in a single background thread for all created items
+            # Submit TTS jobs via executor for all created items
             if self.task_manager and created_items:
-                # Prepare data for background thread (avoid session binding issues)
-                background_items_data = [
-                    {"id": item.id, "text": item.text, "locale": item.locale}
-                    for item in created_items
-                ]
-
-                background_thread = threading.Thread(
-                    target=self._submit_bulk_tts_jobs_background,
-                    args=(background_items_data,),
-                    daemon=True,
-                )
-                background_thread.start()
-                logger.info(
-                    f"Started background TTS job processing for {len(created_items)} items"
-                )
+                for item in created_items:
+                    self._schedule_tts_job(
+                        item.id, item.text, item.locale, f"item_{item.id}"
+                    )
 
             # Convert items to clean data structures to avoid session binding issues
             created_items_data = [self._item_to_dict(item) for item in created_items]

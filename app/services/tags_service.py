@@ -12,7 +12,7 @@ class TagsService:
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
 
-    async def create_tag(self, tag_data: TagCreateRequest) -> TagResponse:
+    def create_tag(self, tag_data: TagCreateRequest) -> TagResponse:
         """Create a new preset tag."""
         try:
             with self.db_manager.get_session() as session:
@@ -39,7 +39,7 @@ class TagsService:
         except Exception as e:
             raise DatabaseException(f"Failed to create tag: {str(e)}")
 
-    async def get_tags(self, limit: int = 100, offset: int = 0) -> TagListResponse:
+    def get_tags(self, limit: int = 100, offset: int = 0) -> TagListResponse:
         """Get list of preset tags."""
         try:
             with self.db_manager.get_session() as session:
@@ -58,7 +58,7 @@ class TagsService:
         except Exception as e:
             raise DatabaseException(f"Failed to get tags: {str(e)}")
 
-    async def delete_tag(self, tag_id: int) -> bool:
+    def delete_tag(self, tag_id: int) -> bool:
         """Delete a preset tag."""
         try:
             with self.db_manager.get_session() as session:
