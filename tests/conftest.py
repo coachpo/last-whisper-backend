@@ -6,6 +6,7 @@ from typing import Dict, Iterable
 
 import pytest
 from fastapi.testclient import TestClient
+from datetime import datetime
 
 from app.api import dependencies as dependency_cache
 from app.api.dependencies import (
@@ -16,10 +17,12 @@ from app.api.dependencies import (
     get_tags_service,
     get_tts_engine,
     get_tts_engine_manager,
+    get_translation_manager,
 )
 from app.api.routes import attempts as attempts_routes
 from app.api.routes import items as items_routes
 from app.api.routes import stats as stats_routes
+from app.api.routes import translations as translations_routes
 from app.main import app
 from app.models.database_manager import Base, DatabaseManager
 from app.services.attempts_service import AttemptsService
@@ -58,6 +61,42 @@ class DummyTTSEngine:
 
     def shutdown(self):  # pragma: no cover - not used in tests
         self.is_initialized = False
+
+
+class DummyTranslationManager:
+    """Stub translation manager to avoid real provider calls."""
+
+    def __init__(self):
+        self.calls = []
+
+    def translate_item(self, item_id: int, target_lang: str, force_refresh: bool = False):
+        self.calls.append(("translate", item_id, target_lang, force_refresh))
+        # block same-lang
+        if target_lang == "fi":
+            return None
+        return {
+            "translation_id": 1,
+            "item_id": item_id,
+            "text": "hello",
+            "source_lang": "fi",
+            "target_lang": target_lang,
+            "translated_text": "hola",
+            "provider": "stub",
+            "cached": False,
+            "status": "completed",
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
+            "last_refreshed_at": datetime.now(),
+            "metadata": {},
+        }
+
+    def get_cached_translation(self, item_id: int, target_lang: str):
+        self.calls.append(("cached", item_id, target_lang))
+        return None
+
+    def refresh_translation(self, translation_id: int):  # pragma: no cover
+        self.calls.append(("refresh", translation_id))
+        return None
 
 
 @pytest.fixture(autouse=True)
@@ -111,6 +150,11 @@ def task_manager() -> DummyTaskManager:
 
 
 @pytest.fixture()
+def translation_manager() -> DummyTranslationManager:
+    return DummyTranslationManager()
+
+
+@pytest.fixture()
 def dummy_tts_engine() -> DummyTTSEngine:
     return DummyTTSEngine()
 
@@ -141,6 +185,7 @@ def test_client(
     tags_service: TagsService,
     task_manager: DummyTaskManager,
     dummy_tts_engine: DummyTTSEngine,
+    translation_manager: DummyTranslationManager,
 ):
     overrides = {
         get_database_manager: lambda: db_manager,
@@ -150,10 +195,12 @@ def test_client(
         get_tags_service: lambda: tags_service,
         get_tts_engine_manager: lambda: task_manager,
         get_tts_engine: lambda: dummy_tts_engine,
+        get_translation_manager: lambda: translation_manager,
         # Route-level wrappers
         attempts_routes.get_attempts_service: lambda: attempts_service,
         stats_routes.get_stats_service: lambda: stats_service,
         items_routes.get_items_service: lambda: items_service,
+        translations_routes.get_translation_manager: lambda: translation_manager,
     }
 
     app.dependency_overrides.update(overrides)

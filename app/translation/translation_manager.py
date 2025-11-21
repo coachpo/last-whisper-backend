@@ -40,6 +40,12 @@ class TranslationManager:
                 return None
 
             source_lang = item.locale
+
+            # Prevent source == target to avoid provider 400s
+            if source_lang == target_lang:
+                logger.warning("Source and target languages identical: %s", target_lang)
+                return None
+
             text_hash = self._text_hash(item.text)
 
             translation = (

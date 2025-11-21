@@ -46,8 +46,6 @@ class Settings(BaseSettings):
 
     # Google Cloud Settings
     google_application_credentials: Optional[str] = "keys/google-credentials.json"
-    google_translation_project_id: Optional[str] = None
-    google_translation_location: Optional[str] = "global"
 
     # Azure Settings (optional)
     azure_speech_key: Optional[str] = None

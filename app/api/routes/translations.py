@@ -1,6 +1,6 @@
 """Translation endpoints (item-bound)."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.dependencies import get_translation_manager
 from app.models.schemas import (
@@ -26,7 +26,10 @@ async def translate_item(
         item_id, payload.target_lang, payload.force_refresh
     )
     if not result:
-        raise HTTPException(status_code=404, detail="Item not found or unsupported lang")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid translation request (item missing, unsupported language, or source-target identical)",
+        )
     return result
 
 
