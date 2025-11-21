@@ -11,7 +11,7 @@ from app.api.dependencies import (
     get_database_manager,
     get_tts_engine,
 )
-from app.api.routes import health, items, attempts, stats, tags
+from app.api.routes import health, items, attempts, stats, tags, translations
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
 from app.core.logging import setup_logging, get_logger
@@ -158,3 +158,4 @@ app.include_router(items.router)
 app.include_router(attempts.router)
 app.include_router(stats.router)
 app.include_router(tags.router)
+app.include_router(translations.router)

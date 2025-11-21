@@ -11,7 +11,7 @@ from sqlalchemy import and_
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.database_manager import DatabaseManager
-from app.models.models import Item
+from app.models.models import Item, ItemTTS
 from app.models.enums import ItemTTSStatus
 
 # Setup logger for this module
@@ -87,9 +87,14 @@ class ItemsService:
     def _mark_tts_failed(self, item_id: int):
         try:
             with self.db_manager.get_session() as session:
-                item = session.query(Item).filter(Item.id == item_id).first()
-                if item:
-                    item.tts_status = ItemTTSStatus.FAILED
+                tts = (
+                    session.query(ItemTTS)
+                    .filter(ItemTTS.item_id == item_id)
+                    .first()
+                )
+                if tts:
+                    tts.status = ItemTTSStatus.FAILED
+                    tts.updated_at = datetime.now()
                     session.commit()
         except Exception as db_error:
             logger.error(
@@ -128,7 +133,6 @@ class ItemsService:
                 text=text,
                 difficulty=difficulty,
                 tags_json=None,
-                tts_status=ItemTTSStatus.PENDING,
             )
 
             if tags:
@@ -137,6 +141,16 @@ class ItemsService:
             session.add(item)
             session.commit()
             session.refresh(item)
+
+            # Create ItemTTS record
+            tts_record = ItemTTS(
+                item_id=item.id,
+                status=ItemTTSStatus.PENDING,
+                created_at=item.created_at,
+                updated_at=item.updated_at,
+            )
+            session.add(tts_record)
+            session.commit()
 
             # Submit TTS job asynchronously via shared executor
             if self.task_manager:
@@ -160,7 +174,6 @@ class ItemsService:
                         text=item_data["text"],
                         difficulty=item_data.get("difficulty"),
                         tags_json=None,
-                        tts_status=ItemTTSStatus.PENDING,
                     )
 
                     # Auto-calculate difficulty if not provided
@@ -183,6 +196,19 @@ class ItemsService:
                     failed_items.append({"data": item_data, "error": str(e)})
 
             # Commit all successful creations
+            session.commit()
+
+            # Create ItemTTS records for created items
+            for item in created_items:
+                session.add(
+                    ItemTTS(
+                        item_id=item.id,
+                        status=ItemTTSStatus.PENDING,
+                        created_at=item.created_at,
+                        updated_at=item.updated_at,
+                    )
+                )
+
             session.commit()
 
             # Submit TTS jobs via executor for all created items
@@ -315,13 +341,14 @@ class ItemsService:
     def update_item_tts_status(self, item_id: int, status: str) -> bool:
         """Update the TTS status for an item."""
         with self.db_manager.get_session() as session:
-            item = session.query(Item).filter(Item.id == item_id).first()
-            if not item:
+            tts = (
+                session.query(ItemTTS).filter(ItemTTS.item_id == item_id).first()
+            )
+            if not tts:
                 return False
 
-            item.tts_status = status
-            item.updated_at = datetime.now()
-
+            tts.status = status
+            tts.updated_at = datetime.now()
             session.commit()
             return True
 
@@ -385,16 +412,22 @@ class ItemsService:
     def get_items_tts_status(self, item_ids: List[int]) -> Dict[str, Any]:
         """Get TTS status for multiple items."""
         with self.db_manager.get_session() as session:
-            items = session.query(Item).filter(Item.id.in_(item_ids)).all()
+            items = (
+                session.query(Item)
+                .filter(Item.id.in_(item_ids))
+                .outerjoin(ItemTTS, Item.id == ItemTTS.item_id)
+                .add_entity(ItemTTS)
+                .all()
+            )
 
             status_info = {}
-            for item in items:
+            for item, tts in items:
                 status_info[item.id] = {
                     "id": item.id,
                     "text": (
                         item.text[:100] + "..." if len(item.text) > 100 else item.text
                     ),
-                    "tts_status": item.tts_status,
+                    "tts_status": tts.status if tts else None,
                     "created_at": (
                         item.created_at.isoformat() if item.created_at else None
                     ),
@@ -407,13 +440,16 @@ class ItemsService:
 
     def _item_to_dict(self, item: Item) -> Dict[str, Any]:
         """Convert Item model to dictionary."""
+        tts_status = None
+        if item.tts_record:
+            tts_status = item.tts_record.status
         return {
             "id": item.id,
             "locale": item.locale,
             "text": item.text,
             "difficulty": item.difficulty,
             "tags": item.tags,
-            "tts_status": item.tts_status,
+            "tts_status": tts_status,
             "created_at": item.created_at.isoformat() if item.created_at else None,
             "updated_at": item.updated_at.isoformat() if item.updated_at else None,
             "practiced": item.has_attempts,

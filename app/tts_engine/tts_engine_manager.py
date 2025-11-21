@@ -11,7 +11,7 @@ from sqlalchemy import and_, func
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.database_manager import DatabaseManager
-from app.models.models import Task, Item
+from app.models.models import Task, Item, ItemTTS
 from app.models.enums import TaskStatus, ItemTTSStatus
 
 # Setup logger for this module
@@ -398,9 +398,25 @@ class TTSEngineManager:
 
         # Update all items based on task status
         for item in items:
+            tts = (
+                session.query(ItemTTS)
+                .filter(ItemTTS.item_id == item.id)
+                .with_for_update()
+                .first()
+            )
+            if not tts:
+                # create if missing (should not happen after migration)
+                tts = ItemTTS(
+                    item_id=item.id,
+                    status=ItemTTSStatus.PENDING,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                )
+                session.add(tts)
+
             if status in [TaskStatus.COMPLETED, TaskStatus.DONE]:
                 # TTS completed successfully
-                item.tts_status = ItemTTSStatus.READY
+                tts.status = ItemTTSStatus.READY
 
                 # Move file to audio directory with proper naming
                 if output_file_path and os.path.exists(output_file_path):
@@ -425,17 +441,18 @@ class TTSEngineManager:
                         logger.error(
                             f"Error handling audio file for item {item.id}: {e}"
                         )
-                        item.tts_status = ItemTTSStatus.FAILED
+                        tts.status = ItemTTSStatus.FAILED
 
             elif status == TaskStatus.FAILED:
                 # TTS failed
-                item.tts_status = ItemTTSStatus.FAILED
+                tts.status = ItemTTSStatus.FAILED
                 logger.error(
                     f"TTS failed for item {item.id}: {metadata.get('error', 'Unknown error')}"
                 )
 
             # Update timestamp
             item.updated_at = datetime.now()
+            tts.updated_at = datetime.now()
 
         session.commit()
 
@@ -481,9 +498,9 @@ class TTSEngineManager:
     def get_item_tts_status(self, item_id: int) -> Optional[str]:
         """Get TTS status for a specific item."""
         with self.db_manager.get_session() as session:
-            item = session.query(Item).filter(Item.id == item_id).first()
-            if item:
-                return item.tts_status
+            tts = session.query(ItemTTS).filter(ItemTTS.item_id == item_id).first()
+            if tts:
+                return tts.status
             return None
 
     def retry_failed_item_tts(self, item_id: int) -> Optional[str]:
@@ -493,12 +510,13 @@ class TTSEngineManager:
             if not item:
                 return None
 
-            if item.tts_status != ItemTTSStatus.FAILED:
+            tts = session.query(ItemTTS).filter(ItemTTS.item_id == item_id).first()
+            if not tts or tts.status != ItemTTSStatus.FAILED:
                 return None  # Only retry failed items
 
             # Reset status to pending
-            item.tts_status = ItemTTSStatus.PENDING
-            item.updated_at = datetime.now()
+            tts.status = ItemTTSStatus.PENDING
+            tts.updated_at = datetime.now()
             session.commit()
 
             # Submit new TTS task
@@ -513,7 +531,12 @@ class TTSEngineManager:
     ) -> list[Dict[str, Any]]:
         """Get items by TTS status."""
         with self.db_manager.get_session() as session:
-            items = session.query(Item).filter(Item.tts_status == status).all()
+            items = (
+                session.query(Item)
+                .join(ItemTTS, Item.id == ItemTTS.item_id)
+                .filter(ItemTTS.status == status)
+                .all()
+            )
 
             return [
                 {
@@ -522,7 +545,7 @@ class TTSEngineManager:
                         item.text[:100] + "..." if len(item.text) > 100 else item.text
                     ),
                     "locale": item.locale,
-                    "tts_status": item.tts_status,
+                    "tts_status": status,
                     "created_at": (
                         item.created_at.isoformat() if item.created_at else None
                     ),
@@ -585,8 +608,8 @@ class TTSEngineManager:
         try:
             with self.db_manager.get_session() as session:
                 pending_items = (
-                    session.query(Item)
-                    .filter(Item.tts_status == ItemTTSStatus.PENDING)
+                    session.query(ItemTTS)
+                    .filter(ItemTTS.status == ItemTTSStatus.PENDING)
                     .count()
                 )
         except Exception:

@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # Audio Storage Settings
     audio_dir: str = "audio"
 
+    # Translation Settings
+    translation_provider: str = "google"  # Currently supports 'google'
+    translation_supported_languages: list[str] = ["en", "fi"]
+
     # TTS Service Settings
     tts_supported_languages: list[str] = ["fi"]  # Supported languages for TTS
     tts_provider: str = "gcp"  # TTS provider: 'azure' or 'gcp'/'google'
@@ -42,6 +46,8 @@ class Settings(BaseSettings):
 
     # Google Cloud Settings
     google_application_credentials: Optional[str] = "keys/google-credentials.json"
+    google_translation_project_id: Optional[str] = None
+    google_translation_location: Optional[str] = "global"
 
     # Azure Settings (optional)
     azure_speech_key: Optional[str] = None

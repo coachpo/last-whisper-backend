@@ -9,6 +9,8 @@ from app.services.tags_service import TagsService
 from app.services.task_service import TaskService
 from app.tts_engine.tts_engine_manager import TTSEngineManager
 from app.tts_engine.tts_engine_wrapper import TTSEngineWrapper
+from app.translation.translation_manager import TranslationManager
+from app.translation.translation_wrapper import TranslationServiceWrapper
 
 # Global instances
 _database_manager = None
@@ -19,6 +21,7 @@ _task_manager = None
 _tts_engine = None
 _task_service = None
 _tags_service = None
+_translation_manager = None
 
 
 def get_database_manager() -> DatabaseManager:
@@ -84,6 +87,17 @@ def get_tags_service() -> TagsService:
         db_manager = get_database_manager()
         _tags_service = TagsService(db_manager)
     return _tags_service
+
+
+def get_translation_manager() -> TranslationManager:
+    """Dependency to get translation manager."""
+    global _translation_manager
+    if _translation_manager is None:
+        provider_wrapper = TranslationServiceWrapper()
+        _translation_manager = TranslationManager(
+            settings.database_url, provider_wrapper
+        )
+    return _translation_manager
 
 
 # Legacy dependencies for backward compatibility

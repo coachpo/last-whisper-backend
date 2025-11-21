@@ -4,7 +4,17 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, Index
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    Index,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -66,9 +76,6 @@ class Item(Base):
     text = Column(Text, nullable=False)
     difficulty = Column(Integer, nullable=True, index=True)
     tags_json = Column(Text, nullable=True)  # JSON array of strings
-    tts_status = Column(
-        String(20), nullable=False, default=ItemTTSStatus.PENDING, index=True
-    )
     task_id = Column(
         String,
         ForeignKey("tasks.task_id", ondelete="SET NULL"),
@@ -85,6 +92,12 @@ class Item(Base):
         "Attempt", back_populates="item", cascade="all, delete-orphan"
     )
     task = relationship("Task", back_populates="items")
+    tts_record = relationship(
+        "ItemTTS", back_populates="item", uselist=False, cascade="all, delete-orphan"
+    )
+    translations = relationship(
+        "Translation", back_populates="item", cascade="all, delete-orphan"
+    )
 
     @property
     def tags(self) -> list[str]:
@@ -105,6 +118,86 @@ class Item(Base):
     def has_attempts(self) -> bool:
         """Check if item has any attempts."""
         return len(self.attempts) > 0
+
+
+class ItemTTS(Base):
+    """Stores TTS status per item (decoupled from Item)."""
+
+    __tablename__ = "item_tts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    item_id = Column(
+        Integer, ForeignKey("items.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    task_id = Column(
+        String,
+        ForeignKey("tasks.task_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    status = Column(
+        String(20), nullable=False, default=ItemTTSStatus.PENDING, index=True
+    )
+    audio_path = Column(Text, nullable=True)
+    last_error = Column(Text, nullable=True)
+    tts_metadata = Column("metadata", Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.now, index=True)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )
+
+    # Relationships
+    item = relationship("Item", back_populates="tts_record")
+    task = relationship("Task")
+
+    @property
+    def metadata_dict(self) -> dict:
+        if self.tts_metadata:
+            try:
+                return json.loads(self.tts_metadata)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return {}
+
+
+class Translation(Base):
+    """Cached translations for items."""
+
+    __tablename__ = "translations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    item_id = Column(
+        Integer, ForeignKey("items.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    target_lang = Column(String(10), nullable=False, index=True)
+    source_lang = Column(String(10), nullable=False, index=True)
+    text_hash = Column(String(32), nullable=False, index=True)
+    translated_text = Column(Text, nullable=True)
+    provider = Column(String(32), nullable=False, default="google", index=True)
+    status = Column(String(16), nullable=False, default=TaskStatus.PENDING, index=True)
+    error = Column(Text, nullable=True)
+    translation_metadata = Column("metadata", Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.now, index=True)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )
+    last_refreshed_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("item_id", "target_lang", name="uq_translation_item_target"),
+    )
+
+    # Relationships
+    item = relationship("Item", back_populates="translations")
+
+    @property
+    def metadata_dict(self) -> dict:
+        if self.translation_metadata:
+            try:
+                return json.loads(self.translation_metadata)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return {}
 
 
 class Attempt(Base):
@@ -161,3 +254,7 @@ Index("idx_items_locale_difficulty", Item.locale, Item.difficulty)
 Index("idx_items_created_at_desc", Item.created_at.desc())
 Index("idx_items_created_at_asc", Item.created_at.asc())
 Index("idx_attempts_item_created", Attempt.item_id, Attempt.created_at)
+Index("idx_itemtts_status", ItemTTS.status)
+Index("idx_itemtts_item", ItemTTS.item_id)
+Index("idx_translations_item_status", Translation.item_id, Translation.status)
+Index("idx_translations_target", Translation.target_lang)

@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from .enums import ItemTTSStatus
+from .enums import ItemTTSStatus, TaskStatus
 
 
 class ErrorResponse(BaseModel):
@@ -125,8 +125,8 @@ class ItemResponse(BaseModel):
     text: str = Field(..., description="Text for dictation")
     difficulty: Optional[int] = Field(None, description="Difficulty level")
     tags: List[str] = Field(default_factory=list, description="Tags")
-    tts_status: ItemTTSStatus = Field(
-        ..., description="TTS status: pending, ready, failed"
+    tts_status: Optional[ItemTTSStatus] = Field(
+        None, description="TTS status: pending, ready, failed"
     )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
@@ -258,6 +258,50 @@ class HealthCheckResponse(BaseModel):
 
     status: str = Field(..., description="Overall health status")
     checks: dict = Field(..., description="Individual health checks")
+
+
+# Translation schemas (item-bound only)
+
+
+class ItemTranslationCreateRequest(BaseModel):
+    """Request to translate an item to a target language."""
+
+    target_lang: str = Field(..., min_length=2, max_length=10, description="Target language code")
+    force_refresh: bool = Field(False, description="If true, bypass cache and refresh from provider")
+
+
+class ItemTranslationQuery(BaseModel):
+    """Query params for fetching a cached translation."""
+
+    target_lang: str = Field(..., min_length=2, max_length=10, description="Target language code")
+
+
+class TranslationResponse(BaseModel):
+    """Response model for translations."""
+
+    translation_id: int = Field(..., description="Translation record ID")
+    item_id: int = Field(..., description="Linked item ID")
+    text: str = Field(..., description="Original item text")
+    source_lang: str = Field(..., description="Source language (from item locale)")
+    target_lang: str = Field(..., description="Target language")
+    translated_text: Optional[str] = Field(None, description="Translated text")
+    provider: str = Field(..., description="Provider used (e.g., google)")
+    cached: bool = Field(..., description="Whether served from cache")
+    status: TaskStatus = Field(..., description="Status of translation task")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+    last_refreshed_at: Optional[datetime] = Field(
+        None, description="When the translation was last refreshed from provider"
+    )
+    metadata: Optional[Dict[str, Any]] = Field(
+        None, description="Provider-specific metadata (e.g., detected language, model)"
+    )
+
+
+class TranslationRefreshResponse(TranslationResponse):
+    """Response for refresh operations (same shape as TranslationResponse)."""
+
+    cached: bool = Field(False, description="Refresh always returns a fresh provider result")
 
 
 # Tag schemas for preset tags
