@@ -60,5 +60,5 @@ def test_bulk_create_marks_failed_when_submission_missing(
     assert len(result["created_items"]) == 2
 
     with db_manager.get_session() as session:
-        statuses = {item.tts_status for item in session.query(Item).all()}
+        statuses = {item.tts_record.status for item in session.query(Item).all()}
         assert statuses == {ItemTTSStatus.FAILED}

@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 
 from app.core.config import settings
@@ -256,7 +257,9 @@ async def get_item_tts_status(
     """Return the TTS processing status for a specific dictation item."""
 
     try:
-        status_map = items_service.get_items_tts_status([item_id])
+        status_map = await run_in_threadpool(
+            items_service.get_items_tts_status, [item_id]
+        )
         status_info = status_map.get(item_id)
 
         if not status_info:
@@ -486,7 +489,7 @@ async def refresh_item_audio(
 ):
     """Enqueue TTS regeneration even if audio exists/missing."""
     try:
-        item = items_service.get_item(item_id)
+        item = await run_in_threadpool(items_service.get_item, item_id)
         if not item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Item not found"
@@ -494,7 +497,7 @@ async def refresh_item_audio(
 
         _ensure_locale_supported(item["locale"])
 
-        result = items_service.refresh_item_audio(item_id)
+        result = await run_in_threadpool(items_service.refresh_item_audio, item_id)
         if not result:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

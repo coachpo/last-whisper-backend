@@ -58,9 +58,13 @@ class TranslationManager:
             )
 
             cached = False
+            needs_refresh = (
+                force_refresh
+                or not translation
+                or translation.text_hash != text_hash
+            )
 
-            if translation and not force_refresh:
-                # Cache hit
+            if translation and not needs_refresh:
                 cached = True
             else:
                 # Fetch from provider

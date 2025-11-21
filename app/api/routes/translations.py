@@ -1,6 +1,7 @@
 """Translation endpoints (item-bound)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.concurrency import run_in_threadpool
 
 from app.api.dependencies import get_translation_manager
 from app.models.schemas import (
@@ -22,8 +23,11 @@ async def translate_item(
     payload: ItemTranslationCreateRequest,
     translation_manager=Depends(get_translation_manager),
 ):
-    result = translation_manager.translate_item(
-        item_id, payload.target_lang, payload.force_refresh
+    result = await run_in_threadpool(
+        translation_manager.translate_item,
+        item_id,
+        payload.target_lang,
+        payload.force_refresh,
     )
     if not result:
         raise HTTPException(
@@ -43,7 +47,9 @@ async def get_item_translation(
     target_lang: str = Query(..., min_length=2, max_length=10),
     translation_manager=Depends(get_translation_manager),
 ):
-    result = translation_manager.get_cached_translation(item_id, target_lang)
+    result = await run_in_threadpool(
+        translation_manager.get_cached_translation, item_id, target_lang
+    )
     if not result:
         raise HTTPException(status_code=404, detail="Cached translation not found")
     return result
@@ -58,7 +64,9 @@ async def refresh_translation(
     translation_id: int,
     translation_manager=Depends(get_translation_manager),
 ):
-    result = translation_manager.refresh_translation(translation_id)
+    result = await run_in_threadpool(
+        translation_manager.refresh_translation, translation_id
+    )
     if not result:
         raise HTTPException(status_code=404, detail="Translation not found")
     return result
