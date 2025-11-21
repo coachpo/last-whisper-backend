@@ -77,7 +77,7 @@ Interactions flow from HTTP routes → dependency-provided services → data/TTS
 
 ### Items
 - `POST /v1/items`
-  - Body: `ItemCreateRequest` requires `locale` (2–10 chars) and `text` (1–10 000 chars) with optional `difficulty` (int 1–10) and `tags` array.
+  - Body: `ItemCreateRequest` requires `locale` (2–10 chars) and `text` (1–10 000 chars) with optional `difficulty` (int 1–5) and `tags` array.
   - Response: 202 with `ItemResponse` reflecting `pending` TTS status; 422 on validation errors.
 - `POST /v1/items/bulk`
   - Body: `BulkItemCreateRequest` containing 1–100 `ItemCreateRequest` payloads.

@@ -42,8 +42,8 @@ class ItemCreateRequest(BaseModel):
     difficulty: Optional[int] = Field(
         None,
         ge=1,
-        le=10,
-        description="Difficulty level (1-10). If not provided, will be auto-calculated based on text length.",
+        le=5,
+        description="Difficulty level (1-5). If not provided, will be auto-calculated based on text length.",
     )
     tags: Optional[List[str]] = Field(None, description="Tags for categorization")
 

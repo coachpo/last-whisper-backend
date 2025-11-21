@@ -352,7 +352,7 @@ async def update_item_tags(
     "/{item_id}/difficulty",
     response_model=DifficultyUpdateResponse,
     summary="Update item difficulty",
-    description="Update the difficulty level for a dictation item. Difficulty must be an integer between 1-10.",
+    description="Update the difficulty level for a dictation item. Difficulty must be an integer between 1-5.",
     responses={
         200: {"description": "Difficulty updated successfully"},
         404: {"model": ErrorResponse, "description": "Item not found"},
