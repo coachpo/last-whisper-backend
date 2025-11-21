@@ -20,6 +20,7 @@ from app.models.schemas import (
     TagUpdateResponse,
     DifficultyUpdateRequest,
     DifficultyUpdateResponse,
+    ItemTTSStatusResponse,
 )
 from app.services.items_service import ItemsService
 
@@ -225,6 +226,49 @@ async def get_item(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve item: {str(e)}",
+        )
+
+
+@router.get(
+    "/{item_id}/tts-status",
+    response_model=ItemTTSStatusResponse,
+    summary="Get item TTS status",
+    description="Get the latest TTS processing status for a dictation item.",
+    responses={
+        200: {"description": "TTS status retrieved successfully"},
+        404: {"model": ErrorResponse, "description": "Item not found"},
+    },
+)
+async def get_item_tts_status(
+    item_id: int,
+    items_service: ItemsService = Depends(get_items_service),
+):
+    """Return the TTS processing status for a specific dictation item."""
+
+    try:
+        status_map = items_service.get_items_tts_status([item_id])
+        status_info = status_map.get(item_id)
+
+        if not status_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Item not found",
+            )
+
+        return ItemTTSStatusResponse(
+            item_id=status_info["id"],
+            text=status_info["text"],
+            tts_status=status_info["tts_status"],
+            created_at=status_info["created_at"],
+            updated_at=status_info["updated_at"],
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve TTS status: {str(e)}",
         )
 
 

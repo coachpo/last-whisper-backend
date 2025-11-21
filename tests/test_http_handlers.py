@@ -4,11 +4,6 @@ from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
 from app.api import dependencies as dependency_cache
-from app.api.dependencies import (
-    get_database_manager,
-    get_tts_engine,
-    get_tts_engine_manager,
-)
 from app.core.config import settings
 from app.main import app
 

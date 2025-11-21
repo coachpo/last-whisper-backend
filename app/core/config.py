@@ -70,7 +70,10 @@ class Settings(BaseSettings):
             self.reload = self.is_development
 
         # Only auto-append the development suffix when using the default base name
-        if self.app_name in {self._app_name_base, f"{self._app_name_base} (Development)"}:
+        if self.app_name in {
+            self._app_name_base,
+            f"{self._app_name_base} (Development)",
+        }:
             suffix = " (Development)" if self.is_development else ""
             self.app_name = f"{self._app_name_base}{suffix}"
 

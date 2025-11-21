@@ -10,7 +10,9 @@ def _naive_utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _create_item(db_manager, *, locale="en-US", text="hello world", difficulty=1) -> Item:
+def _create_item(
+    db_manager, *, locale="en-US", text="hello world", difficulty=1
+) -> Item:
     with db_manager.get_session() as session:
         item = Item(locale=locale, text=text, difficulty=difficulty)
         session.add(item)

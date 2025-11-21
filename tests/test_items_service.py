@@ -28,7 +28,9 @@ def immediate_executor(monkeypatch):
     return executor
 
 
-def test_create_item_submits_tts_with_locale(items_service, task_manager, immediate_executor):
+def test_create_item_submits_tts_with_locale(
+    items_service, task_manager, immediate_executor
+):
     payload = items_service.create_item(locale="en-US", text="hello world example text")
 
     assert payload["tts_status"] == ItemTTSStatus.PENDING

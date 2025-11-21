@@ -69,24 +69,70 @@ Interactions flow from HTTP routes → dependency-provided services → data/TTS
 - Key settings: environment flags, host/port/log level, doc URLs, SQLite `database_url`, `audio_dir`, TTS provider choice, submission workers, Google/Azure credentials, comma-separated CORS policies.
 - `DatabaseManager` auto-creates tables and audio dir; `run_api.py` uses settings to configure Uvicorn.
 
-## 7. API Surface (Highlights)
-| Endpoint | Description | Key Validation |
-| --- | --- | --- |
-| `GET /health` | Returns system + dependency status map. | None. |
-| `POST /v1/items` | Creates item, auto-calculates difficulty, enqueues TTS (202). | Requires locale & text. |
-| `POST /v1/items/bulk` | Batch insert items with background TTS scheduling. | Handles partial failures. |
-| `GET /v1/items` | Paginated/filterable item listing (locale, tags, difficulty, practiced). | Validates sort + pagination. |
-| `GET /v1/items/{id}` | Fetches single item plus TTS metadata. | 404 on missing. |
-| `PATCH /v1/items/{id}/difficulty` & `/tags` | Update difficulty or tags arrays. | Range & list validation. |
-| `GET /v1/items/{id}/tts-status` | Returns TTS status snapshots. | Valid IDs. |
-| `POST /v1/attempts` | Scores dictation attempt (WER). | 404 if item missing. |
-| `GET /v1/attempts` | Paginated attempts filterable by item/time. | Pagination bounds. |
-| `GET /v1/attempts/{id}` | Retrieves single attempt. | 404 on missing. |
-| `GET /v1/stats/summary` | Aggregated totals/averages. | Since < until validation. |
-| `GET /v1/stats/practice-log` | Paginated per-item aggregates with tags/time. | Same window validation. |
-| `GET /v1/stats/items/{id}` | Detailed per-item stats. | 404 on missing. |
-| `GET /v1/stats/progress` | Daily time series for attempts/score trends. | Optional `item_id`. |
-| `POST/GET/DELETE /v1/tags` | Tag creation, listing, deletion. | Duplicate validation, async wrappers. |
+## 7. API Surface (OpenAPI-derived)
+### Health
+- `GET /health`
+  - Returns `HealthCheckResponse` containing an overall `status` plus per-component diagnostics (DB, audio dir, TTS manager, clock skew, etc.).
+  - No parameters; always 200 unless the app fails before routing.
+
+### Items
+- `POST /v1/items`
+  - Body: `ItemCreateRequest` requires `locale` (2–10 chars) and `text` (1–10 000 chars) with optional `difficulty` (int 1–10) and `tags` array.
+  - Response: 202 with `ItemResponse` reflecting `pending` TTS status; 422 on validation errors.
+- `POST /v1/items/bulk`
+  - Body: `BulkItemCreateRequest` containing 1–100 `ItemCreateRequest` payloads.
+  - Response: 202 with `BulkItemCreateResponse` summarizing created vs failed items plus submission timestamp.
+- `GET /v1/items`
+  - Query filters: `locale`, repeated `tag`, `difficulty` (single value or `min..max` string), `practiced` (bool), `sort` (default `created_at.desc`).
+  - Pagination: `page` ≥ 1 (default 1), `per_page` 1–100 (default 20).
+  - Responses: 200 with `ItemListResponse`, 400 for invalid filter combos, 422 for malformed params.
+- `GET /v1/items/{item_id}`
+  - Path `item_id` (int) resolves a single dictation item plus metadata; 404 if missing.
+- `DELETE /v1/items/{item_id}`
+  - Deletes the item, its audio asset, and related attempts/tasks; returns 204 on success, 404 when the item is absent, and 422 for malformed IDs.
+- `GET /v1/items/{item_id}/tts-status`
+  - Reports latest TTS state via `ItemTTSStatusResponse`; 404 if the item is absent.
+- `PATCH /v1/items/{item_id}/difficulty`
+  - Body: `DifficultyUpdateRequest` with `difficulty` constrained to integers 1–5.
+  - Response: `DifficultyUpdateResponse` echoing prior/current difficulty with timestamps; 422 on invalid range.
+- `PATCH /v1/items/{item_id}/tags`
+  - Body: `TagUpdateRequest` containing the complete replacement list of tags.
+  - Response: `TagUpdateResponse` listing previous vs current tags; 404/422 on invalid targets or payloads.
+- `GET /v1/items/{item_id}/audio`
+  - Streams the generated audio (`audio/wav`); returns JSON errors when audio is not ready (400) or missing (404).
+
+### Attempts
+- `POST /v1/attempts`
+  - Body: `AttemptCreateRequest` with `item_id` and attempt `text` (max 10 000 chars).
+  - Response: 201 `AttemptResponse` including score, WER, and counts; 404 if the referenced item is missing.
+- `GET /v1/attempts`
+  - Query filters: `item_id`, `since`/`until` timestamps (ISO 8601), plus `page` ≥ 1 and `per_page` 1–100 (default 20).
+  - Response: 200 `AttemptListResponse`; 400 for invalid windows, 422 for malformed params.
+- `GET /v1/attempts/{attempt_id}`
+  - Path `attempt_id` (int) retrieves a single attempt or returns 404.
+
+### Stats
+- `GET /v1/stats/summary`
+  - Optional `since`/`until` query params bound to ISO datetimes to scope aggregations; validates that `since <= until`.
+  - Returns `StatsSummaryResponse` with totals, averages, and derived practice minutes.
+- `GET /v1/stats/practice-log`
+  - Query `since`/`until` plus pagination (`page` ≥ 1, `per_page` 1–100) to list `PracticeLogEntry` rows.
+  - Response: 200 `PracticeLogResponse`; 400/422 errors follow the same rules as other paginated endpoints.
+- `GET /v1/stats/items/{item_id}`
+  - Path `item_id` selects aggregated stats for a single dictation item; 404 if missing.
+- `GET /v1/stats/progress`
+  - Query params: optional `item_id` and `days` (1–365, default 30) to define the rolling window.
+  - Returns progress-over-time series suitable for charting; 400 on invalid ranges.
+
+### Tags
+- `POST /v1/tags`
+  - Body: `TagCreateRequest` with `name` length 1–50 characters.
+  - Response: 201 `TagResponse`; 422 on duplicates or invalid length.
+- `GET /v1/tags`
+  - Pagination via `limit` 1–1000 (default 100) and `offset` ≥ 0 (default 0).
+  - Response: 200 `TagListResponse` containing total count metadata.
+- `DELETE /v1/tags/{tag_id}`
+  - Removes a preset tag without touching existing items; returns 204 on success and 422 when the path parameter fails validation.
 
 ## 8. Background TTS Workflow
 1. ItemsService persists a new item (difficulty inferred if absent) and queues `_schedule_tts_job`.

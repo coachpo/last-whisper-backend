@@ -10,6 +10,8 @@ def test_create_list_and_delete_tags(tags_service):
     first = tags_service.create_tag(TagCreateRequest(name="alpha"))
     second = tags_service.create_tag(TagCreateRequest(name="beta"))
 
+    assert second.name == "beta"
+
     listing = tags_service.get_tags(limit=10, offset=0)
 
     assert listing.total == 2

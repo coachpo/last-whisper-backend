@@ -116,7 +116,9 @@ def dummy_tts_engine() -> DummyTTSEngine:
 
 
 @pytest.fixture()
-def items_service(db_manager: DatabaseManager, task_manager: DummyTaskManager) -> ItemsService:
+def items_service(
+    db_manager: DatabaseManager, task_manager: DummyTaskManager
+) -> ItemsService:
     return ItemsService(db_manager, task_manager)
 
 

@@ -133,6 +133,20 @@ class ItemResponse(BaseModel):
     practiced: bool = Field(..., description="Whether item has been practiced")
 
 
+class ItemTTSStatusResponse(BaseModel):
+    """Response model for item TTS status."""
+
+    item_id: int = Field(..., description="Item ID")
+    text: str = Field(..., description="Preview of the item text")
+    tts_status: ItemTTSStatus = Field(..., description="Current TTS status")
+    created_at: Optional[datetime] = Field(
+        None, description="When the item was created"
+    )
+    updated_at: Optional[datetime] = Field(
+        None, description="When the item was last updated"
+    )
+
+
 class BulkItemCreateResponse(BaseModel):
     """Response model for bulk item creation."""
 
