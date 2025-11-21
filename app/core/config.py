@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # Translation Settings
     translation_provider: str = "google"  # Currently supports 'google'
-    translation_supported_languages: list[str] = ["en", "fi"]
+    translation_supported_languages: list[str] = ["en", "fi", "zh-CN", "zh-TW"]
 
     # TTS Service Settings
     tts_supported_languages: list[str] = ["fi"]  # Supported languages for TTS
