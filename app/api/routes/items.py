@@ -21,6 +21,7 @@ from app.models.schemas import (
     DifficultyUpdateRequest,
     DifficultyUpdateResponse,
     ItemTTSStatusResponse,
+    AudioRefreshResponse,
 )
 from app.services.items_service import ItemsService
 
@@ -34,6 +35,15 @@ def get_items_service() -> ItemsService:
     from app.api.dependencies import get_items_service as _get_items_service
 
     return _get_items_service()
+
+
+# Helpers
+def _ensure_locale_supported(locale: str):
+    if locale not in settings.tts_supported_languages:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Locale '{locale}' is not supported for TTS. Supported: {settings.tts_supported_languages}",
+        )
 
 
 @router.post(
@@ -454,4 +464,49 @@ async def get_item_audio(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get audio: {str(e)}",
+        )
+
+
+@router.post(
+    "/{item_id}/audio/refresh",
+    response_model=AudioRefreshResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Force refresh/generate audio for an item",
+    responses={
+        202: {
+            "description": "TTS refresh enqueued",
+        },
+        404: {"model": ErrorResponse, "description": "Item not found"},
+        409: {"model": ErrorResponse, "description": "Unsupported locale"},
+    },
+)
+async def refresh_item_audio(
+    item_id: int,
+    items_service: ItemsService = Depends(get_items_service),
+):
+    """Enqueue TTS regeneration even if audio exists/missing."""
+    try:
+        item = items_service.get_item(item_id)
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Item not found"
+            )
+
+        _ensure_locale_supported(item["locale"])
+
+        result = items_service.refresh_item_audio(item_id)
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to enqueue audio refresh",
+            )
+
+        return AudioRefreshResponse(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to refresh audio: {str(e)}",
         )

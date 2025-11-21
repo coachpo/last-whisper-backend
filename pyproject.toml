@@ -42,7 +42,9 @@ dependencies = [
     # Modern Python web framework for building APIs
     "fastapi~=0.116.1",
     # Google Cloud Text-to-Speech API client library
-    "google-cloud-texttospeech~=2.27.0",
+    "google-cloud-texttospeech~=2.33.0",
+    # Google Cloud Translation API client library (v2 used in app.translation.providers.google_provider)
+    "google-cloud-translate~=3.23.0",
     # Word Error Rate (WER) calculation for dictation scoring
     "jiwer~=4.0.0",
     # Pydantic extension for settings management from environment variables

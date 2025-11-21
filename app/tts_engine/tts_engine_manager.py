@@ -41,9 +41,13 @@ class TTSEngineManager:
             )
 
     def submit_task(
-        self, text: str, custom_filename: Optional[str] = None, language: str = "fi"
+        self,
+        text: str,
+        custom_filename: Optional[str] = None,
+        language: str = "fi",
+        force_refresh: bool = False,
     ) -> Optional[str]:
-        """Submit a new TTS task and store it in database"""
+        """Submit a new TTS task and store it in database."""
         if not text.strip():
             logger.error("Error: Empty text provided")
             return None
@@ -62,19 +66,22 @@ class TTSEngineManager:
         text_hash = self._calculate_text_hash(text)
 
         # Check for existing task with same text hash (any status except failed)
-        existing_task = self._get_existing_task_by_hash(text_hash)
-        if existing_task:
-            status = existing_task.status
-            task_id = existing_task.task_id
+        if not force_refresh:
+            existing_task = self._get_existing_task_by_hash(text_hash)
+            if existing_task:
+                status = existing_task.status
+                task_id = existing_task.task_id
 
-            if status in [TaskStatus.COMPLETED, TaskStatus.DONE]:
-                logger.info(
-                    f"TTS task with same text already completed (ID: {task_id})"
-                )
-                return task_id
-            elif status in [TaskStatus.QUEUED, TaskStatus.PROCESSING]:
-                logger.info(f"TTS task with same text already {status} (ID: {task_id})")
-                return task_id
+                if status in [TaskStatus.COMPLETED, TaskStatus.DONE]:
+                    logger.info(
+                        f"TTS task with same text already completed (ID: {task_id})"
+                    )
+                    return task_id
+                elif status in [TaskStatus.QUEUED, TaskStatus.PROCESSING]:
+                    logger.info(
+                        f"TTS task with same text already {status} (ID: {task_id})"
+                    )
+                    return task_id
 
         # No existing task found, create new one
         task_id = self.tts_service.submit_request(text, custom_filename, language)
@@ -462,10 +469,11 @@ class TTSEngineManager:
         text: str,
         custom_filename: Optional[str] = None,
         language: str = "fi",
+        force_refresh: bool = False,
     ) -> Optional[str]:
         """Submit a TTS task specifically for an item."""
         # Submit the task using parent method
-        task_id = self.submit_task(text, custom_filename, language)
+        task_id = self.submit_task(text, custom_filename, language, force_refresh)
 
         if task_id:
             # Link the item to the task

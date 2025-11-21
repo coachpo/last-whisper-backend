@@ -304,6 +304,27 @@ class TranslationRefreshResponse(TranslationResponse):
     cached: bool = Field(False, description="Refresh always returns a fresh provider result")
 
 
+# Audio refresh schemas
+
+
+class AudioRefreshResponse(BaseModel):
+    """Response for forcing audio regeneration."""
+
+    item_id: int = Field(..., description="Item ID")
+    task_id: str = Field(..., description="Queued TTS task identifier")
+    status: TaskStatus = Field(..., description="Task status at submission time")
+    tts_status: ItemTTSStatus = Field(..., description="Item-level TTS status after enqueue")
+    audio_path: Optional[str] = Field(
+        None, description="Expected audio file path once generation completes"
+    )
+    provider: str = Field(..., description="TTS provider used")
+    voice: Optional[str] = Field(None, description="Voice used (if available)")
+    cached: bool = Field(False, description="Audio served from cache; false on refresh")
+    created_at: Optional[datetime] = Field(None, description="Item created timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Item updated timestamp")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional provider metadata")
+
+
 # Tag schemas for preset tags
 
 

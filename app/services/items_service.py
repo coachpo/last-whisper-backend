@@ -352,6 +352,57 @@ class ItemsService:
             session.commit()
             return True
 
+    def refresh_item_audio(self, item_id: int) -> Optional[Dict[str, Any]]:
+        """Force refresh/generate audio for an item."""
+        if not self.task_manager:
+            logger.warning("No TTS task manager available for refresh")
+            return None
+
+        with self.db_manager.get_session() as session:
+            item = session.query(Item).filter(Item.id == item_id).first()
+            if not item:
+                return None
+
+            language = item.locale or settings.tts_supported_languages[0]
+            custom_filename = f"item_{item.id}"
+
+            task_id = self.task_manager.submit_task_for_item(
+                item.id, item.text, custom_filename, language, force_refresh=True
+            )
+
+            if not task_id:
+                return None
+
+            # Update ItemTTS status for this item
+            tts = (
+                session.query(ItemTTS).filter(ItemTTS.item_id == item.id).first()
+            )
+            if not tts:
+                tts = ItemTTS(
+                    item_id=item.id,
+                    status=ItemTTSStatus.PENDING,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                )
+                session.add(tts)
+            tts.status = ItemTTSStatus.PENDING
+            tts.updated_at = datetime.now()
+            session.commit()
+
+            return {
+                "item_id": item.id,
+                "task_id": task_id,
+                "status": TaskStatus.QUEUED,
+                "tts_status": tts.status,
+                "audio_path": os.path.join(settings.audio_dir, f"item_{item.id}.wav"),
+                "provider": getattr(settings, "tts_provider", "gcp"),
+                "voice": None,
+                "cached": False,
+                "created_at": item.created_at,
+                "updated_at": item.updated_at,
+                "metadata": None,
+            }
+
     def update_item_tags(
         self, item_id: int, tags: List[str]
     ) -> Optional[Dict[str, Any]]:
