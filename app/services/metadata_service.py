@@ -8,7 +8,7 @@ import threading
 import time
 from typing import Any, Dict, Optional, Set
 
-_TRANSLATION_LANGUAGE_NAMES: dict[str, str] = {
+_LANGUAGE_NAME_OVERRIDES: dict[str, str] = {
     "en": "English",
     "fi": "Suomi",
     "zh-CN": "简体中文",
@@ -142,18 +142,24 @@ class MetadataService:
             database=self._database_provider_info(),
             tts={
                 "provider": settings.tts_provider,
-                "supported_languages": settings.tts_supported_languages,
+                "supported_languages": self._build_language_descriptors(
+                    settings.tts_supported_languages
+                ),
             },
             translation={
                 "provider": settings.translation_provider,
-                "supported_languages": settings.translation_supported_languages,
+                "supported_languages": self._build_language_descriptors(
+                    settings.translation_supported_languages
+                ),
             },
         )
 
         features = {
             "tts_submission_workers": settings.tts_submission_workers,
             "tts_languages": settings.tts_supported_languages,
-            "translation_languages": self._build_translation_languages(),
+            "translation_languages": self._build_language_descriptors(
+                settings.translation_supported_languages
+            ),
         }
 
         limits = {
@@ -174,13 +180,13 @@ class MetadataService:
             "links": links,
         }
 
-    def _build_translation_languages(self) -> list[dict[str, str]]:
+    def _build_language_descriptors(self, codes: list[str]) -> list[dict[str, str]]:
         structured: list[dict[str, str]] = []
-        for code in settings.translation_supported_languages:
+        for code in codes:
             structured.append(
                 {
                     "language_code": code,
-                    "language_name": _TRANSLATION_LANGUAGE_NAMES.get(code, code),
+                    "language_name": _LANGUAGE_NAME_OVERRIDES.get(code, code),
                 }
             )
         return structured

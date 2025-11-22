@@ -55,3 +55,26 @@ def test_metadata_service_translation_languages_structured():
         {"language_code": "zh-CN", "language_name": "简体中文"},
         {"language_code": "zh-TW", "language_name": "繁體中文"},
     ]
+
+
+def test_metadata_service_provider_translation_languages_structured():
+    service = MetadataService(_DummyDBManager(), _DummyTTSManager(), cache_ttl=1)
+    payload = service.get_metadata()
+
+    translation_supported = payload.providers.translation["supported_languages"]
+    assert translation_supported == [
+        {"language_code": "en", "language_name": "English"},
+        {"language_code": "fi", "language_name": "Suomi"},
+        {"language_code": "zh-CN", "language_name": "简体中文"},
+        {"language_code": "zh-TW", "language_name": "繁體中文"},
+    ]
+
+
+def test_metadata_service_provider_tts_languages_structured():
+    service = MetadataService(_DummyDBManager(), _DummyTTSManager(), cache_ttl=1)
+    payload = service.get_metadata()
+
+    tts_supported = payload.providers.tts["supported_languages"]
+    assert tts_supported == [
+        {"language_code": "fi", "language_name": "Suomi"},
+    ]
