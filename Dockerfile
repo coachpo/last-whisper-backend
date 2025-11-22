@@ -4,8 +4,8 @@ FROM python:3.12-slim AS base
 # Set required environment variables; other defaults live in app/core/config.py
 ENV ENVIRONMENT=production \
     LOG_LEVEL=info \
-    CORS_ORIGINS=https://app.lastwhisper.ai,https://admin.lastwhisper.ai \
-    API_KEYS_CSV="change-me"
+    CORS_ORIGINS="*" \
+    API_KEYS_CSV="last_whisper_prod_webclient"
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser

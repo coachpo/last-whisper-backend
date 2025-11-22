@@ -107,12 +107,7 @@ class Settings(BaseSettings):
 
         cors_origins_value = (self.cors_origins or "").strip()
         if not cors_origins_value:
-            cors_origins_value = "*" if self.is_development else ""
-
-        if self.is_production and cors_origins_value in {"", "*"}:
-            raise ValueError(
-                "CORS_ORIGINS must be configured with explicit origins in production environments"
-            )
+            cors_origins_value = "*"
 
         self.cors_origins = cors_origins_value
 
