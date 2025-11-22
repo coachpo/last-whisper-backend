@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     translation_supported_languages: list[str] = ["en", "fi", "zh-CN", "zh-TW"]
 
     # TTS Service Settings
-    tts_supported_languages: list[str] = ["fi", "en-US"]  # Supported languages for TTS
+    tts_supported_languages: list[str] = ["fi"]  # Supported languages for TTS
     tts_provider: str = "google"  # Currently only Google Cloud is supported
     tts_submission_workers: int = 4
 

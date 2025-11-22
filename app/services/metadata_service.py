@@ -8,6 +8,13 @@ import threading
 import time
 from typing import Any, Dict, Optional, Set
 
+_TRANSLATION_LANGUAGE_NAMES: dict[str, str] = {
+    "en": "English",
+    "fi": "Suomi",
+    "zh-CN": "简体中文",
+    "zh-TW": "繁體中文",
+}
+
 from app.core.build_info import load_build_info
 from app.core.config import settings
 from app.core.runtime_state import get_app_started_at, get_uptime_seconds
@@ -146,7 +153,7 @@ class MetadataService:
         features = {
             "tts_submission_workers": settings.tts_submission_workers,
             "tts_languages": settings.tts_supported_languages,
-            "translation_languages": settings.translation_supported_languages,
+            "translation_languages": self._build_translation_languages(),
         }
 
         limits = {
@@ -166,6 +173,17 @@ class MetadataService:
             "limits": limits,
             "links": links,
         }
+
+    def _build_translation_languages(self) -> list[dict[str, str]]:
+        structured: list[dict[str, str]] = []
+        for code in settings.translation_supported_languages:
+            structured.append(
+                {
+                    "language_code": code,
+                    "language_name": _TRANSLATION_LANGUAGE_NAMES.get(code, code),
+                }
+            )
+        return structured
 
     def _database_provider_info(self) -> Dict[str, Any]:
         engine = getattr(getattr(self.db_manager, "engine", None), "name", "unknown")
