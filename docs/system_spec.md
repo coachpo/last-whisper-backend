@@ -2,7 +2,7 @@
 
 ## 1. System Overview
 - **Purpose:** Provide a production-ready FastAPI backend that powers a dictation training workflow with automated TTS (Text-To-Speech), scoring, analytics, and tag management.
-- **Key Capabilities:** Dictation item CRUD with background audio generation, practice attempt ingestion & scoring, stats reporting, preset tag management, health monitoring, and multi-provider TTS orchestration (Azure + Google Cloud).
+- **Key Capabilities:** Dictation item CRUD with background audio generation, practice attempt ingestion & scoring, stats reporting, preset tag management, health monitoring, and Google Cloud TTS orchestration.
 - **Primary Use Cases:** Language/dictation learning tools that deliver audio prompts, accept user submissions, compute WER-based feedback, and surface progress analytics without session state.
 
 ## 2. Architecture Summary
@@ -52,8 +52,8 @@ Interactions flow from HTTP routes → dependency-provided services → data/TTS
 - **TTSEngineManager:** Deduplicates submissions via MD5, enqueues provider requests, monitors message queues, updates tasks/items, exposes stats, and cleans failed rows.
 
 ### 4.3 TTS Engine Components
-- **`tts_engine_wrapper.py`:** Encapsulates provider selection (`azure` vs `gcp`), credential loading, lifecycle management, and bridge to DummyTTSEngine for tests.
-- **Provider Implementations:** `tts_engine_gcp.py` and `tts_engine_azure.py` integrate official SDKs, normalize voice parameters, and push completion messages into queues consumed by the manager.
+- **`tts_engine_wrapper.py`:** Encapsulates provider configuration (Google Cloud), credential loading, lifecycle management, and bridge to DummyTTSEngine for tests.
+- **Provider Implementations:** `tts_engine_gcp.py` integrates the official SDK, normalizes voice parameters, and pushes completion messages into queues consumed by the manager.
 
 ## 5. Data Model Overview
 - **SQLAlchemy Tables (`app/models/models.py`):**
@@ -66,7 +66,7 @@ Interactions flow from HTTP routes → dependency-provided services → data/TTS
 
 ## 6. Configuration & Environment
 - Centralized in `app/core/config.py` (pydantic-settings, `.env` support).
-- Key settings: environment flags, host/port/log level, doc URLs, SQLite `database_url`, `audio_dir`, TTS provider choice, submission workers, Google/Azure credentials, comma-separated CORS policies.
+- Key settings: environment flags, host/port/log level, doc URLs, SQLite `database_url`, `audio_dir`, submission workers, Google credentials, comma-separated CORS policies.
 - `DatabaseManager` auto-creates tables and audio dir; `run_api.py` uses settings to configure Uvicorn.
 
 ## 7. API Surface (OpenAPI-derived)
@@ -145,7 +145,7 @@ Interactions flow from HTTP routes → dependency-provided services → data/TTS
 ## 9. Persistence & Storage
 - **Database:** SQLite by default; `DatabaseManager` configures engine (foreign keys on) and exposes `get_session()`.
 - **Audio Files:** Stored under `settings.audio_dir`; health check verifies write access.
-- **Credentials:** `keys/google-credentials.json` placeholder; Azure keys via env variables.
+- **Credentials:** `keys/google-credentials.json` placeholder for GCP service accounts.
 - **Data Directory:** `data/dictation.db`; tables auto-created at startup.
 
 ## 10. Testing & Quality
