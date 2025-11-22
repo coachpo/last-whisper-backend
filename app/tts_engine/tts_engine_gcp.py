@@ -309,7 +309,6 @@ class TTSEngine(BaseTTSEngine):
                 request["id"], request["filename"], TaskStatus.DONE, **meta
             )
 
-
         except (GoogleAPICallError, RetryError) as e:
             request["status"] = TaskStatus.FAILED
             request["error"] = f"Google API error: {e}"
