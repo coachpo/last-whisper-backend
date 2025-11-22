@@ -40,7 +40,7 @@ _Last updated: November 22, 2025_
 }
 ```
 ## Required Frontend Changes
-1. **Update typing/models**: Change any `string[]` typings for `translation_languages` to `Array<{ language_code: string; language_name: string }>`.
+1. **Update typing/models**: Change any `string[]` typings for `translation_languages` *and* both `providers.*.supported_languages` collections to `Array<{ language_code: string; language_name: string }>`.
 2. **Parsing logic**: When reading `/metadata`, remove calls that upper-case raw strings; instead, rely on `language_code` for logic and `language_name` for UI labels.
 3. **Feature toggles**: If UI uses the supported translation list to gate locale dropdowns, surface the localized `language_name` directly. Fallback to `language_code` when the name is missing.
 4. **TTS badges**: Because only Finnish (`fi`) is supported for TTS generation, ensure dropdowns and copy reflect the single available locale.
