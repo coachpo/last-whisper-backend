@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Core FastAPI code lives in `app/`, split into clearly defined layers: `api/routes` exposes versioned endpoints, `core` holds config/logging, `models` mixes SQLAlchemy + Pydantic schemas, `services` contains domain logic, and `tts_engine` wraps Azure/GCP providers. `run_api.py` boots uvicorn with project defaults, while `pyproject.toml` owns dependencies and tool configs. Generated artifacts stay outside source: SQLite data in `data/dictation.db`, cached audio in `audio/`, and credentials in `keys/`. Tests mirror the package layout under `tests/` so every module has a matching suite.
+Core FastAPI code lives in `app/`, split into clearly defined layers: `api/routes` exposes versioned endpoints, `core` holds config/logging, `models` mixes SQLAlchemy + Pydantic schemas, `services` contains domain logic, and `tts_engine` wraps the Google Cloud provider. `run_api.py` boots uvicorn with project defaults, while `pyproject.toml` owns dependencies and tool configs. Generated artifacts stay outside source: SQLite data in `data/dictation.db`, cached audio in `audio/`, and credentials in `keys/`. Tests mirror the package layout under `tests/` so every module has a matching suite.
 
 ## Build, Test, and Development Commands
 - `conda activate last_whisper`: enter the shared conda environment configured for this project.
@@ -20,4 +20,4 @@ All new behavior requires pytest coverage beside existing tests (e.g., place API
 Git history favors Conventional Commit syntax (`feat(api): add scoring hook`, `test: expand stats coverage`) with optional emojis. Write imperative, present-tense summaries under 72 chars and include scopes when touching multiple layers. PRs should link GitHub issues, describe behavior changes, call out migrations/config updates, and attach screenshots or sample `curl` calls for new endpoints. Confirm CI lint/test success and note any follow-up tasks before requesting review.
 
 ## Security & Configuration Tips
-Use `.env` or shell exports to provide `AZURE_*`, `GCP_*`, and database paths consumed by `app/core/config.py`. Keep `keys/` and `data/` out of commits—add redactions or git-crypt if sharing logs. When testing TTS locally, rotate API keys regularly and verify quota usage in provider dashboards.
+Use `.env` or shell exports to provide `GCP_*` credentials and database paths consumed by `app/core/config.py`. Keep `keys/` and `data/` out of commits—add redactions or git-crypt if sharing logs. When testing TTS locally, rotate API keys regularly and verify quota usage in provider dashboards.

@@ -18,7 +18,6 @@ keywords = [
     "text-to-speech",
     "dictation",
     "fastapi",
-    "azure",
     "google-cloud",
     "speech-synthesis",
     "language-learning",
@@ -55,8 +54,6 @@ dependencies = [
     "unidecode~=1.4.0",
     # ASGI server for running FastAPI applications in production
     "uvicorn[standard]~=0.35.0",
-    # Azure Cognitive Services Speech SDK for TTS functionality
-    "azure-cognitiveservices-speech~=1.45.0",
 ]
 
 [project.optional-dependencies]

@@ -17,12 +17,7 @@ class TTSEngineWrapper:
     def initialize(self):
         """Initialize the TTS service."""
         try:
-            provider = getattr(settings, "tts_provider", "gcp").lower()
-
-            if provider not in {"gcp", "google"}:
-                raise TTSServiceException(
-                    f"Unsupported TTS provider: {provider}. Only 'gcp' is available in this build."
-                )
+            _provider = getattr(settings, "tts_provider", "google").lower()
 
             from app.tts_engine.tts_engine_gcp import TTSEngine
 
@@ -106,7 +101,7 @@ class TTSEngineWrapper:
         if not self._is_initialized or not self._service:
             raise TTSServiceException("TTS service not initialized")
 
-        # Only GCP and Azure TTS engines support device switching for compatibility
+        # Device switching is a no-op for the Google Cloud TTS backend
         if hasattr(self._service, "switch_device"):
             return self._service.switch_device(new_device)
         else:

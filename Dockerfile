@@ -3,7 +3,7 @@ FROM python:3.12-slim AS base
 
 # Set default environment variables
 ENV ENVIRONMENT=production \
-    TTS_PROVIDER=gcp \
+    TTS_PROVIDER=google \
     LOG_LEVEL=info \
     HOST=0.0.0.0 \
     PORT=8000 \

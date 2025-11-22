@@ -395,7 +395,7 @@ class ItemsService:
                 "status": TaskStatus.QUEUED,
                 "tts_status": tts.status,
                 "audio_path": os.path.join(settings.audio_dir, f"item_{item.id}.wav"),
-                "provider": getattr(settings, "tts_provider", "gcp"),
+                "provider": getattr(settings, "tts_provider", "google"),
                 "voice": None,
                 "cached": False,
                 "created_at": item.created_at,
