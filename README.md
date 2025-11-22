@@ -5,7 +5,7 @@ A production-grade FastAPI service for comprehensive dictation training with aut
 ## ✨ Core Features
 
 ### 🎙️ Internal TTS Engine
-- **Multiple Providers**: Azure Speech and Google Cloud Text-to-Speech
+- **Cloud Provider**: Google Cloud Text-to-Speech
 - **High-Quality Audio**: Neural voice synthesis with customizable parameters
 - **Automatic Processing**: Background TTS generation for dictation items
 - **Task Management**: Comprehensive lifecycle tracking with deduplication
@@ -57,7 +57,6 @@ last-whisper-backend/
 │   │   ├── stats_service.py       # Statistics service
 │   │   └── tags_service.py        # Preset tag service
 │   ├── tts_engine/                # TTS engine implementations
-│   │   ├── tts_engine_azure.py    # Azure Speech TTS engine
 │   │   ├── tts_engine_gcp.py      # Google Cloud TTS engine
 │   │   ├── tts_engine_manager.py  # Task orchestration and monitoring
 │   │   └── tts_engine_wrapper.py  # TTS service wrapper and provider selection
@@ -77,13 +76,6 @@ last-whisper-backend/
 
 The backend includes a robust TTS engine that automatically generates audio files for dictation items:
 
-### 🔵 Azure Speech TTS
-- **Provider**: Microsoft Azure Cognitive Services Speech
-- **Voice Options**: Multiple Finnish neural voices with natural intonation
-- **Output Format**: High-quality WAV audio files (24kHz, 16-bit mono)
-- **Features**: SSML support, prosody controls, advanced neural voices
-- **Use Cases**: Automatic audio generation for dictation practice items
-
 ### 🟢 Google Cloud Text-to-Speech
 - **Provider**: Google Cloud Platform Text-to-Speech API
 - **Voice Options**: Premium WaveNet voices (fi-FI-Wavenet-B)
@@ -94,7 +86,7 @@ The backend includes a robust TTS engine that automatically generates audio file
 ### ⚡ Internal Features
 - **Automatic Processing**: TTS generation happens automatically when dictation items are created
 - **Task Management**: Comprehensive task lifecycle tracking with deduplication
-- **Provider Switching**: Seamless configuration-based provider selection
+- **Provider Switching**: Simplified configuration with Google Cloud defaults
 - **Error Handling**: Robust error handling with intelligent retry mechanisms
 - **Background Processing**: Non-blocking audio generation for optimal performance
 
@@ -230,13 +222,9 @@ Configuration is managed through environment variables or `.env` file for maximu
 ### 🎙️ TTS Provider Configuration
 
 **Provider Selection:**
-- TTS provider choice (Azure or Google Cloud)
+- Google Cloud Text-to-Speech defaults with configurable voice parameters
 - Thread count for concurrent processing
 - Supported languages configuration
-
-**Azure Speech TTS Settings:**
-- Azure Speech service key and region
-- Language code and sample rate configuration
 
 **Google Cloud TTS Settings:**
 - Google Cloud credentials configuration
@@ -312,10 +300,10 @@ The application follows clean architecture principles with clear separation of c
 ### 🔧 Key Components
 
 #### TTS Engine System
-- **TTSEngine**: Core TTS engine with provider abstraction
+- **TTSEngine**: Core Google Cloud TTS integration with provider abstraction
 - **TTSEngineManager**: Task orchestration, monitoring, and queue management
 - **TTSEngineWrapper**: Service lifecycle management and provider selection
-- **Provider Implementations**: Azure and Google Cloud TTS integrations
+- **Provider Implementations**: Google Cloud TTS integration
 
 #### Business Services
 - **ItemsService**: Dictation item management with automatic TTS integration
@@ -341,8 +329,7 @@ The application follows clean architecture principles with clear separation of c
 - **Alembic**: Database migration management and schema versioning
 
 ### 🎙️ TTS Engines
-- **Azure Cognitive Services Speech**: Enterprise-grade Azure TTS integration
-- **Google Cloud Text-to-Speech**: Premium Google Cloud TTS integration
+- **Google Cloud Text-to-Speech**: Premium neural voice integration
 
 ### 📚 Dictation Features
 - **jiwer**: Advanced Word Error Rate calculation for accurate scoring
@@ -383,4 +370,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Ready to build amazing TTS applications?** 🚀 [Get started now](#-installation--setup) with Last Whisper Backend!
-

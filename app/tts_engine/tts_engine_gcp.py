@@ -6,6 +6,7 @@ import random
 import threading
 import wave
 from datetime import datetime
+from typing import Any, Dict, Optional
 
 from google.api_core.exceptions import GoogleAPICallError, RetryError
 from google.cloud import texttospeech
@@ -13,6 +14,7 @@ from google.cloud import texttospeech
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.enums import TaskStatus
+from app.tts_engine.base import BaseTTSEngine
 
 # Setup logger for this module
 logger = get_logger(__name__)
@@ -55,7 +57,7 @@ WAVENET_FI = ["fi-FI-Wavenet-B"]
 DEFAULT_FI_VOICE_POOL = CHIRP3_HD_FI_VOICES + WAVENET_FI
 
 
-class TTSEngine:
+class TTSEngine(BaseTTSEngine):
     """
     Google Cloud Text-to-Speech (Finnish).
     - Supports Chirp3-HD (neural) and WaveNet (fi-FI-Wavenet-B).
@@ -121,11 +123,11 @@ class TTSEngine:
 
     # ----------------------- Public API (unchanged) -----------------------
 
-    def get_task_message_queue(self):
+    def get_task_message_queue(self) -> queue.Queue:
         """Returns the task queue for external services to consume task messages"""
         return self.task_message_queue
 
-    def start_service(self):
+    def start_service(self) -> None:
         """Start the TTS service worker thread"""
         if not self.is_running:
             self.is_running = True
@@ -135,7 +137,7 @@ class TTSEngine:
             self.worker_thread.start()
             logger.info("TTS engine: Service started successfully!")
 
-    def stop_service(self):
+    def stop_service(self) -> None:
         """Stop the TTS service"""
         self.is_running = False
         if self.worker_thread:
@@ -143,7 +145,9 @@ class TTSEngine:
             self.worker_thread = None
         logger.info("TTS engine: Service stopped successfully!")
 
-    def submit_request(self, text, custom_filename=None, language="fi"):
+    def submit_request(
+        self, text: str, custom_filename: Optional[str] = None, language: str = "fi"
+    ) -> Optional[str]:
         """Submit a text-to-speech conversion request (random voice chosen here)."""
         if not text or not str(text).strip():
             logger.error("Error: Empty text provided")
@@ -200,15 +204,15 @@ class TTSEngine:
         )
         return request_id
 
-    def get_queue_size(self):
+    def get_queue_size(self) -> int:
         """Get the current queue size"""
         return self.request_queue.qsize()
 
-    def get_task_message_queue_size(self):
+    def get_task_message_queue_size(self) -> int:
         """Get the current task queue size"""
         return self.task_message_queue.qsize()
 
-    def get_device_info(self):
+    def get_device_info(self) -> Dict[str, Any]:
         """API 'device' info (mirrors your original signature)"""
         return {
             "device": self.device,
@@ -216,7 +220,7 @@ class TTSEngine:
             "cuda_available": False,
         }
 
-    def switch_device(self, new_device):
+    def switch_device(self, new_device: str) -> bool:
         """Not applicable; present for interface compatibility."""
         logger.info(
             f"TTS engine: switch_device requested ({new_device}) — ignored for API backend."

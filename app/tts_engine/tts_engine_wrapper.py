@@ -4,72 +4,47 @@ from typing import Optional
 
 from app.core.config import settings
 from app.core.exceptions import TTSServiceException
+from app.tts_engine.base import BaseTTSEngine
 
 
 class TTSEngineWrapper:
     """Wrapper for the TTS service that provides a clean interface."""
 
     def __init__(self):
-        self._service: Optional[object] = None
+        self._service: Optional[BaseTTSEngine] = None
         self._is_initialized = False
 
     def initialize(self):
         """Initialize the TTS service."""
         try:
-            # Get TTS provider from settings, default to 'gcp'
             provider = getattr(settings, "tts_provider", "gcp").lower()
 
-            if provider == "azure":
-                from app.tts_engine.tts_engine_azure import TTSEngine
-
-                # Azure-specific configuration
-                azure_config = {}
-                if hasattr(settings, "azure_voices"):
-                    azure_config["voices"] = settings.azure_voices
-                if hasattr(settings, "azure_language_code"):
-                    azure_config["language_code"] = settings.azure_language_code
-                if hasattr(settings, "azure_sample_rate_hz"):
-                    azure_config["sample_rate_hz"] = settings.azure_sample_rate_hz
-                if hasattr(settings, "azure_speaking_rate"):
-                    azure_config["speaking_rate"] = settings.azure_speaking_rate
-                if hasattr(settings, "azure_pitch"):
-                    azure_config["pitch"] = settings.azure_pitch
-                if hasattr(settings, "azure_volume_gain_db"):
-                    azure_config["volume_gain_db"] = settings.azure_volume_gain_db
-                if hasattr(settings, "azure_use_ssml"):
-                    azure_config["use_ssml"] = settings.azure_use_ssml
-                if hasattr(settings, "azure_device"):
-                    azure_config["device"] = settings.azure_device
-
-                self._service = TTSEngine(**azure_config)
-            elif provider == "gcp" or provider == "google":
-                from app.tts_engine.tts_engine_gcp import TTSEngine
-
-                # GCP-specific configuration
-                gcp_config = {}
-                if hasattr(settings, "gcp_voice_name"):
-                    gcp_config["voice_name"] = settings.gcp_voice_name
-                if hasattr(settings, "gcp_language_code"):
-                    gcp_config["language_code"] = settings.gcp_language_code
-                if hasattr(settings, "gcp_sample_rate_hz"):
-                    gcp_config["sample_rate_hz"] = settings.gcp_sample_rate_hz
-                if hasattr(settings, "gcp_speaking_rate"):
-                    gcp_config["speaking_rate"] = settings.gcp_speaking_rate
-                if hasattr(settings, "gcp_pitch"):
-                    gcp_config["pitch"] = settings.gcp_pitch
-                if hasattr(settings, "gcp_volume_gain_db"):
-                    gcp_config["volume_gain_db"] = settings.gcp_volume_gain_db
-                if hasattr(settings, "gcp_use_ssml"):
-                    gcp_config["use_ssml"] = settings.gcp_use_ssml
-                if hasattr(settings, "gcp_device"):
-                    gcp_config["device"] = settings.gcp_device
-
-                self._service = TTSEngine(**gcp_config)
-            else:
+            if provider not in {"gcp", "google"}:
                 raise TTSServiceException(
-                    f"Unsupported TTS provider: {provider}. Supported providers: 'azure', 'gcp'"
+                    f"Unsupported TTS provider: {provider}. Only 'gcp' is available in this build."
                 )
 
+            from app.tts_engine.tts_engine_gcp import TTSEngine
+
+            gcp_config = {}
+            if hasattr(settings, "gcp_voice_name"):
+                gcp_config["voice_name"] = settings.gcp_voice_name
+            if hasattr(settings, "gcp_language_code"):
+                gcp_config["language_code"] = settings.gcp_language_code
+            if hasattr(settings, "gcp_sample_rate_hz"):
+                gcp_config["sample_rate_hz"] = settings.gcp_sample_rate_hz
+            if hasattr(settings, "gcp_speaking_rate"):
+                gcp_config["speaking_rate"] = settings.gcp_speaking_rate
+            if hasattr(settings, "gcp_pitch"):
+                gcp_config["pitch"] = settings.gcp_pitch
+            if hasattr(settings, "gcp_volume_gain_db"):
+                gcp_config["volume_gain_db"] = settings.gcp_volume_gain_db
+            if hasattr(settings, "gcp_use_ssml"):
+                gcp_config["use_ssml"] = settings.gcp_use_ssml
+            if hasattr(settings, "gcp_device"):
+                gcp_config["device"] = settings.gcp_device
+
+            self._service = TTSEngine(**gcp_config)
             self._service.start_service()
             self._is_initialized = True
         except Exception as e:

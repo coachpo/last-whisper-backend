@@ -3,7 +3,8 @@
 from typing import Optional
 
 from app.core.config import settings
-from app.translation.providers.base import TranslationProvider
+from app.translation.base import TranslationProvider
+from app.translation.translation_google import GoogleTranslateProvider
 
 
 class TranslationServiceWrapper:
@@ -15,7 +16,6 @@ class TranslationServiceWrapper:
     def initialize(self):
         provider = getattr(settings, "translation_provider", "google").lower()
         if provider == "google":
-            from app.translation.providers.google_provider import GoogleTranslateProvider
 
             self._provider = GoogleTranslateProvider()
         else:

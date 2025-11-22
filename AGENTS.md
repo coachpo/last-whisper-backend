@@ -4,7 +4,7 @@
 Core FastAPI code lives in `app/`, split into clearly defined layers: `api/routes` exposes versioned endpoints, `core` holds config/logging, `models` mixes SQLAlchemy + Pydantic schemas, `services` contains domain logic, and `tts_engine` wraps Azure/GCP providers. `run_api.py` boots uvicorn with project defaults, while `pyproject.toml` owns dependencies and tool configs. Generated artifacts stay outside source: SQLite data in `data/dictation.db`, cached audio in `audio/`, and credentials in `keys/`. Tests mirror the package layout under `tests/` so every module has a matching suite.
 
 ## Build, Test, and Development Commands
-- `python -m venv .venv && source .venv/bin/activate`: create/enter a local virtualenv.
+- `conda activate last_whisper`: enter the shared conda environment configured for this project.
 - `pip install -e .[dev]`: install the app plus lint/test extras from `pyproject.toml`.
 - `python run_api.py` (or `uvicorn app.main:app --reload`): launch the API locally with live reload.
 - `ruff check app tests` and `black app tests`: enforce linting and formatting before commits.
