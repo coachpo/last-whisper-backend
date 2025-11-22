@@ -1,6 +1,7 @@
 """FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
+from typing import Callable, TypeVar
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,10 +24,26 @@ from app.services.exceptions import ServiceError
 logger = get_logger(__name__)
 
 
+T = TypeVar("T")
+
+
+def _resolve_dependency(app: FastAPI, dependency: Callable[[], T]) -> T:
+    """Return dependency override if registered, otherwise call original."""
+
+    if getattr(app, "dependency_overrides", None):
+        override = app.dependency_overrides.get(dependency)
+        if override is not None:
+            return override()
+    return dependency()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan."""
     # Startup
+    db_manager = None
+    tts_engine = None
+    tts_engine_manager = None
     try:
         # Setup logging
         setup_logging()
@@ -36,16 +53,16 @@ async def lifespan(app: FastAPI):
         set_app_started_at()
 
         # Initialize database manager
-        db_manager = get_database_manager()
+        db_manager = _resolve_dependency(app, get_database_manager)
         logger.info("Database manager initialized successfully")
 
         # Initialize TTS service
-        tts_engine = get_tts_engine()
+        tts_engine = _resolve_dependency(app, get_tts_engine)
         tts_engine.initialize()
         logger.info("TTS engine service initialized successfully")
 
         # Initialize tts engine manager
-        tts_engine_manager = get_tts_engine_manager()
+        tts_engine_manager = _resolve_dependency(app, get_tts_engine_manager)
         tts_engine_manager.start_monitoring()
         logger.info("TTS engine manager initialized successfully")
 
@@ -58,23 +75,20 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     try:
-        # Shutdown tts engine manager
-        try:
-            tts_engine_manager = get_tts_engine_manager()
-            tts_engine_manager.stop_monitoring()
-            logger.info("TTS engine manager shut down successfully")
-        except Exception as e:
-            logger.error(f"Error shutting down TTS engine manager: {e}")
+        if tts_engine_manager:
+            try:
+                tts_engine_manager.stop_monitoring()
+                logger.info("TTS engine manager shut down successfully")
+            except Exception as e:
+                logger.error(f"Error shutting down TTS engine manager: {e}")
 
-        # Shutdown TTS service
-        tts_engine = get_tts_engine()
-        tts_engine.shutdown()
-        logger.info("TTS engine service shut down successfully")
+        if tts_engine:
+            tts_engine.shutdown()
+            logger.info("TTS engine service shut down successfully")
 
-        # Shutdown database manager
-        db_manager = get_database_manager()
-        db_manager.close()
-        logger.info("Database manager shut down successfully")
+        if db_manager and hasattr(db_manager, "close"):
+            db_manager.close()
+            logger.info("Database manager shut down successfully")
 
         logger.info("All API services shut down successfully")
     except Exception as e:

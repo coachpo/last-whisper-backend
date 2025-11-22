@@ -12,6 +12,8 @@ from app.api.dependencies import (
 from app.core.config import settings
 from app.models.database_manager import DatabaseManager
 from app.models.schemas import HealthCheckResponse
+from app.tts_engine.tts_engine_manager import TTSEngineManager
+from app.tts_engine.tts_engine_wrapper import TTSEngineWrapper
 
 router = APIRouter()
 
@@ -24,6 +26,8 @@ router = APIRouter()
 )
 async def health_check(
     db_manager: DatabaseManager = Depends(get_database_manager),
+    tts_service: TTSEngineWrapper = Depends(get_tts_engine),
+    task_mgr: TTSEngineManager = Depends(get_tts_engine_manager),
 ):
     """Health check endpoint with detailed checks."""
     checks = {}
@@ -51,7 +55,6 @@ async def health_check(
 
     # Check TTS service
     try:
-        tts_service = get_tts_engine()
         checks["tts_service"] = (
             "healthy" if tts_service.is_initialized else "not_initialized"
         )
@@ -61,7 +64,6 @@ async def health_check(
 
     # Check task manager
     try:
-        task_mgr = get_tts_engine_manager()
         checks["task_manager"] = (
             "healthy" if task_mgr.is_initialized else "not_initialized"
         )
