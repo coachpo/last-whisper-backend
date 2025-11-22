@@ -94,7 +94,6 @@ def test_health_endpoint_reports_individual_checks():
 
     assert response.status_code == 200
     assert payload["status"] == "healthy"
-    assert payload["checks"]["database"] == "healthy"
-    assert payload["checks"]["audio_directory"] == "healthy"
-    assert payload["checks"]["tts_service"] == "healthy"
-    assert payload["checks"]["task_manager"] == "healthy"
+    for key in ("database", "audio_directory", "tts_service", "task_manager"):
+        assert payload["checks"][key]["status"] == "healthy"
+    assert payload["checks"]["service_info"]["status"] == "informational"
