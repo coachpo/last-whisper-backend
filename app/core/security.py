@@ -60,7 +60,9 @@ def require_api_key(
         return None
 
     if not provided_key or provided_key not in settings.api_keys:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key"
+        )
 
     request.state.api_identity = provided_key
     return provided_key

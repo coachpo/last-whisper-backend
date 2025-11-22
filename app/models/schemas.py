@@ -320,14 +320,20 @@ class HealthCheckResponse(BaseModel):
 class ItemTranslationCreateRequest(BaseModel):
     """Request to translate an item to a target language."""
 
-    target_lang: str = Field(..., min_length=2, max_length=10, description="Target language code")
-    force_refresh: bool = Field(False, description="If true, bypass cache and refresh from provider")
+    target_lang: str = Field(
+        ..., min_length=2, max_length=10, description="Target language code"
+    )
+    force_refresh: bool = Field(
+        False, description="If true, bypass cache and refresh from provider"
+    )
 
 
 class ItemTranslationQuery(BaseModel):
     """Query params for fetching a cached translation."""
 
-    target_lang: str = Field(..., min_length=2, max_length=10, description="Target language code")
+    target_lang: str = Field(
+        ..., min_length=2, max_length=10, description="Target language code"
+    )
 
 
 class TranslationResponse(BaseModel):
@@ -355,7 +361,9 @@ class TranslationResponse(BaseModel):
 class TranslationRefreshResponse(TranslationResponse):
     """Response for refresh operations (same shape as TranslationResponse)."""
 
-    cached: bool = Field(False, description="Refresh always returns a fresh provider result")
+    cached: bool = Field(
+        False, description="Refresh always returns a fresh provider result"
+    )
 
 
 # Audio refresh schemas
@@ -367,7 +375,9 @@ class AudioRefreshResponse(BaseModel):
     item_id: int = Field(..., description="Item ID")
     task_id: str = Field(..., description="Queued TTS task identifier")
     status: TaskStatus = Field(..., description="Task status at submission time")
-    tts_status: ItemTTSStatus = Field(..., description="Item-level TTS status after enqueue")
+    tts_status: ItemTTSStatus = Field(
+        ..., description="Item-level TTS status after enqueue"
+    )
     audio_path: Optional[str] = Field(
         None, description="Expected audio file path once generation completes"
     )
@@ -376,7 +386,9 @@ class AudioRefreshResponse(BaseModel):
     cached: bool = Field(False, description="Audio served from cache; false on refresh")
     created_at: Optional[datetime] = Field(None, description="Item created timestamp")
     updated_at: Optional[datetime] = Field(None, description="Item updated timestamp")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional provider metadata")
+    metadata: Optional[Dict[str, Any]] = Field(
+        None, description="Additional provider metadata"
+    )
 
 
 # Tag schemas for preset tags

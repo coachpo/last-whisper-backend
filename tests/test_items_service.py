@@ -13,7 +13,9 @@ def immediate_scheduler(monkeypatch, items_service):
     def _immediate(self, item_id, text, locale):
         return self._submit_request(item_id, text, locale)
 
-    bound = _immediate.__get__(items_service.audio_manager, type(items_service.audio_manager))
+    bound = _immediate.__get__(
+        items_service.audio_manager, type(items_service.audio_manager)
+    )
     monkeypatch.setattr(items_service.audio_manager, "schedule_generation", bound)
     return original
 

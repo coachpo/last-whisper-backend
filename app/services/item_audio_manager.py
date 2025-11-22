@@ -58,11 +58,7 @@ class ItemAudioManager:
     def _mark_tts_failed(self, item_id: int):
         try:
             with self.db_manager.get_session() as session:
-                tts = (
-                    session.query(ItemTTS)
-                    .filter(ItemTTS.item_id == item_id)
-                    .first()
-                )
+                tts = session.query(ItemTTS).filter(ItemTTS.item_id == item_id).first()
                 if tts:
                     tts.status = ItemTTSStatus.FAILED
                     tts.updated_at = datetime.now()
@@ -88,11 +84,7 @@ class ItemAudioManager:
             if not task_id:
                 raise ServiceError("Unable to enqueue audio refresh", status_code=502)
 
-            tts = (
-                session.query(ItemTTS)
-                .filter(ItemTTS.item_id == item.id)
-                .first()
-            )
+            tts = session.query(ItemTTS).filter(ItemTTS.item_id == item.id).first()
             if not tts:
                 tts = ItemTTS(
                     item_id=item.id,
@@ -110,9 +102,7 @@ class ItemAudioManager:
                 "task_id": task_id,
                 "status": TaskStatus.QUEUED,
                 "tts_status": tts.status,
-                "audio_path": os.path.join(
-                    settings.audio_dir, f"item_{item.id}.wav"
-                ),
+                "audio_path": os.path.join(settings.audio_dir, f"item_{item.id}.wav"),
                 "provider": getattr(settings, "tts_provider", "google"),
                 "voice": None,
                 "cached": False,

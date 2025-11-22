@@ -29,9 +29,7 @@ class ItemsService:
     ):
         self.db_manager = db_manager
         self.task_manager = task_manager
-        self.audio_manager = audio_manager or ItemAudioManager(
-            db_manager, task_manager
-        )
+        self.audio_manager = audio_manager or ItemAudioManager(db_manager, task_manager)
 
     def _calculate_difficulty_from_text(self, text: str) -> int:
         """Calculate difficulty level based on text length rules."""
@@ -53,9 +51,7 @@ class ItemsService:
 
     def _validate_locale(self, locale: str) -> None:
         if locale not in settings.tts_supported_languages:
-            raise ValidationError(
-                f"Locale '{locale}' is not supported for TTS."
-            )
+            raise ValidationError(f"Locale '{locale}' is not supported for TTS.")
 
     def create_item(
         self,
@@ -285,9 +281,7 @@ class ItemsService:
     def update_item_tts_status(self, item_id: int, status: str) -> bool:
         """Update the TTS status for an item."""
         with self.db_manager.get_session() as session:
-            tts = (
-                session.query(ItemTTS).filter(ItemTTS.item_id == item_id).first()
-            )
+            tts = session.query(ItemTTS).filter(ItemTTS.item_id == item_id).first()
             if not tts:
                 return False
 

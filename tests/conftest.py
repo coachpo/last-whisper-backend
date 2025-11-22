@@ -75,7 +75,9 @@ class DummyTranslationManager:
     def __init__(self):
         self.calls = []
 
-    def translate_item(self, item_id: int, target_lang: str, force_refresh: bool = False):
+    def translate_item(
+        self, item_id: int, target_lang: str, force_refresh: bool = False
+    ):
         self.calls.append(("translate", item_id, target_lang, force_refresh))
         # block same-lang
         if target_lang == "fi":
@@ -203,15 +205,15 @@ def test_client(
         stats_routes.get_stats_service: lambda: stats_service,
         items_routes.get_items_service: lambda: items_service,
         translations_routes.get_translation_manager: lambda: translation_manager,
-        metadata_routes.get_metadata_service: lambda: MetadataService(db_manager, task_manager),
+        metadata_routes.get_metadata_service: lambda: MetadataService(
+            db_manager, task_manager
+        ),
     }
 
     app.dependency_overrides.update(overrides)
     client = TestClient(app, raise_server_exceptions=False)
 
-    client.headers.update(
-        {settings.api_key_header_name: settings.api_keys[0]}
-    )
+    client.headers.update({settings.api_key_header_name: settings.api_keys[0]})
 
     try:
         yield client

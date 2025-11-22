@@ -26,7 +26,14 @@ from app.tts_engine.tts_engine_manager import TTSEngineManager
 _FIELD_MATRIX: dict[MetadataDetailLevel, Set[str]] = {
     MetadataDetailLevel.CORE: {"build", "links"},
     MetadataDetailLevel.RUNTIME: {"runtime"},
-    MetadataDetailLevel.FULL: {"build", "runtime", "providers", "features", "limits", "links"},
+    MetadataDetailLevel.FULL: {
+        "build",
+        "runtime",
+        "providers",
+        "features",
+        "limits",
+        "links",
+    },
 }
 
 
@@ -77,8 +84,18 @@ class MetadataService:
         if not fields:
             return None
 
-        allowed = {"service", "build", "runtime", "providers", "features", "limits", "links"}
-        normalized = {field for field in (f.strip().lower() for f in fields) if field in allowed}
+        allowed = {
+            "service",
+            "build",
+            "runtime",
+            "providers",
+            "features",
+            "limits",
+            "links",
+        }
+        normalized = {
+            field for field in (f.strip().lower() for f in fields) if field in allowed
+        }
         return normalized or None
 
     def _get_static_sections(self) -> dict[str, Any]:

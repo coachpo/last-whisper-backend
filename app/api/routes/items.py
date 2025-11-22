@@ -44,7 +44,6 @@ def get_items_service() -> ItemsService:
     return _get_items_service()
 
 
-
 @router.post(
     "",
     response_model=ItemResponse,

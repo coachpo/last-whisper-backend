@@ -96,9 +96,7 @@ class Settings(BaseSettings):
         normalized_keys = [key.strip() for key in self.api_keys if key.strip()]
         if self.api_keys_csv:
             normalized_keys.extend(
-                key.strip()
-                for key in self.api_keys_csv.split(",")
-                if key.strip()
+                key.strip() for key in self.api_keys_csv.split(",") if key.strip()
             )
         self.api_keys = sorted(set(normalized_keys))
 

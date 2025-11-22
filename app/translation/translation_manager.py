@@ -64,9 +64,7 @@ class TranslationManager:
 
             cached = False
             needs_refresh = (
-                force_refresh
-                or not translation
-                or translation.text_hash != text_hash
+                force_refresh or not translation or translation.text_hash != text_hash
             )
 
             if translation and not needs_refresh:
@@ -185,7 +183,9 @@ class TranslationManager:
             translation.text_hash = self._text_hash(item.text)
             translation.status = TaskStatus.COMPLETED
             translation.error = None
-            translation.translation_metadata = json.dumps(metadata) if metadata else None
+            translation.translation_metadata = (
+                json.dumps(metadata) if metadata else None
+            )
             translation.updated_at = datetime.now()
             translation.last_refreshed_at = datetime.now()
 
