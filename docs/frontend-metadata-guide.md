@@ -135,3 +135,37 @@ curl "http://localhost:8000/metadata?detail=runtime&fields=runtime"
 3. Re-request on interval only when you need runtime stats (uptime or worker health).
 4. If `runtime.worker.tts_service_available` becomes `false`, surface an admin alert and disable submission-triggering UI.
 5. When adding new sections to the response, prefer using the `fields` query parameter to minimize payload size in views that only need runtime data.
+
+## Frontend Upgrade Guide
+
+Use this checklist whenever the backend bumps `service.schema_version`, introduces new sections, or retires existing fields. Treat metadata as a versioned contract and stage upgrades the same way you would for any other API change.
+
+### 1. Detect and assess the change
+
+- Record the current schema version inside your frontend release notes. During app bootstrap, compare the freshly fetched `service.schema_version` to the version your bundle expects.
+- Use the `fields` parameter in lower environments to probe newly added sections without impacting production users.
+- Review backend release notes for deprecations—fields will remain optional for at least one release cycle, so plan to maintain backward compatibility until you confirm the new version is everywhere.
+
+### 2. Prepare the client
+
+1. Update TypeScript/PropTypes interfaces so optional fields are guarded (e.g., `metadata.features?.tts_languages ?? []`).
+2. Add feature toggles that key off either the schema version (`>= 2025-11-22`) or an explicit capability flag returned in the payload.
+3. Refresh local fixtures/mocks used by Storybook and unit tests so they reflect both the old and new schema, ensuring components render gracefully in either case.
+
+### 3. Roll out safely
+
+- **Development**: Point your local build at the newest backend, verifying console warnings are absent and that fallbacks render when sections are missing.
+- **Staging**: Deploy the frontend behind an environment flag. Enable verbose logging around the metadata fetch (timing, schema version, feature flags) to catch mismatches early.
+- **Production**: Ship the bundle with the new logic still tolerant of older schemas. Keep caches short (≤30s) during the rollout so clients observe backend upgrades quickly.
+
+### 4. Validate and monitor
+
+- Track a synthetic check that periodically fetches `/metadata` with `detail=full` and asserts the schema version your frontend expects. Alert if it drifts.
+- Add runtime assertions (only in non-production builds) that warn developers when an unknown field appears—handy for future upgrades.
+- After release, confirm that UI elements tied to new metadata (e.g., new feature flags) behave correctly while legacy environments continue to function.
+
+### 5. Rollback + support plan
+
+- If the backend rollout lags, set the frontend feature toggle off and rely on the older rendering paths; because the client treats new fields as optional, this is instant.
+- Keep the previous metadata schema fixture around until every environment reports the new `service.schema_version` for at least one full day.
+- Document any consumer-visible changes (new footer info, feature gates) in your frontend changelog so other teams know when they can depend on them.

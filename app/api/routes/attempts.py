@@ -4,7 +4,9 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.concurrency import run_in_threadpool
 
+from app.core.security import rate_limit_dependency
 from app.models.schemas import (
     ErrorResponse,
     AttemptCreateRequest,
@@ -13,7 +15,11 @@ from app.models.schemas import (
 )
 from app.services.attempts_service import AttemptsService
 
-router = APIRouter(prefix="/v1/attempts", tags=["Attempts"])
+router = APIRouter(
+    prefix="/v1/attempts",
+    tags=["Attempts"],
+    dependencies=[Depends(rate_limit_dependency("attempts"))],
+)
 
 
 # We'll need dependency injection for services
@@ -43,9 +49,10 @@ async def create_attempt(
 ):
     """Create and score a new dictation attempt."""
     try:
-        attempt = attempts_service.create_attempt(
-            item_id=request.item_id,
-            user_text=request.text,
+        attempt = await run_in_threadpool(
+            attempts_service.create_attempt,
+            request.item_id,
+            request.text,
         )
 
         if not attempt:
@@ -98,12 +105,13 @@ async def list_attempts(
 ):
     """List dictation attempts with filtering."""
     try:
-        result = attempts_service.list_attempts(
-            item_id=item_id,
-            since=since,
-            until=until,
-            page=page,
-            per_page=per_page,
+        result = await run_in_threadpool(
+            attempts_service.list_attempts,
+            item_id,
+            since,
+            until,
+            page,
+            per_page,
         )
 
         # Convert to response format
@@ -142,7 +150,7 @@ async def get_attempt(
 ):
     """Get a specific dictation attempt."""
     try:
-        attempt = attempts_service.get_attempt(attempt_id)
+        attempt = await run_in_threadpool(attempts_service.get_attempt, attempt_id)
         if not attempt:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

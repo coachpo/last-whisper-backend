@@ -4,7 +4,9 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.concurrency import run_in_threadpool
 
+from app.core.security import rate_limit_dependency
 from app.models.schemas import (
     ErrorResponse,
     StatsSummaryResponse,
@@ -13,7 +15,11 @@ from app.models.schemas import (
 )
 from app.services.stats_service import StatsService
 
-router = APIRouter(prefix="/v1/stats", tags=["Stats"])
+router = APIRouter(
+    prefix="/v1/stats",
+    tags=["Stats"],
+    dependencies=[Depends(rate_limit_dependency("stats"))],
+)
 
 
 # We'll need dependency injection for services
@@ -49,7 +55,11 @@ async def get_summary_stats(
                 detail="'since' must be before 'until'",
             )
 
-        stats = stats_service.get_summary_stats(since=since, until=until)
+        stats = await run_in_threadpool(
+            stats_service.get_summary_stats,
+            since,
+            until,
+        )
 
         return StatsSummaryResponse(
             total_attempts=stats["total_attempts"],
@@ -95,11 +105,12 @@ async def get_practice_log(
                 detail="'since' must be before 'until'",
             )
 
-        result = stats_service.get_practice_log(
-            since=since,
-            until=until,
-            page=page,
-            per_page=per_page,
+        result = await run_in_threadpool(
+            stats_service.get_practice_log,
+            since,
+            until,
+            page,
+            per_page,
         )
 
         # Convert to response format
@@ -139,7 +150,7 @@ async def get_item_stats(
 ):
     """Get detailed statistics for a specific item."""
     try:
-        stats = stats_service.get_item_stats(item_id)
+        stats = await run_in_threadpool(stats_service.get_item_stats, item_id)
         if not stats:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -175,7 +186,11 @@ async def get_progress_over_time(
 ):
     """Get progress over time."""
     try:
-        progress = stats_service.get_progress_over_time(item_id=item_id, days=days)
+        progress = await run_in_threadpool(
+            stats_service.get_progress_over_time,
+            item_id,
+            days,
+        )
         return {"progress": progress}
 
     except Exception as e:

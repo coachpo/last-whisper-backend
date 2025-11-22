@@ -5,13 +5,19 @@ from __future__ import annotations
 from typing import Annotated, Optional, Set
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.concurrency import run_in_threadpool
 
 from app.api.dependencies import get_metadata_service
+from app.core.security import rate_limit_dependency
 from app.models.enums import MetadataDetailLevel
 from app.models.schemas import ApplicationMetadataResponse
 from app.services.metadata_service import MetadataService
 
-router = APIRouter(prefix="/metadata", tags=["metadata"])
+router = APIRouter(
+    prefix="/metadata",
+    tags=["metadata"],
+    dependencies=[Depends(rate_limit_dependency("metadata", limit=20))],
+)
 
 
 def _parse_fields(raw: Optional[str]) -> Optional[Set[str]]:
@@ -38,4 +44,8 @@ async def read_metadata(
     metadata_service: MetadataService = Depends(get_metadata_service),
 ):
     include = _parse_fields(fields)
-    return metadata_service.get_metadata(detail=detail, include_fields=include)
+    return await run_in_threadpool(
+        metadata_service.get_metadata,
+        detail,
+        include,
+    )

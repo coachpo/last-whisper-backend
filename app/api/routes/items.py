@@ -6,9 +6,10 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import Response
+from fastapi.responses import FileResponse
 
 from app.core.config import settings
+from app.core.security import rate_limit_dependency
 from app.models.enums import ItemTTSStatus
 from app.models.schemas import (
     ErrorResponse,
@@ -25,8 +26,13 @@ from app.models.schemas import (
     AudioRefreshResponse,
 )
 from app.services.items_service import ItemsService
+from app.services.exceptions import ServiceError
 
-router = APIRouter(prefix="/v1/items", tags=["Items"])
+router = APIRouter(
+    prefix="/v1/items",
+    tags=["Items"],
+    dependencies=[Depends(rate_limit_dependency("items"))],
+)
 
 
 # We'll need dependency injection for services
@@ -37,14 +43,6 @@ def get_items_service() -> ItemsService:
 
     return _get_items_service()
 
-
-# Helpers
-def _ensure_locale_supported(locale: str):
-    if locale not in settings.tts_supported_languages:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Locale '{locale}' is not supported for TTS. Supported: {settings.tts_supported_languages}",
-        )
 
 
 @router.post(
@@ -66,15 +64,18 @@ async def create_item(
 ):
     """Create a new dictation item."""
     try:
-        item_data = items_service.create_item(
-            locale=request.locale,
-            text=request.text,
-            difficulty=request.difficulty,
-            tags=request.tags or [],
+        item_data = await run_in_threadpool(
+            items_service.create_item,
+            request.locale,
+            request.text,
+            request.difficulty,
+            request.tags or [],
         )
 
         return ItemResponse(**item_data)
 
+    except ServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -113,7 +114,7 @@ async def bulk_create_items(
                 }
             )
 
-        result = items_service.bulk_create_items(items_data)
+        result = await run_in_threadpool(items_service.bulk_create_items, items_data)
 
         # Convert created items to response format
         created_items_response = []
@@ -128,6 +129,8 @@ async def bulk_create_items(
             submitted_at=datetime.now(),
         )
 
+    except ServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -174,14 +177,15 @@ async def list_items(
                 detail=f"Invalid sort parameter. Must be one of: {', '.join(valid_sorts)}",
             )
 
-        result = items_service.list_items(
-            locale=locale,
-            tags=tag,
-            difficulty=difficulty,
-            practiced=practiced,
-            sort=sort,
-            page=page,
-            per_page=per_page,
+        result = await run_in_threadpool(
+            items_service.list_items,
+            locale,
+            tag,
+            difficulty,
+            practiced,
+            sort,
+            page,
+            per_page,
         )
 
         # Convert to response format
@@ -199,6 +203,8 @@ async def list_items(
 
     except HTTPException:
         raise
+    except ServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -222,17 +228,14 @@ async def get_item(
 ):
     """Get a specific dictation item."""
     try:
-        item_data = items_service.get_item(item_id)
-        if not item_data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Item not found",
-            )
+        item_data = await run_in_threadpool(items_service.get_item, item_id)
 
         return ItemResponse(**item_data)
 
     except HTTPException:
         raise
+    except ServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -301,15 +304,12 @@ async def delete_item(
 ):
     """Delete a dictation item."""
     try:
-        success = items_service.delete_item(item_id)
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Item not found",
-            )
+        await run_in_threadpool(items_service.delete_item, item_id)
 
     except HTTPException:
         raise
+    except ServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -335,13 +335,11 @@ async def update_item_tags(
 ):
     """Update tags for a dictation item."""
     try:
-        result = items_service.update_item_tags(item_id=item_id, tags=request.tags)
-
-        if not result:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Item not found",
-            )
+        result = await run_in_threadpool(
+            items_service.update_item_tags,
+            item_id,
+            request.tags,
+        )
 
         return TagUpdateResponse(
             item_id=result["item_id"],
@@ -354,6 +352,8 @@ async def update_item_tags(
 
     except HTTPException:
         raise
+    except ServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -379,15 +379,11 @@ async def update_item_difficulty(
 ):
     """Update the difficulty level for a dictation item."""
     try:
-        result = items_service.update_item_difficulty(
-            item_id=item_id, difficulty=request.difficulty
+        result = await run_in_threadpool(
+            items_service.update_item_difficulty,
+            item_id,
+            request.difficulty,
         )
-
-        if not result:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Item not found",
-            )
 
         return DifficultyUpdateResponse(
             item_id=result["item_id"],
@@ -399,6 +395,8 @@ async def update_item_difficulty(
 
     except HTTPException:
         raise
+    except ServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -423,12 +421,7 @@ async def get_item_audio(
 ):
     """Stream the audio file for a dictation item."""
     try:
-        item_data = items_service.get_item(item_id)
-        if not item_data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Item not found",
-            )
+        item_data = await run_in_threadpool(items_service.get_item, item_id)
 
         if item_data["tts_status"] != ItemTTSStatus.READY:
             raise HTTPException(
@@ -446,23 +439,17 @@ async def get_item_audio(
                 detail="Audio file not found",
             )
 
-        # Read the audio file content
-        with open(audio_path, "rb") as audio_file:
-            audio_content = audio_file.read()
-
-        # Return with explicit MIME type headers
-        return Response(
-            content=audio_content,
+        return FileResponse(
+            audio_path,
             media_type="audio/wav",
-            headers={
-                "Content-Type": "audio/wav",
-                "Content-Disposition": f"inline; filename={audio_filename}",
-                "Cache-Control": "public, max-age=3600",  # Cache for 1 hour
-            },
+            filename=audio_filename,
+            headers={"Cache-Control": "public, max-age=3600"},
         )
 
     except HTTPException:
         raise
+    except ServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -489,25 +476,14 @@ async def refresh_item_audio(
 ):
     """Enqueue TTS regeneration even if audio exists/missing."""
     try:
-        item = await run_in_threadpool(items_service.get_item, item_id)
-        if not item:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Item not found"
-            )
-
-        _ensure_locale_supported(item["locale"])
-
         result = await run_in_threadpool(items_service.refresh_item_audio, item_id)
-        if not result:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to enqueue audio refresh",
-            )
 
         return AudioRefreshResponse(**result)
 
     except HTTPException:
         raise
+    except ServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

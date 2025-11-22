@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     reload: Optional[bool] = None
     log_level: str = "info"
 
+    # Security Settings
+    api_key_header_name: str = "X-API-Key"
+    api_keys: list[str] = ["local-dev-key"]
+    api_keys_csv: Optional[str] = None
+    api_rate_limit_per_minute: int = 120
+    api_rate_limit_window_seconds: int = 60
+
     # Database Settings
     database_url: str = "sqlite:///data/dictation.db"
 
@@ -40,7 +47,7 @@ class Settings(BaseSettings):
     translation_supported_languages: list[str] = ["en", "fi", "zh-CN", "zh-TW"]
 
     # TTS Service Settings
-    tts_supported_languages: list[str] = ["fi"]  # Supported languages for TTS
+    tts_supported_languages: list[str] = ["fi", "en-US"]  # Supported languages for TTS
     tts_provider: str = "google"  # Currently only Google Cloud is supported
     tts_submission_workers: int = 4
 
@@ -87,6 +94,18 @@ class Settings(BaseSettings):
 
         if self.metadata_cache_ttl_seconds <= 0:
             self.metadata_cache_ttl_seconds = 60
+
+        normalized_keys = [key.strip() for key in self.api_keys if key.strip()]
+        if self.api_keys_csv:
+            normalized_keys.extend(
+                key.strip()
+                for key in self.api_keys_csv.split(",")
+                if key.strip()
+            )
+        self.api_keys = sorted(set(normalized_keys))
+
+        if self.is_production and not self.api_keys:
+            raise ValueError("API keys must be configured in production environments")
 
         return self
 

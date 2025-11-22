@@ -4,32 +4,22 @@ import pytest
 
 from app.models.enums import ItemTTSStatus
 from app.models.models import Item
-from app.services.items_service import ItemsService
-
-
-class ImmediateExecutor:
-    def __init__(self):
-        self.calls = []
-
-    def submit(self, fn, *args, **kwargs):
-        self.calls.append((fn, args, kwargs))
-        return fn(*args, **kwargs)
 
 
 @pytest.fixture()
-def immediate_executor(monkeypatch):
-    executor = ImmediateExecutor()
-    monkeypatch.setattr(ItemsService, "_tts_executor", executor)
-    monkeypatch.setattr(
-        ItemsService,
-        "_get_executor",
-        classmethod(lambda cls: executor),
-    )
-    return executor
+def immediate_scheduler(monkeypatch, items_service):
+    original = items_service.audio_manager.schedule_generation
+
+    def _immediate(self, item_id, text, locale):
+        return self._submit_request(item_id, text, locale)
+
+    bound = _immediate.__get__(items_service.audio_manager, type(items_service.audio_manager))
+    monkeypatch.setattr(items_service.audio_manager, "schedule_generation", bound)
+    return original
 
 
 def test_create_item_submits_tts_with_locale(
-    items_service, task_manager, immediate_executor
+    items_service, task_manager, immediate_scheduler
 ):
     payload = items_service.create_item(locale="en-US", text="hello world example text")
 
@@ -42,7 +32,7 @@ def test_create_item_submits_tts_with_locale(
 
 
 def test_bulk_create_marks_failed_when_submission_missing(
-    items_service, task_manager, db_manager, immediate_executor, monkeypatch
+    items_service, task_manager, db_manager, immediate_scheduler, monkeypatch
 ):
     monkeypatch.setattr(
         task_manager,
@@ -53,7 +43,7 @@ def test_bulk_create_marks_failed_when_submission_missing(
     result = items_service.bulk_create_items(
         [
             {"locale": "fi", "text": "Hei maailma"},
-            {"locale": "sv", "text": "Hej världen"},
+            {"locale": "en-US", "text": "Hello world"},
         ]
     )
 

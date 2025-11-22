@@ -113,3 +113,8 @@ class TTSEngineWrapper:
     def is_initialized(self) -> bool:
         """Check if the service is initialized."""
         return self._is_initialized
+
+    @property
+    def service(self) -> Optional[BaseTTSEngine]:
+        """Expose the underlying provider implementation."""
+        return self._service

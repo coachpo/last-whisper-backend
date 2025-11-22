@@ -4,13 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.concurrency import run_in_threadpool
 
 from app.api.dependencies import get_translation_manager
+from app.core.security import rate_limit_dependency
 from app.models.schemas import (
     ItemTranslationCreateRequest,
     TranslationResponse,
     TranslationRefreshResponse,
 )
 
-router = APIRouter(prefix="/v1", tags=["translations"])
+router = APIRouter(
+    prefix="/v1",
+    tags=["translations"],
+    dependencies=[Depends(rate_limit_dependency("translations", limit=30))],
+)
 
 
 @router.post(

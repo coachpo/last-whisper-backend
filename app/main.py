@@ -17,6 +17,7 @@ from app.core.exceptions import TTSAPIException
 from app.core.logging import setup_logging, get_logger
 from app.core.runtime_state import set_app_started_at
 from app.models.schemas import ErrorResponse
+from app.services.exceptions import ServiceError
 
 # Setup logging
 logger = get_logger(__name__)
@@ -140,6 +141,15 @@ async def tts_api_exception_handler(request, exc: TTSAPIException):
         status_code=exc.status_code,
         content=ErrorResponse(error=exc.message, detail=exc.detail).model_dump(),
         headers=exc.headers,
+    )
+
+
+@app.exception_handler(ServiceError)
+async def service_error_handler(request, exc: ServiceError):
+    """Handle domain service errors."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ErrorResponse(error=exc.message, detail=exc.detail).model_dump(),
     )
 
 

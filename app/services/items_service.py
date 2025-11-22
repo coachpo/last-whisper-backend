@@ -1,18 +1,18 @@
 """Items service for managing dictation items."""
 
 import os
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from threading import Lock
-from typing import Optional, Dict, Any, List, ClassVar
+from typing import Optional, Dict, Any, List
 
-from sqlalchemy import and_
+from sqlalchemy import and_, func, true
 
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.database_manager import DatabaseManager
 from app.models.models import Item, ItemTTS
-from app.models.enums import ItemTTSStatus, TaskStatus
+from app.models.enums import ItemTTSStatus
+from app.services.exceptions import NotFoundError, ServiceError, ValidationError
+from app.services.item_audio_manager import ItemAudioManager
 
 # Setup logger for this module
 logger = get_logger(__name__)
@@ -21,22 +21,17 @@ logger = get_logger(__name__)
 class ItemsService:
     """Service for managing dictation items."""
 
-    _tts_executor: ClassVar[Optional[ThreadPoolExecutor]] = None
-    _executor_lock: ClassVar[Lock] = Lock()
-
-    def __init__(self, db_manager: DatabaseManager, task_manager=None):
+    def __init__(
+        self,
+        db_manager: DatabaseManager,
+        task_manager=None,
+        audio_manager: Optional[ItemAudioManager] = None,
+    ):
         self.db_manager = db_manager
         self.task_manager = task_manager
-
-    @classmethod
-    def _get_executor(cls) -> ThreadPoolExecutor:
-        with cls._executor_lock:
-            if cls._tts_executor is None:
-                cls._tts_executor = ThreadPoolExecutor(
-                    max_workers=settings.tts_submission_workers,
-                    thread_name_prefix="tts-submitter",
-                )
-            return cls._tts_executor
+        self.audio_manager = audio_manager or ItemAudioManager(
+            db_manager, task_manager
+        )
 
     def _calculate_difficulty_from_text(self, text: str) -> int:
         """Calculate difficulty level based on text length rules."""
@@ -56,63 +51,11 @@ class ItemsService:
         else:  # words >= 16 or letters >= 141
             return 5
 
-    def _submit_tts_job(
-        self, item_id: int, text: str, locale: Optional[str], custom_filename: str
-    ):
-        """Submit a TTS job through the manager and update status on failure."""
-        if not self.task_manager:
-            logger.warning(f"No task manager available for item {item_id}")
-            return
-
-        language = locale or settings.tts_supported_languages[0]
-
-        try:
-            task_id = self.task_manager.submit_task_for_item(
-                item_id, text, custom_filename, language
+    def _validate_locale(self, locale: str) -> None:
+        if locale not in settings.tts_supported_languages:
+            raise ValidationError(
+                f"Locale '{locale}' is not supported for TTS."
             )
-
-            if not task_id:
-                self._mark_tts_failed(item_id)
-                logger.warning(f"Failed to submit TTS job for item {item_id}")
-                return
-
-            logger.info(
-                f"TTS job submitted for item {item_id} with language '{language}': {task_id}"
-            )
-
-        except Exception as exc:
-            logger.error(f"Error submitting TTS job for item {item_id}: {exc}")
-            self._mark_tts_failed(item_id)
-
-    def _mark_tts_failed(self, item_id: int):
-        try:
-            with self.db_manager.get_session() as session:
-                tts = (
-                    session.query(ItemTTS)
-                    .filter(ItemTTS.item_id == item_id)
-                    .first()
-                )
-                if tts:
-                    tts.status = ItemTTSStatus.FAILED
-                    tts.updated_at = datetime.now()
-                    session.commit()
-        except Exception as db_error:
-            logger.error(
-                f"Failed to update TTS status to failed for item {item_id}: {db_error}"
-            )
-
-    def _schedule_tts_job(
-        self, item_id: int, text: str, locale: Optional[str], custom_filename: str
-    ):
-        if not self.task_manager:
-            logger.warning(f"No task manager available for item {item_id}")
-            return
-
-        executor = self._get_executor()
-        logger.info(
-            f"Queueing TTS submission for item {item_id} (locale={locale or 'default'})"
-        )
-        executor.submit(self._submit_tts_job, item_id, text, locale, custom_filename)
 
     def create_item(
         self,
@@ -122,6 +65,7 @@ class ItemsService:
         tags: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Create a new dictation item and enqueue TTS job in background."""
+        self._validate_locale(locale)
         # Auto-calculate difficulty if not provided
         if difficulty is None:
             difficulty = self._calculate_difficulty_from_text(text)
@@ -152,10 +96,8 @@ class ItemsService:
             session.add(tts_record)
             session.commit()
 
-            # Submit TTS job asynchronously via shared executor
-            if self.task_manager:
-                custom_filename = f"item_{item.id}"
-                self._schedule_tts_job(item.id, text, locale, custom_filename)
+            if self.audio_manager:
+                self.audio_manager.schedule_generation(item.id, text, locale)
 
             # Return clean data structure to avoid session binding issues
             return self._item_to_dict(item)
@@ -168,7 +110,7 @@ class ItemsService:
         with self.db_manager.get_session() as session:
             for item_data in items_data:
                 try:
-                    # Create item with pending TTS status
+                    self._validate_locale(item_data["locale"])
                     item = Item(
                         locale=item_data["locale"],
                         text=item_data["text"],
@@ -176,7 +118,6 @@ class ItemsService:
                         tags_json=None,
                     )
 
-                    # Auto-calculate difficulty if not provided
                     if item.difficulty is None:
                         item.difficulty = self._calculate_difficulty_from_text(
                             item_data["text"]
@@ -186,49 +127,42 @@ class ItemsService:
                         item.tags = item_data["tags"]
 
                     session.add(item)
-                    session.flush()  # Get the ID without committing
+                    session.flush()
                     session.refresh(item)
 
-                    created_items.append(item)
-
-                except Exception as e:
-                    logger.error(f"Failed to create item: {e}")
-                    failed_items.append({"data": item_data, "error": str(e)})
-
-            # Commit all successful creations
-            session.commit()
-
-            # Create ItemTTS records for created items
-            for item in created_items:
-                session.add(
-                    ItemTTS(
-                        item_id=item.id,
-                        status=ItemTTSStatus.PENDING,
-                        created_at=item.created_at,
-                        updated_at=item.updated_at,
+                    session.add(
+                        ItemTTS(
+                            item_id=item.id,
+                            status=ItemTTSStatus.PENDING,
+                            created_at=item.created_at,
+                            updated_at=item.updated_at,
+                        )
                     )
-                )
+                    session.commit()
 
-            session.commit()
+                    created_items.append(self._item_to_dict(item))
 
-            # Submit TTS jobs via executor for all created items
-            if self.task_manager and created_items:
-                for item in created_items:
-                    self._schedule_tts_job(
-                        item.id, item.text, item.locale, f"item_{item.id}"
-                    )
+                    if self.audio_manager:
+                        self.audio_manager.schedule_generation(
+                            item.id, item.text, item.locale
+                        )
 
-            # Convert items to clean data structures to avoid session binding issues
-            created_items_data = [self._item_to_dict(item) for item in created_items]
+                except ValidationError as exc:
+                    session.rollback()
+                    failed_items.append({"data": item_data, "error": exc.message})
+                except Exception as exc:  # pragma: no cover - logged for ops
+                    session.rollback()
+                    logger.error("Failed to create item: %s", exc)
+                    failed_items.append({"data": item_data, "error": str(exc)})
 
-            return {"created_items": created_items_data, "failed_items": failed_items}
+        return {"created_items": created_items, "failed_items": failed_items}
 
     def get_item(self, item_id: int) -> Optional[Dict[str, Any]]:
         """Get an item by ID."""
         with self.db_manager.get_session() as session:
             item = session.query(Item).filter(Item.id == item_id).first()
             if not item:
-                return None
+                raise NotFoundError(f"Item {item_id} not found")
 
             # Return clean data structure to avoid session binding issues
             return self._item_to_dict(item)
@@ -238,7 +172,7 @@ class ItemsService:
         with self.db_manager.get_session() as session:
             item = session.query(Item).filter(Item.id == item_id).first()
             if not item:
-                return False
+                raise NotFoundError(f"Item {item_id} not found")
 
             # Delete associated audio file if it exists
             # Check if audio file exists using predictable naming convention
@@ -277,9 +211,19 @@ class ItemsService:
                 query = query.filter(Item.locale == locale)
 
             if tags:
-                # Items must have all specified tags
-                for tag in tags:
-                    query = query.filter(Item.tags_json.like(f'%"{tag}"%'))
+                dialect = self.db_manager.engine.dialect.name
+                if dialect == "sqlite":
+                    for idx, tag in enumerate(tags):
+                        tag_alias = (
+                            func.json_each(Item.tags_json)
+                            .table_valued("value")
+                            .alias(f"tag_filter_{idx}")
+                        )
+                        query = query.join(tag_alias, true(), isouter=True)
+                        query = query.filter(tag_alias.c.value == tag)
+                else:
+                    for tag in tags:
+                        query = query.filter(Item.tags_json.like(f'%"{tag}"%'))
 
             if difficulty:
                 if ".." in difficulty:
@@ -354,54 +298,10 @@ class ItemsService:
 
     def refresh_item_audio(self, item_id: int) -> Optional[Dict[str, Any]]:
         """Force refresh/generate audio for an item."""
-        if not self.task_manager:
-            logger.warning("No TTS task manager available for refresh")
-            return None
+        if not self.audio_manager:
+            raise ServiceError("TTS refresh unavailable", status_code=503)
 
-        with self.db_manager.get_session() as session:
-            item = session.query(Item).filter(Item.id == item_id).first()
-            if not item:
-                return None
-
-            language = item.locale or settings.tts_supported_languages[0]
-            custom_filename = f"item_{item.id}"
-
-            task_id = self.task_manager.submit_task_for_item(
-                item.id, item.text, custom_filename, language, force_refresh=True
-            )
-
-            if not task_id:
-                return None
-
-            # Update ItemTTS status for this item
-            tts = (
-                session.query(ItemTTS).filter(ItemTTS.item_id == item.id).first()
-            )
-            if not tts:
-                tts = ItemTTS(
-                    item_id=item.id,
-                    status=ItemTTSStatus.PENDING,
-                    created_at=datetime.now(),
-                    updated_at=datetime.now(),
-                )
-                session.add(tts)
-            tts.status = ItemTTSStatus.PENDING
-            tts.updated_at = datetime.now()
-            session.commit()
-
-            return {
-                "item_id": item.id,
-                "task_id": task_id,
-                "status": TaskStatus.QUEUED,
-                "tts_status": tts.status,
-                "audio_path": os.path.join(settings.audio_dir, f"item_{item.id}.wav"),
-                "provider": getattr(settings, "tts_provider", "google"),
-                "voice": None,
-                "cached": False,
-                "created_at": item.created_at,
-                "updated_at": item.updated_at,
-                "metadata": None,
-            }
+        return self.audio_manager.refresh_item_audio(item_id)
 
     def update_item_tags(
         self, item_id: int, tags: List[str]
@@ -410,7 +310,7 @@ class ItemsService:
         with self.db_manager.get_session() as session:
             item = session.query(Item).filter(Item.id == item_id).first()
             if not item:
-                return None
+                raise NotFoundError(f"Item {item_id} not found")
 
             previous_tags = item.tags.copy() if item.tags else []
 
@@ -435,7 +335,7 @@ class ItemsService:
         with self.db_manager.get_session() as session:
             item = session.query(Item).filter(Item.id == item_id).first()
             if not item:
-                return None
+                raise NotFoundError(f"Item {item_id} not found")
 
             previous_difficulty = item.difficulty
 

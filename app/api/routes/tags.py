@@ -5,10 +5,15 @@ from fastapi.concurrency import run_in_threadpool
 
 from app.api.dependencies import get_tags_service
 from app.core.exceptions import DatabaseException, ValidationException
+from app.core.security import rate_limit_dependency
 from app.models.schemas import TagCreateRequest, TagResponse, TagListResponse
 from app.services.tags_service import TagsService
 
-router = APIRouter(prefix="/v1/tags", tags=["Tags"])
+router = APIRouter(
+    prefix="/v1/tags",
+    tags=["Tags"],
+    dependencies=[Depends(rate_limit_dependency("tags", limit=60))],
+)
 
 
 @router.post(

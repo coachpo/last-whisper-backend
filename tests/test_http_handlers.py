@@ -3,7 +3,11 @@
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
-from app.api import dependencies as dependency_cache
+from app.api.dependencies import (
+    get_database_manager,
+    get_tts_engine,
+    get_tts_engine_manager,
+)
 from app.core.config import settings
 from app.main import app
 
@@ -73,22 +77,20 @@ def test_health_endpoint_reports_individual_checks():
         def stop_monitoring(self):  # pragma: no cover - lifecycle stub
             self.is_initialized = False
 
-    prev_db = dependency_cache._database_manager
-    prev_tts = dependency_cache._tts_engine
-    prev_mgr = dependency_cache._task_manager
+    overrides = {
+        get_database_manager: lambda: HealthyDB(),
+        get_tts_engine: lambda: HealthyTTS(),
+        get_tts_engine_manager: lambda: HealthyManager(),
+    }
 
-    dependency_cache._database_manager = HealthyDB()
-    dependency_cache._tts_engine = HealthyTTS()
-    dependency_cache._task_manager = HealthyManager()
+    app.dependency_overrides.update(overrides)
 
     try:
         with TestClient(app, raise_server_exceptions=False) as client:
             response = client.get("/health")
             payload = response.json()
     finally:
-        dependency_cache._database_manager = prev_db
-        dependency_cache._tts_engine = prev_tts
-        dependency_cache._task_manager = prev_mgr
+        app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert payload["status"] == "healthy"

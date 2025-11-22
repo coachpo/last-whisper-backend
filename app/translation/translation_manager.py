@@ -16,8 +16,13 @@ logger = get_logger(__name__)
 
 
 class TranslationManager:
-    def __init__(self, db_url: str = settings.database_url, provider_wrapper=None):
-        self.db_manager = DatabaseManager(db_url)
+    def __init__(
+        self,
+        db_url: str = settings.database_url,
+        provider_wrapper=None,
+        db_manager: Optional[DatabaseManager] = None,
+    ):
+        self.db_manager = db_manager or DatabaseManager(db_url)
         self.provider_wrapper = provider_wrapper or TranslationServiceWrapper()
 
     @staticmethod

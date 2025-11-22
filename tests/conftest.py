@@ -25,9 +25,12 @@ from app.api.routes import items as items_routes
 from app.api.routes import metadata as metadata_routes
 from app.api.routes import stats as stats_routes
 from app.api.routes import translations as translations_routes
+from app.core.config import settings
+from app.core.security import reset_rate_limiter_state
 from app.main import app
 from app.models.database_manager import Base, DatabaseManager
 from app.services.attempts_service import AttemptsService
+from app.services.item_audio_manager import ItemAudioManager
 from app.services.items_service import ItemsService
 from app.services.metadata_service import MetadataService
 from app.services.stats_service import StatsService
@@ -106,25 +109,11 @@ class DummyTranslationManager:
 def reset_dependency_singletons():
     """Ensure global dependency caches do not leak between tests."""
 
-    dependency_cache._database_manager = None
-    dependency_cache._items_service = None
-    dependency_cache._attempts_service = None
-    dependency_cache._stats_service = None
-    dependency_cache._task_manager = None
-    dependency_cache._tts_engine = None
-    dependency_cache._task_service = None
-    dependency_cache._tags_service = None
-    dependency_cache._metadata_service = None
+    dependency_cache.reset_dependency_caches()
+    reset_rate_limiter_state()
     yield
-    dependency_cache._database_manager = None
-    dependency_cache._items_service = None
-    dependency_cache._attempts_service = None
-    dependency_cache._stats_service = None
-    dependency_cache._task_manager = None
-    dependency_cache._tts_engine = None
-    dependency_cache._task_service = None
-    dependency_cache._tags_service = None
-    dependency_cache._metadata_service = None
+    dependency_cache.reset_dependency_caches()
+    reset_rate_limiter_state()
 
 
 @pytest.fixture(scope="session")
@@ -167,8 +156,13 @@ def dummy_tts_engine() -> DummyTTSEngine:
 @pytest.fixture()
 def items_service(
     db_manager: DatabaseManager, task_manager: DummyTaskManager
-) -> ItemsService:
-    return ItemsService(db_manager, task_manager)
+) -> Iterable[ItemsService]:
+    audio_manager = ItemAudioManager(db_manager, task_manager)
+    service = ItemsService(db_manager, task_manager, audio_manager)
+    try:
+        yield service
+    finally:
+        audio_manager.shutdown()
 
 
 @pytest.fixture()
@@ -192,6 +186,8 @@ def test_client(
     dummy_tts_engine: DummyTTSEngine,
     translation_manager: DummyTranslationManager,
 ):
+    settings.api_keys = ["test-suite-key"]
+
     overrides = {
         get_database_manager: lambda: db_manager,
         get_items_service: lambda: items_service,
@@ -212,6 +208,10 @@ def test_client(
 
     app.dependency_overrides.update(overrides)
     client = TestClient(app, raise_server_exceptions=False)
+
+    client.headers.update(
+        {settings.api_key_header_name: settings.api_keys[0]}
+    )
 
     try:
         yield client
