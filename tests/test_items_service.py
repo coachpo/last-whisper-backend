@@ -2,8 +2,11 @@
 
 import pytest
 
+from app.core.config import settings
 from app.models.enums import ItemTTSStatus
 from app.models.models import Item
+
+SUPPORTED_TTS_LOCALE = settings.tts_supported_languages[0]
 
 
 @pytest.fixture()
@@ -23,13 +26,15 @@ def immediate_scheduler(monkeypatch, items_service):
 def test_create_item_submits_tts_with_locale(
     items_service, task_manager, immediate_scheduler
 ):
-    payload = items_service.create_item(locale="en-US", text="hello world example text")
+    payload = items_service.create_item(
+        locale=SUPPORTED_TTS_LOCALE, text="hello world example text"
+    )
 
     assert payload["tts_status"] == ItemTTSStatus.PENDING
     assert len(task_manager.submissions) == 1
 
     submission_args, _ = task_manager.submissions[0]
-    assert submission_args[3] == "en-US"
+    assert submission_args[3] == SUPPORTED_TTS_LOCALE
     assert payload["difficulty"] is not None
 
 
@@ -44,8 +49,8 @@ def test_bulk_create_marks_failed_when_submission_missing(
 
     result = items_service.bulk_create_items(
         [
-            {"locale": "fi", "text": "Hei maailma"},
-            {"locale": "en-US", "text": "Hello world"},
+            {"locale": SUPPORTED_TTS_LOCALE, "text": "Hei maailma"},
+            {"locale": SUPPORTED_TTS_LOCALE, "text": "Hello world"},
         ]
     )
 

@@ -1,10 +1,15 @@
 """Integration tests for items API endpoints."""
 
+from app.core.config import settings
 from app.models.enums import ItemTTSStatus
+
+SUPPORTED_TTS_LOCALE = settings.tts_supported_languages[0]
 
 
 def test_get_item_tts_status_returns_payload(test_client, items_service):
-    item = items_service.create_item(locale="en-US", text="Sample dictation text")
+    item = items_service.create_item(
+        locale=SUPPORTED_TTS_LOCALE, text="Sample dictation text"
+    )
 
     response = test_client.get(f"/v1/items/{item['id']}/tts-status")
 
