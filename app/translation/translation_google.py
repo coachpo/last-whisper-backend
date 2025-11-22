@@ -35,13 +35,6 @@ class GoogleTranslateProvider(TranslationProvider):
     def translate(
         self, text: str, source_lang: str, target_lang: str
     ) -> Tuple[str, Dict[str, Any]]:
-        log_context = {
-            "source_lang": source_lang,
-            "target_lang": target_lang,
-            "text_length": len(text),
-        }
-
-        logger.info("Translation: submitting request", extra=log_context)
         try:
             response = self.client.translate(
                 text,
@@ -54,12 +47,10 @@ class GoogleTranslateProvider(TranslationProvider):
                 "detected_source_language": response.get("detectedSourceLanguage"),
                 "model": response.get("model"),
             }
-            logger.info("Translation: completed", extra=log_context)
             return translated_text, metadata
         except GoogleAPIError as exc:
             logger.error(
                 "Translation: Google API error",
                 exc_info=exc,
-                extra=log_context,
             )
             raise

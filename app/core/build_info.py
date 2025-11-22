@@ -77,9 +77,6 @@ def load_build_info() -> BuildInfo:
     branch = _resolve_branch() or "unknown"
     built_at = _resolve_timestamp()
 
-    if built_at is None:
-        logger.debug("Build timestamp unavailable; falling back to python start time")
-
     return BuildInfo(
         commit=commit,
         short_commit=short_commit,

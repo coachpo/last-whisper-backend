@@ -194,11 +194,6 @@ class TTSEngine(BaseTTSEngine):
             voice=selected_voice,
             backend="google-tts",
         )
-
-        logger.info(
-            f"TTS engine: Request {request_id} submitted and queued."
-            f" Voice={selected_voice} Output file: {filename}"
-        )
         return request_id
 
     def get_queue_size(self) -> int:
@@ -219,9 +214,6 @@ class TTSEngine(BaseTTSEngine):
 
     def switch_device(self, new_device: str) -> bool:
         """Not applicable; present for interface compatibility."""
-        logger.info(
-            f"TTS engine: switch_device requested ({new_device}) — ignored for API backend."
-        )
         return False
 
     # ----------------------- Internal helpers -----------------------
@@ -266,9 +258,6 @@ class TTSEngine(BaseTTSEngine):
     def _process_request(self, request):
         try:
             voice_name = request.get("voice_name") or self.voice_name
-            logger.info(
-                f"TTS engine: Processing request {request['id']} with Google TTS (voice={voice_name})..."
-            )
             request["status"] = TaskStatus.PROCESSING
 
             self._publish_task_message(
@@ -320,9 +309,6 @@ class TTSEngine(BaseTTSEngine):
                 request["id"], request["filename"], TaskStatus.DONE, **meta
             )
 
-            logger.info(
-                f"TTS engine: Request {request['id']} completed! Saved: {request['filename']}"
-            )
 
         except (GoogleAPICallError, RetryError) as e:
             request["status"] = TaskStatus.FAILED

@@ -73,14 +73,8 @@ class TTSEngineManager:
                 task_id = existing_task.task_id
 
                 if status in [TaskStatus.COMPLETED, TaskStatus.DONE]:
-                    logger.info(
-                        f"TTS task with same text already completed (ID: {task_id})"
-                    )
                     return task_id
                 elif status in [TaskStatus.QUEUED, TaskStatus.PROCESSING]:
-                    logger.info(
-                        f"TTS task with same text already {status} (ID: {task_id})"
-                    )
                     return task_id
 
         # No existing task found, create new one
@@ -102,7 +96,6 @@ class TTSEngineManager:
             session.add(new_task)
             session.commit()
 
-        logger.info(f"New TTS task created successfully (ID: {task_id})")
         return task_id
 
     def _task_exists(self, task_id: str) -> bool:
@@ -281,8 +274,6 @@ class TTSEngineManager:
         if not task_id:
             return
 
-        logger.info(f"TTS engine manager updating task {task_id} status to {status}")
-
         with self.db_manager.get_session() as session:
             task = session.query(Task).filter(Task.task_id == task_id).first()
 
@@ -440,10 +431,6 @@ class TTSEngineManager:
 
                             shutil.copy2(output_file_path, audio_path)
 
-                        logger.info(
-                            f"TTS engine manager: Audio file ready for item {item.id}: {audio_filename}"
-                        )
-
                     except Exception as e:
                         logger.error(
                             f"Error handling audio file for item {item.id}: {e}"
@@ -482,10 +469,6 @@ class TTSEngineManager:
                 if item:
                     item.task_id = task_id
                     session.commit()
-                    logger.info(
-                        f"TTS engine manager linked item {item_id} to task {task_id}"
-                    )
-
                     # If the task is already completed, update the item status immediately
                     task = session.query(Task).filter(Task.task_id == task_id).first()
                     if task and task.status in [TaskStatus.COMPLETED, TaskStatus.DONE]:
