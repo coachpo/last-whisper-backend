@@ -60,9 +60,7 @@ class Settings(BaseSettings):
     openapi_url: str = "/openapi.json"
 
     # CORS Settings
-    cors_origins: str = (
-        "http://localhost:3000,http://127.0.0.1:3000"  # Comma-separated list of allowed origins
-    )
+    cors_origins: Optional[str] = None  # Comma-separated list of allowed origins
     cors_allow_methods: str = "*"  # Comma-separated list or "*" for all methods
     cors_allow_headers: str = "*"  # Comma-separated list or "*" for all headers
 
@@ -106,6 +104,17 @@ class Settings(BaseSettings):
 
         if self.is_production and not self.api_keys:
             raise ValueError("API keys must be configured in production environments")
+
+        cors_origins_value = (self.cors_origins or "").strip()
+        if not cors_origins_value:
+            cors_origins_value = "*" if self.is_development else ""
+
+        if self.is_production and cors_origins_value in {"", "*"}:
+            raise ValueError(
+                "CORS_ORIGINS must be configured with explicit origins in production environments"
+            )
+
+        self.cors_origins = cors_origins_value
 
         return self
 

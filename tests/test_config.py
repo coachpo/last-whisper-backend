@@ -4,7 +4,7 @@ from app.core.config import Settings
 
 
 def test_settings_production_flags():
-    settings = Settings(environment="production")
+    settings = Settings(environment="production", cors_origins="https://example.com")
 
     assert settings.is_development is False
     assert settings.is_production is True

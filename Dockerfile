@@ -1,23 +1,11 @@
 # Use official Python image as base
 FROM python:3.12-slim AS base
 
-# Set default environment variables
+# Set required environment variables; other defaults live in app/core/config.py
 ENV ENVIRONMENT=production \
-    TTS_PROVIDER=google \
     LOG_LEVEL=info \
-    HOST=0.0.0.0 \
-    PORT=8000 \
-    APP_NAME="Last Whisper Backend" \
-    APP_VERSION="1.0.0" \
-    DATABASE_URL=sqlite:///data/dictation.db \
-    AUDIO_DIR=audio \
-    TTS_SUPPORTED_LANGUAGES="[\"fi\"]" \
-    CORS_ORIGINS=http://localhost:3000,http://127.0.1:3000 \
-    CORS_ALLOW_METHODS="*" \
-    CORS_ALLOW_HEADERS="*" \
-    DOCS_URL="/docs" \
-    REDOC_URL="/redoc" \
-    OPENAPI_URL="/openapi.json"
+    CORS_ORIGINS=https://app.lastwhisper.ai,https://admin.lastwhisper.ai \
+    API_KEYS_CSV="change-me"
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
