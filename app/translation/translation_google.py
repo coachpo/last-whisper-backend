@@ -20,20 +20,18 @@ class GoogleTranslateProvider(TranslationProvider):
 
     def _configure_credentials(self):
         if getattr(settings, "google_application_credentials", None):
-            os.environ.setdefault(
-                "GOOGLE_APPLICATION_CREDENTIALS", settings.google_application_credentials
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
+                settings.google_application_credentials
             )
             logger.info(
                 "Translation: Using Google credentials from %s",
                 settings.google_application_credentials,
             )
-        else:
-            if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-                logger.info("Translation: Using GOOGLE_APPLICATION_CREDENTIALS from env")
-            else:
-                logger.warning(
-                    "Translation: No Google credentials provided. Set GOOGLE_APPLICATION_CREDENTIALS or settings.google_application_credentials."
-                )
+            return
+
+        raise RuntimeError(
+            "Translation: google_application_credentials must be configured via app.core.config settings."
+        )
 
     def translate(
         self, text: str, source_lang: str, target_lang: str

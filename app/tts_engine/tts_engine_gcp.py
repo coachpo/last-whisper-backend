@@ -238,16 +238,11 @@ class TTSEngine(BaseTTSEngine):
             logger.info(
                 f"TTS engine: Using Google credentials from {settings.google_application_credentials}"
             )
-        else:
-            if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-                logger.info(
-                    "TTS engine: Using existing GOOGLE_APPLICATION_CREDENTIALS from environment"
-                )
-            else:
-                logger.warning(
-                    "TTS engine: No Google credentials configured. "
-                    "Set GOOGLE_APPLICATION_CREDENTIALS or settings.google_application_credentials."
-                )
+            return
+
+        raise RuntimeError(
+            "TTS engine: google_application_credentials must be configured via app.core.config settings."
+        )
 
     def _publish_task_message(self, request_id, output_file_path, status, **metadata):
         task_message = {
