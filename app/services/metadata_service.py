@@ -8,13 +8,6 @@ import threading
 import time
 from typing import Any, Dict, Optional, Set
 
-_LANGUAGE_NAME_OVERRIDES: dict[str, str] = {
-    "en": "English",
-    "fi": "Suomi",
-    "zh-CN": "简体中文",
-    "zh-TW": "繁體中文",
-}
-
 from app.core.build_info import load_build_info
 from app.core.config import settings
 from app.core.runtime_state import get_app_started_at, get_uptime_seconds
@@ -29,6 +22,13 @@ from app.models.schemas import (
 )
 from app.tts_engine.tts_engine_manager import TTSEngineManager
 
+
+_LANGUAGE_NAME_OVERRIDES: dict[str, str] = {
+    "en": "English",
+    "fi": "Suomi",
+    "zh-CN": "简体中文",
+    "zh-TW": "繁體中文",
+}
 
 _FIELD_MATRIX: dict[MetadataDetailLevel, Set[str]] = {
     MetadataDetailLevel.CORE: {"build", "links"},
