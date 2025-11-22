@@ -24,6 +24,60 @@ class HealthResponse(BaseModel):
     timestamp: datetime = Field(..., description="Current timestamp")
 
 
+class MetadataServiceInfo(BaseModel):
+    """High-level identifiers for the application."""
+
+    name: str = Field(..., description="Application name")
+    description: str = Field(..., description="Human-friendly description")
+    environment: str = Field(..., description="Deployment environment label")
+    version: str = Field(..., description="Semantic application version")
+    schema_version: str = Field(..., description="Metadata schema revision")
+
+
+class MetadataBuildInfo(BaseModel):
+    """Build and artifact identifiers."""
+
+    commit: str = Field(..., description="Full git SHA or image ID")
+    short_commit: str = Field(..., description="Abbreviated commit identifier")
+    branch: str = Field(..., description="Source branch name")
+    built_at: Optional[str] = Field(None, description="Build timestamp (ISO 8601)")
+    python_version: str = Field(..., description="Python interpreter version")
+    fastapi_version: str = Field(..., description="FastAPI library version")
+
+
+class MetadataRuntimeInfo(BaseModel):
+    """Process runtime state."""
+
+    started_at: datetime = Field(..., description="Process bootstrap timestamp")
+    uptime_seconds: float = Field(..., description="Seconds since startup")
+    process_id: int = Field(..., description="Operating system process ID")
+    host: str = Field(..., description="Hostname handling the request")
+    worker: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Aggregated worker/queue stats when available",
+    )
+
+
+class MetadataProvidersSection(BaseModel):
+    """External provider wiring summary."""
+
+    database: Dict[str, Any] = Field(default_factory=dict)
+    tts: Dict[str, Any] = Field(default_factory=dict)
+    translation: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ApplicationMetadataResponse(BaseModel):
+    """Envelope for the /metadata endpoint."""
+
+    service: MetadataServiceInfo
+    build: Optional[MetadataBuildInfo] = None
+    runtime: Optional[MetadataRuntimeInfo] = None
+    providers: Optional[MetadataProvidersSection] = None
+    features: Dict[str, Any] = Field(default_factory=dict)
+    limits: Dict[str, Any] = Field(default_factory=dict)
+    links: Dict[str, str] = Field(default_factory=dict)
+
+
 # New schemas for dictation API
 
 

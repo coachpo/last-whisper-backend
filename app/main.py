@@ -11,10 +11,11 @@ from app.api.dependencies import (
     get_database_manager,
     get_tts_engine,
 )
-from app.api.routes import health, items, attempts, stats, tags, translations
+from app.api.routes import attempts, health, items, metadata, stats, tags, translations
 from app.core.config import settings
 from app.core.exceptions import TTSAPIException
 from app.core.logging import setup_logging, get_logger
+from app.core.runtime_state import set_app_started_at
 from app.models.schemas import ErrorResponse
 
 # Setup logging
@@ -29,6 +30,9 @@ async def lifespan(app: FastAPI):
         # Setup logging
         setup_logging()
         logger.info("Logging system initialized successfully")
+
+        # Persist runtime start instant for metadata reporting
+        set_app_started_at()
 
         # Initialize database manager
         db_manager = get_database_manager()
@@ -159,3 +163,4 @@ app.include_router(attempts.router)
 app.include_router(stats.router)
 app.include_router(tags.router)
 app.include_router(translations.router)
+app.include_router(metadata.router)

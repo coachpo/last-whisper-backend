@@ -13,6 +13,7 @@ from app.api.dependencies import (
     get_attempts_service,
     get_database_manager,
     get_items_service,
+    get_metadata_service,
     get_stats_service,
     get_tags_service,
     get_tts_engine,
@@ -21,12 +22,14 @@ from app.api.dependencies import (
 )
 from app.api.routes import attempts as attempts_routes
 from app.api.routes import items as items_routes
+from app.api.routes import metadata as metadata_routes
 from app.api.routes import stats as stats_routes
 from app.api.routes import translations as translations_routes
 from app.main import app
 from app.models.database_manager import Base, DatabaseManager
 from app.services.attempts_service import AttemptsService
 from app.services.items_service import ItemsService
+from app.services.metadata_service import MetadataService
 from app.services.stats_service import StatsService
 from app.services.tags_service import TagsService
 
@@ -111,6 +114,7 @@ def reset_dependency_singletons():
     dependency_cache._tts_engine = None
     dependency_cache._task_service = None
     dependency_cache._tags_service = None
+    dependency_cache._metadata_service = None
     yield
     dependency_cache._database_manager = None
     dependency_cache._items_service = None
@@ -120,6 +124,7 @@ def reset_dependency_singletons():
     dependency_cache._tts_engine = None
     dependency_cache._task_service = None
     dependency_cache._tags_service = None
+    dependency_cache._metadata_service = None
 
 
 @pytest.fixture(scope="session")
@@ -196,11 +201,13 @@ def test_client(
         get_tts_engine_manager: lambda: task_manager,
         get_tts_engine: lambda: dummy_tts_engine,
         get_translation_manager: lambda: translation_manager,
+        get_metadata_service: lambda: MetadataService(db_manager, task_manager),
         # Route-level wrappers
         attempts_routes.get_attempts_service: lambda: attempts_service,
         stats_routes.get_stats_service: lambda: stats_service,
         items_routes.get_items_service: lambda: items_service,
         translations_routes.get_translation_manager: lambda: translation_manager,
+        metadata_routes.get_metadata_service: lambda: MetadataService(db_manager, task_manager),
     }
 
     app.dependency_overrides.update(overrides)

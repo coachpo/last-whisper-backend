@@ -20,3 +20,11 @@ class ItemTTSStatus(str, Enum):
     PENDING = "pending"
     READY = "ready"
     FAILED = "failed"
+
+
+class MetadataDetailLevel(str, Enum):
+    """Controls how much information the metadata endpoint returns."""
+
+    CORE = "core"
+    RUNTIME = "runtime"
+    FULL = "full"

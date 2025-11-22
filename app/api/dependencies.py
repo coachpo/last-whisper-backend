@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.models.database_manager import DatabaseManager
 from app.services.attempts_service import AttemptsService
 from app.services.items_service import ItemsService
+from app.services.metadata_service import MetadataService
 from app.services.stats_service import StatsService
 from app.services.tags_service import TagsService
 from app.services.task_service import TaskService
@@ -22,6 +23,7 @@ _tts_engine = None
 _task_service = None
 _tags_service = None
 _translation_manager = None
+_metadata_service = None
 
 
 def get_database_manager() -> DatabaseManager:
@@ -98,6 +100,17 @@ def get_translation_manager() -> TranslationManager:
             settings.database_url, provider_wrapper
         )
     return _translation_manager
+
+
+def get_metadata_service() -> MetadataService:
+    """Dependency to get metadata service."""
+
+    global _metadata_service
+    if _metadata_service is None:
+        db_manager = get_database_manager()
+        tts_manager = get_tts_engine_manager()
+        _metadata_service = MetadataService(db_manager, tts_manager)
+    return _metadata_service
 
 
 # Legacy dependencies for backward compatibility

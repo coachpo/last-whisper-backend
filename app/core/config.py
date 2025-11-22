@@ -2,7 +2,7 @@
 
 from typing import ClassVar, Optional
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     cors_allow_methods: str = "*"  # Comma-separated list or "*" for all methods
     cors_allow_headers: str = "*"  # Comma-separated list or "*" for all headers
 
+    # Metadata / observability settings
+    metadata_schema_version: str = "2025-11-22"
+    metadata_cache_ttl_seconds: int = 60
+    metadata_commit_sha: Optional[str] = None
+    metadata_build_branch: Optional[str] = None
+    metadata_build_timestamp: Optional[str] = None
+    metadata_additional_links: dict[str, str] = Field(default_factory=dict)
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
     @model_validator(mode="after")
@@ -76,6 +84,9 @@ class Settings(BaseSettings):
         }:
             suffix = " (Development)" if self.is_development else ""
             self.app_name = f"{self._app_name_base}{suffix}"
+
+        if self.metadata_cache_ttl_seconds <= 0:
+            self.metadata_cache_ttl_seconds = 60
 
         return self
 
