@@ -4,6 +4,7 @@ import os
 from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import create_engine, event, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.core.config import settings
@@ -20,6 +21,7 @@ class DatabaseManager:
     def __init__(self, database_url: str = settings.database_url):
         # Configure database engine
         if database_url.startswith("sqlite"):
+            self._ensure_sqlite_parent_dir(database_url)
             # Add SQLite-specific options
             self.engine = create_engine(
                 database_url,
@@ -56,6 +58,16 @@ class DatabaseManager:
         """Create tables if they don't exist."""
         # create_all is idempotent - it only creates tables that don't exist
         Base.metadata.create_all(bind=self.engine)
+
+    @staticmethod
+    def _ensure_sqlite_parent_dir(database_url: str) -> None:
+        url = make_url(database_url)
+        db_path = url.database
+        if not db_path or db_path == ":memory:":
+            return
+        parent_dir = os.path.dirname(os.path.abspath(db_path))
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
 
     def get_session(self) -> Session:
         """Get a database session."""

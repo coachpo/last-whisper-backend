@@ -15,7 +15,9 @@ logger = get_logger(__name__)
 
 class GoogleTranslateProvider(TranslationProvider):
     def __init__(self):
+        logger.info("Translation: initializing Google Translate client")
         self.client = self._build_client()
+        logger.info("Translation: Google Translate client ready")
 
     def _build_client(self) -> translate.Client:
         credentials_path = settings.google_application_credentials
@@ -27,15 +29,19 @@ class GoogleTranslateProvider(TranslationProvider):
         credentials = service_account.Credentials.from_service_account_file(
             credentials_path
         )
-        logger.info(
-            "Translation: Using Google credentials from %s",
-            credentials_path,
-        )
+        logger.info("Translation: using Google credentials from %s", credentials_path)
         return translate.Client(credentials=credentials)
 
     def translate(
         self, text: str, source_lang: str, target_lang: str
     ) -> Tuple[str, Dict[str, Any]]:
+        log_context = {
+            "source_lang": source_lang,
+            "target_lang": target_lang,
+            "text_length": len(text),
+        }
+
+        logger.info("Translation: submitting request", extra=log_context)
         try:
             response = self.client.translate(
                 text,
@@ -48,7 +54,12 @@ class GoogleTranslateProvider(TranslationProvider):
                 "detected_source_language": response.get("detectedSourceLanguage"),
                 "model": response.get("model"),
             }
+            logger.info("Translation: completed", extra=log_context)
             return translated_text, metadata
         except GoogleAPIError as exc:
-            logger.error("Google Translate API error: %s", exc)
+            logger.error(
+                "Translation: Google API error",
+                exc_info=exc,
+                extra=log_context,
+            )
             raise
