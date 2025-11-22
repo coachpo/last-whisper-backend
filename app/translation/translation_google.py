@@ -1,10 +1,10 @@
 """Google Cloud Translation provider (v2)."""
 
-import os
 from typing import Tuple, Dict, Any
 
-from google.cloud import translate_v2 as translate
 from google.api_core.exceptions import GoogleAPIError
+from google.cloud import translate_v2 as translate
+from google.oauth2 import service_account
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -15,23 +15,23 @@ logger = get_logger(__name__)
 
 class GoogleTranslateProvider(TranslationProvider):
     def __init__(self):
-        self._configure_credentials()
-        self.client = translate.Client()
+        self.client = self._build_client()
 
-    def _configure_credentials(self):
-        if getattr(settings, "google_application_credentials", None):
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
-                settings.google_application_credentials
+    def _build_client(self) -> translate.Client:
+        credentials_path = settings.google_application_credentials
+        if not credentials_path:
+            raise RuntimeError(
+                "Translation: google_application_credentials must be configured via app.core.config settings."
             )
-            logger.info(
-                "Translation: Using Google credentials from %s",
-                settings.google_application_credentials,
-            )
-            return
 
-        raise RuntimeError(
-            "Translation: google_application_credentials must be configured via app.core.config settings."
+        credentials = service_account.Credentials.from_service_account_file(
+            credentials_path
         )
+        logger.info(
+            "Translation: Using Google credentials from %s",
+            credentials_path,
+        )
+        return translate.Client(credentials=credentials)
 
     def translate(
         self, text: str, source_lang: str, target_lang: str

@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 from google.api_core.exceptions import GoogleAPICallError, RetryError
 from google.cloud import texttospeech
+from google.oauth2 import service_account
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -82,11 +83,7 @@ class TTSEngine(BaseTTSEngine):
     ):
         logger.info("TTS engine: Initializing Google Cloud Text-to-Speech client...")
 
-        # Configure Google Cloud credentials from pydantic settings
-        self._configure_google_credentials()
-
-        # Google TTS client (auth via configured credentials)
-        self.client = texttospeech.TextToSpeechClient()
+        self.client = self._build_client()
         # Voice & audio configuration (defaults; selected per-request at submit)
         self.voice_name = voice_name
         self.language_code = language_code
@@ -229,20 +226,21 @@ class TTSEngine(BaseTTSEngine):
 
     # ----------------------- Internal helpers -----------------------
 
-    def _configure_google_credentials(self):
-        """Configure Google Cloud credentials from pydantic settings."""
-        if getattr(settings, "google_application_credentials", None):
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
-                settings.google_application_credentials
+    def _build_client(self) -> texttospeech.TextToSpeechClient:
+        credentials_path = settings.google_application_credentials
+        if not credentials_path:
+            raise RuntimeError(
+                "TTS engine: google_application_credentials must be configured via app.core.config settings."
             )
-            logger.info(
-                f"TTS engine: Using Google credentials from {settings.google_application_credentials}"
-            )
-            return
 
-        raise RuntimeError(
-            "TTS engine: google_application_credentials must be configured via app.core.config settings."
+        credentials = service_account.Credentials.from_service_account_file(
+            credentials_path
         )
+        logger.info(
+            "TTS engine: Using Google credentials from %s",
+            credentials_path,
+        )
+        return texttospeech.TextToSpeechClient(credentials=credentials)
 
     def _publish_task_message(self, request_id, output_file_path, status, **metadata):
         task_message = {
