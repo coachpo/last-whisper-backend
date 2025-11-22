@@ -4,12 +4,29 @@ _Last updated: November 22, 2025_
 
 ## Summary
 - `features.translation_languages` now returns an ordered list of objects with `language_code` and `language_name` instead of bare strings.
-- `providers.tts.supported_languages` reflects the single supported voice locale (`fi`) to match the backend capability.
+- Both `providers.translation.supported_languages` and `providers.tts.supported_languages` follow the same object shape, so every metadata consumer sees a consistent schema.
 - No other metadata sections changed, but clients that previously assumed strings must normalize their parsing logic before deploying.
 
 ## API Response Example
 ```json
 {
+  "providers": {
+    "translation": {
+      "provider": "google",
+      "supported_languages": [
+        { "language_code": "en", "language_name": "English" },
+        { "language_code": "fi", "language_name": "Suomi" },
+        { "language_code": "zh-CN", "language_name": "简体中文" },
+        { "language_code": "zh-TW", "language_name": "繁體中文" }
+      ]
+    },
+    "tts": {
+      "provider": "google",
+      "supported_languages": [
+        { "language_code": "fi", "language_name": "Suomi" }
+      ]
+    }
+  },
   "features": {
     "translation_languages": [
       { "language_code": "en", "language_name": "English" },
