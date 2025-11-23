@@ -73,7 +73,9 @@ class TTSEngineManager:
             if existing_task and existing_task.status != TaskStatus.FAILED:
                 return existing_task.task_id
 
-        task_kind_value = task_kind.value if isinstance(task_kind, TaskKind) else task_kind
+        task_kind_value = (
+            task_kind.value if isinstance(task_kind, TaskKind) else task_kind
+        )
 
         task_id = self.tts_service.submit_request(
             text, custom_filename, language, task_kind=task_kind_value
@@ -84,9 +86,7 @@ class TTSEngineManager:
         # Ensure a stub row exists for FK linking; avoid overwriting if message already inserted
         with self.db_manager.get_session() as session:
             try:
-                task = (
-                    session.query(Task).filter(Task.task_id == task_id).first()
-                )
+                task = session.query(Task).filter(Task.task_id == task_id).first()
                 if not task:
                     task = Task(
                         task_id=task_id,
