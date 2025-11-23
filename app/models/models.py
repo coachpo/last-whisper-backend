@@ -20,7 +20,7 @@ from sqlalchemy.sql import func
 
 # Import Base from database_manager to avoid circular imports
 from .database_manager import Base
-from .enums import TaskStatus, ItemTTSStatus
+from .enums import TaskStatus, ItemTTSStatus, TaskKind
 
 
 class Task(Base):
@@ -35,6 +35,7 @@ class Task(Base):
     status = Column(String, nullable=False, default=TaskStatus.PENDING, index=True)
     output_file_path = Column(Text)
     custom_filename = Column(Text)
+    task_kind = Column(String, nullable=False, default=TaskKind.GENERATE, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     submitted_at = Column(DateTime)
     started_at = Column(DateTime)

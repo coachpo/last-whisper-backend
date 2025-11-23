@@ -5,6 +5,8 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 
+from sqlalchemy.exc import IntegrityError
+
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.database_manager import DatabaseManager
@@ -70,7 +72,6 @@ class TranslationManager:
             if translation and not needs_refresh:
                 cached = True
             else:
-                # Fetch from provider
                 provider = self.provider_wrapper.provider
                 translated_text, metadata = provider.translate(
                     item.text, source_lang, target_lang
@@ -107,7 +108,19 @@ class TranslationManager:
                     translation.updated_at = datetime.now()
                     translation.last_refreshed_at = datetime.now()
 
-                session.commit()
+                try:
+                    session.commit()
+                except IntegrityError:
+                    session.rollback()
+                    translation = (
+                        session.query(Translation)
+                        .filter(
+                            Translation.item_id == item.id,
+                            Translation.target_lang == target_lang,
+                        )
+                        .first()
+                    )
+                    cached = bool(translation and translation.text_hash == text_hash)
 
             return {
                 "translation_id": translation.id,

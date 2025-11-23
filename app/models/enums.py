@@ -14,6 +14,13 @@ class TaskStatus(str, Enum):
     DONE = "done"
 
 
+class TaskKind(str, Enum):
+    """Identifies why a TTS task was created."""
+
+    GENERATE = "generate"
+    REGENERATE = "regenerate"
+
+
 class ItemTTSStatus(str, Enum):
     """Enum for Item model tts_status field."""
 

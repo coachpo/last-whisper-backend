@@ -143,7 +143,11 @@ class TTSEngine(BaseTTSEngine):
         logger.info("TTS engine: Service stopped successfully!")
 
     def submit_request(
-        self, text: str, custom_filename: Optional[str] = None, language: str = "fi"
+        self,
+        text: str,
+        custom_filename: Optional[str] = None,
+        language: str = "fi",
+        task_kind: str = "generate",
     ) -> Optional[str]:
         """Submit a text-to-speech conversion request (random voice chosen here)."""
         if not text or not str(text).strip():
@@ -180,7 +184,17 @@ class TTSEngine(BaseTTSEngine):
             "voice_name": selected_voice,  # <-- stored on the request
             "status": TaskStatus.QUEUED,
             "submitted_at": datetime.now(),
+            "task_kind": task_kind,
         }
+
+        logger.info(
+            "TTS enqueue: id=%s kind=%s lang=%s voice=%s file=%s",
+            request_id,
+            task_kind,
+            language,
+            selected_voice,
+            filename,
+        )
 
         self.request_queue.put_nowait(request)
 
@@ -193,6 +207,7 @@ class TTSEngine(BaseTTSEngine):
             language=language,
             voice=selected_voice,
             backend="google-tts",
+            task_kind=task_kind,
         )
         return request_id
 
@@ -266,6 +281,7 @@ class TTSEngine(BaseTTSEngine):
                 TaskStatus.PROCESSING,
                 text=request["text"],
                 language=request["language"],
+                task_kind=request.get("task_kind"),
                 started_at=datetime.now().isoformat(),
                 backend="google-tts",
                 voice=voice_name,
@@ -290,6 +306,7 @@ class TTSEngine(BaseTTSEngine):
             meta = {
                 "text": request["text"],
                 "language": request["language"],
+                "task_kind": request.get("task_kind"),
                 "completed_at": request["completed_at"].isoformat(),
                 "file_size": (
                     os.path.getsize(request["filename"])
@@ -318,6 +335,7 @@ class TTSEngine(BaseTTSEngine):
                 TaskStatus.FAILED,
                 text=request["text"],
                 language=request["language"],
+                task_kind=request.get("task_kind"),
                 error=str(e),
                 failed_at=datetime.now().isoformat(),
                 backend="google-tts",
@@ -333,6 +351,7 @@ class TTSEngine(BaseTTSEngine):
                 TaskStatus.FAILED,
                 text=request["text"],
                 language=request["language"],
+                task_kind=request.get("task_kind"),
                 error=str(e),
                 failed_at=datetime.now().isoformat(),
                 backend="google-tts",

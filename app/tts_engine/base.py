@@ -20,7 +20,11 @@ class BaseTTSEngine(ABC):
 
     @abstractmethod
     def submit_request(
-        self, text: str, custom_filename: Optional[str] = None, language: str = "fi"
+        self,
+        text: str,
+        custom_filename: Optional[str] = None,
+        language: str = "fi",
+        task_kind: str = "generate",
     ) -> Optional[str]:
         """Submit a TTS request and return a task identifier if queued successfully."""
         raise NotImplementedError

@@ -12,7 +12,9 @@ from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.database_manager import DatabaseManager
 from app.models.models import Task, Item, ItemTTS
-from app.models.enums import TaskStatus, ItemTTSStatus
+from sqlalchemy.exc import IntegrityError
+
+from app.models.enums import TaskStatus, ItemTTSStatus, TaskKind
 
 # Setup logger for this module
 logger = get_logger(__name__)
@@ -46,8 +48,9 @@ class TTSEngineManager:
         custom_filename: Optional[str] = None,
         language: str = "fi",
         force_refresh: bool = False,
+        task_kind: TaskKind = TaskKind.GENERATE,
     ) -> Optional[str]:
-        """Submit a new TTS task and store it in database."""
+        """Submit a new TTS task and ensure the DB row exists idempotently."""
         if not text.strip():
             logger.error("Error: Empty text provided")
             return None
@@ -56,7 +59,6 @@ class TTSEngineManager:
             logger.error("Error: TTS service not available")
             return None
 
-        # Validate language support
         if language not in settings.tts_supported_languages:
             logger.error(
                 f"Error: Language '{language}' is not supported. Supported languages: {settings.tts_supported_languages}"
@@ -65,36 +67,46 @@ class TTSEngineManager:
 
         text_hash = self._calculate_text_hash(text)
 
-        # Check for existing task with same text hash (any status except failed)
-        if not force_refresh:
+        # Deduplicate only for generate tasks
+        if task_kind == TaskKind.GENERATE and not force_refresh:
             existing_task = self._get_existing_task_by_hash(text_hash)
-            if existing_task:
-                status = existing_task.status
-                task_id = existing_task.task_id
+            if existing_task and existing_task.status != TaskStatus.FAILED:
+                return existing_task.task_id
 
-                if status in [TaskStatus.COMPLETED, TaskStatus.DONE]:
-                    return task_id
-                elif status in [TaskStatus.QUEUED, TaskStatus.PROCESSING]:
-                    return task_id
+        task_kind_value = task_kind.value if isinstance(task_kind, TaskKind) else task_kind
 
-        # No existing task found, create new one
-        task_id = self.tts_service.submit_request(text, custom_filename, language)
+        task_id = self.tts_service.submit_request(
+            text, custom_filename, language, task_kind=task_kind_value
+        )
         if not task_id:
             return None
 
-        # Insert initial task record into database
+        # Ensure a stub row exists for FK linking; avoid overwriting if message already inserted
         with self.db_manager.get_session() as session:
-            new_task = Task(
-                task_id=task_id,
-                original_text=text,
-                text_hash=text_hash,
-                status=TaskStatus.QUEUED,
-                custom_filename=custom_filename,
-                created_at=datetime.now(),
-                submitted_at=datetime.now(),
-            )
-            session.add(new_task)
-            session.commit()
+            try:
+                task = (
+                    session.query(Task).filter(Task.task_id == task_id).first()
+                )
+                if not task:
+                    task = Task(
+                        task_id=task_id,
+                        original_text=text or "unknown",
+                        text_hash=text_hash,
+                        status=TaskStatus.QUEUED,
+                        custom_filename=custom_filename,
+                        task_kind=task_kind,
+                        created_at=datetime.now(),
+                        submitted_at=datetime.now(),
+                        task_metadata=json.dumps({"task_kind": task_kind_value}),
+                    )
+                    session.add(task)
+                    session.commit()
+            except IntegrityError:
+                session.rollback()
+                # Another writer inserted first (likely the queue message); that's fine
+            except Exception:
+                session.rollback()
+                logger.exception("Failed to create stub task row for %s", task_id)
 
         return task_id
 
@@ -275,6 +287,14 @@ class TTSEngineManager:
         status = message.get("status") or TaskStatus.QUEUED
         output_file_path = message.get("output_file_path")
         metadata = message.get("metadata", {})
+        raw_kind = metadata.get("task_kind") or TaskKind.GENERATE
+        try:
+            task_kind = TaskKind(raw_kind)
+        except Exception:
+            task_kind = TaskKind.GENERATE
+
+        if metadata and "task_kind" not in metadata:
+            metadata["task_kind"] = task_kind.value
 
         if not task_id:
             logger.warning("TTS task message missing request_id; skipping")
@@ -304,6 +324,7 @@ class TTSEngineManager:
                     status=status,
                     output_file_path=output_file_path,
                     custom_filename=metadata.get("custom_filename"),
+                    task_kind=task_kind,
                     created_at=datetime.now(),
                     submitted_at=(
                         datetime.fromisoformat(metadata["submitted_at"])
@@ -317,10 +338,13 @@ class TTSEngineManager:
                     "Inserted missing TTS task %s from incoming message", task_id
                 )
 
-            # Update basic fields
+            # Update basic fields (merge non-null to avoid wiping earlier data)
             task.status = status
-            task.output_file_path = output_file_path
-            task.task_metadata = json.dumps(metadata) if metadata else None
+            task.task_kind = task_kind or task.task_kind
+            if output_file_path:
+                task.output_file_path = output_file_path
+            if metadata:
+                task.task_metadata = json.dumps(metadata)
 
             # Update status-specific fields
             if status == TaskStatus.PROCESSING:
@@ -493,10 +517,13 @@ class TTSEngineManager:
         custom_filename: Optional[str] = None,
         language: str = "fi",
         force_refresh: bool = False,
+        task_kind: TaskKind = TaskKind.GENERATE,
     ) -> Optional[str]:
         """Submit a TTS task specifically for an item."""
         # Submit the task using parent method
-        task_id = self.submit_task(text, custom_filename, language, force_refresh)
+        task_id = self.submit_task(
+            text, custom_filename, language, force_refresh, task_kind=task_kind
+        )
 
         if task_id:
             # Link the item to the task

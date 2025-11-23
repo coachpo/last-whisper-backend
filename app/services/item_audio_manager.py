@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.database_manager import DatabaseManager
-from app.models.enums import ItemTTSStatus, TaskStatus
+from app.models.enums import ItemTTSStatus, TaskStatus, TaskKind
 from app.models.models import Item, ItemTTS
 from app.services.exceptions import NotFoundError, ServiceError
 
@@ -46,7 +46,7 @@ class ItemAudioManager:
         language = locale or settings.tts_supported_languages[0]
         try:
             task_id = self.task_manager.submit_task_for_item(
-                item_id, text, f"item_{item_id}", language
+                item_id, text, f"item_{item_id}", language, task_kind=TaskKind.GENERATE
             )
             if not task_id:
                 logger.warning("Task submission failed for item %s", item_id)
@@ -79,7 +79,12 @@ class ItemAudioManager:
 
             language = item.locale or settings.tts_supported_languages[0]
             task_id = self.task_manager.submit_task_for_item(
-                item.id, item.text, f"item_{item.id}", language, force_refresh=True
+                item.id,
+                item.text,
+                f"item_{item.id}",
+                language,
+                force_refresh=True,
+                task_kind=TaskKind.REGENERATE,
             )
             if not task_id:
                 raise ServiceError("Unable to enqueue audio refresh", status_code=502)
