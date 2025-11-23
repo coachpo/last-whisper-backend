@@ -3,7 +3,7 @@
 from contextlib import asynccontextmanager
 from typing import Callable, TypeVar
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.exceptions import TTSAPIException
 from app.core.logging import setup_logging, get_logger
 from app.core.runtime_state import set_app_started_at
+from app.core.security import require_api_key
 from app.models.schemas import ErrorResponse
 from app.services.exceptions import ServiceError
 
@@ -104,6 +105,7 @@ app = FastAPI(
     redoc_url=settings.redoc_url if settings.is_development else None,
     openapi_url=settings.openapi_url if settings.is_development else None,
     lifespan=lifespan,
+    dependencies=[Depends(require_api_key)],
 )
 
 

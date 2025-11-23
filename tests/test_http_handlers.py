@@ -87,6 +87,7 @@ def test_health_endpoint_reports_individual_checks():
 
     try:
         with TestClient(app, raise_server_exceptions=False) as client:
+            client.headers.update({settings.api_key_header_name: settings.api_keys[0]})
             response = client.get("/health")
             payload = response.json()
     finally:

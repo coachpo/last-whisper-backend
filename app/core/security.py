@@ -51,15 +51,20 @@ def require_api_key(
         default=None, alias=settings.api_key_header_name
     ),
 ):
-    """Validate API keys when configured; otherwise allow anonymous access."""
+    """Validate API keys; header must always be present."""
+
+    if not provided_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required"
+        )
 
     if not settings.api_keys:
-        request.state.api_identity = (
-            request.client.host if request.client else "anonymous"
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key authentication is not configured",
         )
-        return None
 
-    if not provided_key or provided_key not in settings.api_keys:
+    if provided_key not in settings.api_keys:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key"
         )
