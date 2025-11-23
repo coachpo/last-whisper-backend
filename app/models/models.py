@@ -139,9 +139,6 @@ class ItemTTS(Base):
     status = Column(
         String(20), nullable=False, default=ItemTTSStatus.PENDING, index=True
     )
-    audio_path = Column(Text, nullable=True)
-    last_error = Column(Text, nullable=True)
-    tts_metadata = Column("metadata", Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.now, index=True)
     updated_at = Column(
         DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
@@ -150,15 +147,6 @@ class ItemTTS(Base):
     # Relationships
     item = relationship("Item", back_populates="tts_record")
     task = relationship("Task")
-
-    @property
-    def metadata_dict(self) -> dict:
-        if self.tts_metadata:
-            try:
-                return json.loads(self.tts_metadata)
-            except (json.JSONDecodeError, TypeError):
-                return {}
-        return {}
 
 
 class Translation(Base):
