@@ -265,21 +265,57 @@ class TTSEngineManager:
                 logger.error(f"Error monitoring task queue: {e}")
 
     def _update_task_from_message(self, message: Dict[str, Any]):
-        """Update task status based on task queue message"""
+        """Update task status based on task queue message.
+
+        Idempotent: if the task row is missing (e.g. message arrives before DB insert),
+        create it with best-effort metadata; otherwise update in-place under a row lock.
+        """
+
         task_id = message.get("request_id")
-        status = message.get("status")
+        status = message.get("status") or TaskStatus.QUEUED
         output_file_path = message.get("output_file_path")
         metadata = message.get("metadata", {})
 
         if not task_id:
+            logger.warning("TTS task message missing request_id; skipping")
             return
 
         with self.db_manager.get_session() as session:
-            task = session.query(Task).filter(Task.task_id == task_id).first()
+            task = (
+                session.query(Task)
+                .filter(Task.task_id == task_id)
+                .with_for_update()
+                .first()
+            )
 
             if not task:
-                logger.warning(f"TTS task {task_id} not found in database")
-                return
+                # Build a minimal task record from metadata so later updates succeed
+                text = metadata.get("text") or ""
+                text_hash = (
+                    self._calculate_text_hash(text)
+                    if text
+                    else self._calculate_text_hash(task_id)
+                )
+
+                task = Task(
+                    task_id=task_id,
+                    original_text=text or "unknown",
+                    text_hash=text_hash,
+                    status=status,
+                    output_file_path=output_file_path,
+                    custom_filename=metadata.get("custom_filename"),
+                    created_at=datetime.now(),
+                    submitted_at=(
+                        datetime.fromisoformat(metadata["submitted_at"])
+                        if metadata.get("submitted_at")
+                        else datetime.now()
+                    ),
+                    task_metadata=json.dumps(metadata) if metadata else None,
+                )
+                session.add(task)
+                logger.info(
+                    "Inserted missing TTS task %s from incoming message", task_id
+                )
 
             # Update basic fields
             task.status = status
