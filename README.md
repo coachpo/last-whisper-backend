@@ -1,68 +1,63 @@
 # Last Whisper Backend
+FastAPI service for dictation training: TTS generation (Google Cloud), WER-based scoring, tagging, and analytics APIs.
 
-Last Whisper is a FastAPI backend that powers a dictation-training workflow with Google Cloud text-to-speech (TTS), attempt scoring, analytics, and tag management. It exposes a fully typed REST API plus background queues that generate and monitor audio tasks.
-
-## Key Capabilities
-- Dictation item CRUD with background audio generation and locale/difficulty filtering.
-- Attempt ingestion with WER-based scoring and normalized text comparison.
-- Stats and practice-log endpoints for dashboards and progress charts.
-- Tag presets, health monitoring, and structured logging ready for production deployments.
-
-## Project Structure
-```
-app/                 # FastAPI app, routes, services, models, config
-run_api.py           # Entry point that boots uvicorn with custom logging
-audio/               # Generated WAV assets (gitignored)
-data/dictation.db    # Default SQLite database
-docs/                # Architecture and migration notes (`docs/system_spec.md`)
-tests/               # Pytest suite mirroring the app layout
-```
-See `AGENTS.md` for contributor conventions.
+## Overview
+- REST + OpenAPI docs, background TTS queues, health checks, typed models.
+- Defaults: SQLite at `data/dictation.db`, audio in `audio/`, port 8000.
+- Production image: Gunicorn + Uvicorn on Python 3.12-slim.
 
 ## Prerequisites
-- macOS/Linux/WSL with Python 3.11+
-- Conda environment named `last_whisper`
-- Google Cloud project with Text-to-Speech and Translation APIs enabled
-- `GOOGLE_APPLICATION_CREDENTIALS` JSON stored at `keys/google-credentials.json`
+- Python 3.11+ (3.12 supported) and `pip`
+- Google Cloud Text-to-Speech credentials JSON at `keys/google-credentials.json`
+- Optional: Docker for container runs; `ruff`/`black`/`pytest` for quality checks
 
-## Environment Setup
+## Quickstart (local)
 ```bash
-conda create -n last_whisper python=3.11
-conda activate last_whisper
-python -m pip install --upgrade pip
-pip install -e .[dev]
+cd last-whisper-backend
+python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
+pip install -e ".[dev]"
+export TTS_PROVIDER=google
+export GOOGLE_APPLICATION_CREDENTIALS=keys/google-credentials.json
+python run_api.py    # http://localhost:8000, docs at /docs
 ```
-Create a `.env` file (or export env vars) to override defaults such as `DATABASE_URL`, `CORS_ORIGINS`, and `GOOGLE_APPLICATION_CREDENTIALS`. Baseline values live in `app/core/config.py` and fall back to SQLite plus local audio storage.
+Alternate: `uvicorn app.main:app --reload --port 8000`.
 
-## Running the API
-```bash
-conda activate last_whisper
-python run_api.py               # uses settings from app/core/config.py
-# alternatively
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-OpenAPI docs are available at `/docs` when `environment=development`. The `/health` endpoint reports DB, audio directory, TTS manager, and clock diagnostics.
+## Environment variables (common)
+- `TTS_PROVIDER` (default `google`)
+- `GOOGLE_APPLICATION_CREDENTIALS` (default `keys/google-credentials.json`)
+- `DATABASE_URL` (default `sqlite:///data/dictation.db`)
+- `CORS_ORIGINS`, `API_KEYS_CSV` / `API_KEYS`, `PORT` (default 8000), `ENVIRONMENT`
+Settings load from `.env` via `pydantic-settings` (`app/core/config.py`).
 
-## Testing & Quality
+## Testing & quality
 ```bash
-conda activate last_whisper
-pytest                           # full suite (sync + async)
+pytest
 pytest --cov=app --cov-report=term-missing
-ruff check app tests             # linting
-black app tests                  # formatting (88 columns)
+ruff check app tests
+black app tests
 ```
-Fixtures in `tests/conftest.py` supply a temporary SQLite database, dependency overrides, and dummy TTS managers—mirror the `app/` layout for new tests.
 
-## Configuration Notes
-- Update `app/core/config.py` when adding new settings; they automatically load from `.env` via `pydantic-settings`.
-- Audio files save to `settings.audio_dir` (default `audio/`). Deleting items removes their audio assets.
-- Background TTS jobs run through `TTSEngineManager`; ensure worker threads can write to `audio/` and reach Google Cloud.
+## Docker
+```bash
+docker build -t last-whisper-backend .
+docker run -p 8000:8000 \
+  -v $(pwd)/keys:/app/keys:ro \
+  -v $(pwd)/audio:/app/audio \
+  last-whisper-backend
+```
+Image entrypoint: `gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000`.
+
+## Project layout
+```
+app/               # FastAPI routes, services, models, config
+run_api.py         # Local dev entrypoint (uvicorn)
+audio/             # Generated audio (gitignored)
+data/              # SQLite DB (gitignored)
+tests/             # Pytest suite mirroring app/
+AGENTS.md          # Contributor conventions
+Dockerfile         # Production build
+```
 
 ## Deployment
-- **Docker:** `docker build -t last-whisper-backend .` then `docker run -p 8000:8000 --env-file .env last-whisper-backend`.
-- **Gunicorn/Uvicorn:** Use `last-whisper-api` script (declared in `pyproject.toml`) or run `uvicorn app.main:app --workers 4`. Disable `reload` in production.
-- **Data Stores:** Switch `settings.database_url` to Postgres/MySQL for multi-user deployments; SQLAlchemy models are backend-agnostic.
-
-## Further Reading
-- `docs/system_spec.md` for a detailed architecture walkthrough and endpoint reference.
-- GitHub Issues/Discussions for roadmap items.
+- Staging/dev: from repo root `docker compose -f ../staging/docker-compose.staging.yml up --build`
+- Production: `docker compose -f ../deploy/docker-compose.prod.yml up -d` (uses GHCR image `ghcr.io/coachpo/last-whisper-backend:latest`; mount `deploy/keys` for Google creds)
